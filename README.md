@@ -29,6 +29,7 @@ npm install
 
 ```text
 MANAGER_URL=http://manager:8080
+AGENT_URL=http://agent:4111
 APP_ROOT_DOMAIN=llmagents.com
 DATABASE_URL=mysql://root:password@mysql:3306/llagents_platform
 AUTH_SECRET=change-me

@@ -176,9 +176,7 @@ export function AppDesktop({ initialProjects }: AppDesktopProps) {
               >
                 <a
                   className="desktop-app-link"
-                  href={project.url}
-                  target="_blank"
-                  rel="noreferrer"
+                  href={`/apps/${encodeURIComponent(project.id)}`}
                 >
                   <span className="desktop-app-icon-wrap">
                     <AppIcon templateId={project.templateId as TemplateId} size="large" />
