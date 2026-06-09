@@ -35,6 +35,13 @@ type ProjectFileEntry = {
   depth?: number;
 };
 
+type CommandResult = {
+  command: string;
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+};
+
 export async function POST(request: NextRequest, context: AgentChatContext) {
   const requestId = crypto.randomUUID();
   const startedAt = Date.now();
@@ -138,14 +145,18 @@ Status: ${project.status}
 Agent tools endpoint: ${toolsUrl}
 
 Rules:
+- You are the llm-to-apps project coding agent for this app, not the underlying model provider.
 - Answer once. Do not repeat the same sentence.
 - Use the tools endpoint for runtime facts and code changes when project tools are available.
+- Search file contents with searchProjectFiles.
+- Change files with patchProjectFiles for focused edits and writeProjectFile for new/complete file writes.
+- After changing files, run a relevant check with runProjectCommand when possible.
 - Do not announce tool usage before calling a tool.
 - After a tool result, answer with the result. Do not call the same tool twice with the same arguments.
 - Do not say "let me check" unless you actually call a tool.
 - Do not claim you changed files unless a tool call confirms it.
 `,
-        maxSteps: 1,
+        maxSteps: 6,
         modelSettings: {
           temperature: 0.2
         },
@@ -280,6 +291,34 @@ function formatToolResult(toolName: string | undefined, result: unknown) {
     }
   }
 
+  if (toolName === 'searchProjectFiles' && isCommandResult(result)) {
+    if (result.exitCode === 1 || !result.stdout.trim()) {
+      return 'No matches found.';
+    }
+
+    return result.stdout.trim();
+  }
+
+  if (
+    (toolName === 'runProjectCommand' ||
+      toolName === 'patchProjectFiles' ||
+      toolName === 'getProjectGitStatus') &&
+    isCommandResult(result)
+  ) {
+    return [
+      `Command: ${result.command}`,
+      `Exit code: ${result.exitCode}`,
+      result.stdout.trim() ? `stdout:\n${result.stdout.trim()}` : '',
+      result.stderr.trim() ? `stderr:\n${result.stderr.trim()}` : ''
+    ]
+      .filter(Boolean)
+      .join('\n');
+  }
+
+  if (toolName === 'writeProjectFile' && isObjectRecord(result) && typeof result.path === 'string') {
+    return `Wrote ${result.path}.`;
+  }
+
   return JSON.stringify(result, null, 2);
 }
 
@@ -301,6 +340,16 @@ function isReadFileResult(result: unknown): result is { path: string; content: s
     isObjectRecord(result) &&
     typeof result.path === 'string' &&
     typeof result.content === 'string'
+  );
+}
+
+function isCommandResult(result: unknown): result is CommandResult {
+  return (
+    isObjectRecord(result) &&
+    typeof result.command === 'string' &&
+    typeof result.exitCode === 'number' &&
+    typeof result.stdout === 'string' &&
+    typeof result.stderr === 'string'
   );
 }
 
