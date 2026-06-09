@@ -21,6 +21,8 @@ type MastraGenerateResult = {
 };
 
 export async function POST(request: NextRequest, context: AgentChatContext) {
+  const requestId = crypto.randomUUID();
+  const startedAt = Date.now();
   const user = await getCurrentUser();
 
   if (!user) {
@@ -64,7 +66,23 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
   const agentUrl = process.env.AGENT_URL;
   const toolsUrl = `${project.url.replace(/\/$/, '')}/agent-tools`;
 
+  console.info('[agent-chat] request', {
+    requestId,
+    projectId: project.id,
+    domain: project.domain,
+    status: project.status,
+    hasAgentUrl: Boolean(agentUrl),
+    hasAgentToolsToken: Boolean(project.agentToolsToken),
+    messageLength: body.message.trim().length,
+    toolsUrl
+  });
+
   if (!agentUrl) {
+    console.warn('[agent-chat] agent url is not configured', {
+      requestId,
+      projectId: project.id
+    });
+
     return NextResponse.json({
       ok: true,
       message: {
@@ -75,8 +93,16 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
     });
   }
 
+  const generateUrl = `${agentUrl.replace(/\/$/, '')}/api/agents/projectAgent/generate`;
+
+  console.info('[agent-chat] forwarding to agent', {
+    requestId,
+    projectId: project.id,
+    generateUrl
+  });
+
   const agentResponse = await fetch(
-    `${agentUrl.replace(/\/$/, '')}/api/agents/projectAgent/generate`,
+    generateUrl,
     {
       method: 'POST',
       headers: {
@@ -119,8 +145,26 @@ Rules:
   const agentResult = (await agentResponse.json().catch(() => null)) as
     | MastraGenerateResult
     | null;
+  const durationMs = Date.now() - startedAt;
+
+  console.info('[agent-chat] agent response', {
+    requestId,
+    projectId: project.id,
+    status: agentResponse.status,
+    ok: agentResponse.ok,
+    durationMs,
+    hasText: Boolean(agentResult?.text),
+    responseMessages: agentResult?.response?.messages?.length ?? 0
+  });
 
   if (!agentResponse.ok || !agentResult) {
+    console.error('[agent-chat] agent request failed', {
+      requestId,
+      projectId: project.id,
+      status: agentResponse.status,
+      durationMs
+    });
+
     return NextResponse.json(
       {
         ok: false,
