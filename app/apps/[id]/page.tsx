@@ -109,7 +109,6 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             {usageSummary ? (
               <span className="project-token-summary" title={usageSummary.title}>
                 <strong>{usageSummary.total}</strong>
-                {usageSummary.breakdown ? <span>{usageSummary.breakdown}</span> : null}
               </span>
             ) : null}
             <McpConnectButton
@@ -203,13 +202,7 @@ function formatUsageSummary(usage: {
     return null;
   }
 
-  const breakdown =
-    promptTokens > 0 || completionTokens > 0
-      ? `${formatTokenCount(promptTokens)} in / ${formatTokenCount(completionTokens)} out`
-      : '';
-
   return {
-    breakdown,
     title: [
       `Total: ${formatTokenCount(totalTokens)}`,
       promptTokens > 0 ? `Input: ${formatTokenCount(promptTokens)}` : '',

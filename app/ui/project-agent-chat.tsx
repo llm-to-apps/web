@@ -381,27 +381,17 @@ function parseAgentStreamEvent(line: string): AgentStreamEvent | null {
 }
 
 function TokenUsageBadge({ usage }: { usage: TokenUsage }) {
-  const totalTokens = usage.totalTokens ?? sumKnownTokens(usage);
+  const breakdown = formatTokenBreakdown(usage);
 
-  if (!totalTokens) {
+  if (!breakdown) {
     return null;
   }
 
   return (
     <span className="chat-usage" title={formatTokenUsageTitle(usage)}>
-      <strong>{formatTokenCount(totalTokens)}</strong>
-      {formatTokenBreakdown(usage) ? (
-        <span className="chat-usage-breakdown">{formatTokenBreakdown(usage)}</span>
-      ) : null}
+      <span>{breakdown}</span>
     </span>
   );
-}
-
-function sumKnownTokens(usage: TokenUsage) {
-  const promptTokens = usage.promptTokens ?? 0;
-  const completionTokens = usage.completionTokens ?? 0;
-
-  return promptTokens + completionTokens;
 }
 
 function formatTokenBreakdown(usage: TokenUsage) {

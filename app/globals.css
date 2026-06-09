@@ -478,15 +478,6 @@ button {
   font-weight: 700;
 }
 
-.project-token-summary span {
-  min-width: 0;
-  border-left: 1px solid #d8e3dc;
-  color: var(--muted);
-  overflow: hidden;
-  padding-left: 7px;
-  text-overflow: ellipsis;
-}
-
 .back-link {
   color: var(--muted);
   text-decoration: none;
@@ -578,16 +569,8 @@ button {
   padding: 4px 8px;
 }
 
-.chat-usage strong {
-  color: var(--text);
-  font-weight: 650;
-}
-
-.chat-usage-breakdown {
-  border-left: 1px solid #d8e3dc;
+.chat-usage span {
   color: var(--muted);
-  margin-left: 2px;
-  padding-left: 7px;
 }
 
 .chat-message.progress p {
