@@ -311,7 +311,7 @@ function mapMastraStreamEvent(chunk: unknown): AgentStreamEvent[] {
     return [
       {
         type: 'progress',
-        message: `Running ${extractToolName(chunk) ?? 'tool'}...`
+        message: formatToolProgressMessage('Running', chunk)
       }
     ];
   }
@@ -320,7 +320,7 @@ function mapMastraStreamEvent(chunk: unknown): AgentStreamEvent[] {
     return [
       {
         type: 'progress',
-        message: `Finished ${extractToolName(chunk) ?? 'tool'}.`
+        message: formatToolProgressMessage('Finished', chunk)
       }
     ];
   }
@@ -357,6 +357,16 @@ function extractStreamText(chunk: Record<string, unknown>) {
   return '';
 }
 
+function formatToolProgressMessage(action: 'Running' | 'Finished', chunk: Record<string, unknown>) {
+  const toolName = extractToolName(chunk) ?? 'tool';
+  const details =
+    action === 'Running'
+      ? summarizeToolInput(extractToolInput(chunk))
+      : summarizeToolOutput(extractToolOutput(chunk));
+
+  return details ? `${action} ${toolName}\n${details}` : `${action} ${toolName}`;
+}
+
 function extractToolName(chunk: Record<string, unknown>) {
   for (const key of ['toolName', 'name']) {
     const value = chunk[key];
@@ -372,7 +382,157 @@ function extractToolName(chunk: Record<string, unknown>) {
     return toolCall.toolName;
   }
 
+  const toolCallDelta = chunk.toolCallDelta;
+
+  if (isObjectRecord(toolCallDelta) && typeof toolCallDelta.toolName === 'string') {
+    return toolCallDelta.toolName;
+  }
+
   return null;
+}
+
+function extractToolInput(chunk: Record<string, unknown>): unknown {
+  return firstKnownValue(chunk, [
+    'args',
+    'input',
+    'toolInput',
+    'toolArgs',
+    'arguments',
+    'inputData'
+  ]);
+}
+
+function extractToolOutput(chunk: Record<string, unknown>): unknown {
+  return firstKnownValue(chunk, [
+    'result',
+    'output',
+    'toolResult',
+    'toolOutput',
+    'content',
+    'data'
+  ]);
+}
+
+function firstKnownValue(chunk: Record<string, unknown>, keys: string[]): unknown {
+  for (const key of keys) {
+    const value = chunk[key];
+
+    if (value !== undefined) {
+      return value;
+    }
+  }
+
+  for (const nestedKey of ['toolCall', 'toolCallDelta', 'toolInvocation']) {
+    const value = chunk[nestedKey];
+
+    if (isObjectRecord(value)) {
+      const nestedValue = firstKnownValue(value, keys);
+
+      if (nestedValue !== undefined) {
+        return nestedValue;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function summarizeToolInput(input: unknown) {
+  const parsedInput = parsePossiblyJson(input);
+
+  if (!isObjectRecord(parsedInput)) {
+    return summarizeUnknownValue(parsedInput);
+  }
+
+  const lines: string[] = [];
+
+  appendField(lines, parsedInput, 'command');
+  appendField(lines, parsedInput, 'cwd');
+  appendField(lines, parsedInput, 'path');
+  appendField(lines, parsedInput, 'query');
+  appendField(lines, parsedInput, 'maxDepth');
+  appendField(lines, parsedInput, 'tail');
+
+  const changes = parsedInput.changes;
+
+  if (Array.isArray(changes)) {
+    lines.push(`changes: ${changes.length}`);
+  }
+
+  return lines.length > 0 ? lines.join('\n') : summarizeUnknownValue(parsedInput);
+}
+
+function summarizeToolOutput(output: unknown) {
+  const parsedOutput = parsePossiblyJson(output);
+
+  if (!isObjectRecord(parsedOutput)) {
+    return summarizeUnknownValue(parsedOutput);
+  }
+
+  const lines: string[] = [];
+
+  appendField(lines, parsedOutput, 'path');
+  appendField(lines, parsedOutput, 'exitCode');
+  appendField(lines, parsedOutput, 'status');
+  appendField(lines, parsedOutput, 'ok');
+
+  const entries = parsedOutput.entries;
+
+  if (Array.isArray(entries)) {
+    lines.push(`entries: ${entries.length}`);
+  }
+
+  appendTextPreview(lines, parsedOutput, 'stdout');
+  appendTextPreview(lines, parsedOutput, 'stderr');
+  appendTextPreview(lines, parsedOutput, 'content');
+
+  return lines.length > 0 ? lines.join('\n') : summarizeUnknownValue(parsedOutput);
+}
+
+function appendField(lines: string[], record: Record<string, unknown>, key: string) {
+  const value = record[key];
+
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    lines.push(`${key}: ${truncateText(String(value), 180)}`);
+  }
+}
+
+function appendTextPreview(lines: string[], record: Record<string, unknown>, key: string) {
+  const value = record[key];
+
+  if (typeof value === 'string' && value.trim()) {
+    lines.push(`${key}: ${truncateText(value.trim(), 260)}`);
+  }
+}
+
+function parsePossiblyJson(value: unknown): unknown {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue.startsWith('{') && !trimmedValue.startsWith('[')) {
+    return value;
+  }
+
+  return parseJson(trimmedValue) ?? value;
+}
+
+function summarizeUnknownValue(value: unknown) {
+  if (value === undefined || value === null || value === '') {
+    return '';
+  }
+
+  if (typeof value === 'string') {
+    return truncateText(value, 260);
+  }
+
+  return truncateText(JSON.stringify(value, null, 2), 360);
+}
+
+function truncateText(value: string, maxLength: number) {
+  return value.length > maxLength ? `${value.slice(0, maxLength - 1)}...` : value;
 }
 
 function extractErrorMessage(chunk: Record<string, unknown>) {

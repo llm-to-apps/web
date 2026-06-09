@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Bot, Send, User } from 'lucide-react';
 
 type ProjectAgentChatProps = {
@@ -47,6 +47,13 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
   ]);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({
+      block: 'end'
+    });
+  }, [messages]);
 
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -197,6 +204,7 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
             <p>{message.content}</p>
           </article>
         ))}
+        <div ref={messagesEndRef} />
       </div>
 
       <form className="chat-form" onSubmit={sendMessage}>

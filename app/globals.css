@@ -369,20 +369,23 @@ button {
 }
 
 .project-workspace {
-  min-height: 100vh;
+  height: 100vh;
+  min-height: 0;
   display: grid;
   grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
   background: #eef2ee;
+  overflow: hidden;
 }
 
 .agent-column {
-  min-height: 100vh;
+  min-height: 0;
   padding: 20px;
   background: #fbfcfa;
   border-right: 1px solid var(--line);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 18px;
+  overflow: hidden;
 }
 
 .project-header {
@@ -412,6 +415,7 @@ button {
 
 .agent-chat {
   min-height: 0;
+  overflow: hidden;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 12px;
@@ -441,11 +445,14 @@ button {
 
 .chat-messages {
   min-height: 0;
-  overflow: auto;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: grid;
   align-content: start;
   gap: 12px;
   padding-right: 4px;
+  overscroll-behavior: contain;
 }
 
 .chat-message {
@@ -487,6 +494,8 @@ button {
   background: #f4f7f4;
   color: var(--muted);
   font-size: 13px;
+  max-height: 160px;
+  overflow: auto;
 }
 
 .chat-message.error p {
@@ -528,9 +537,10 @@ button {
 
 .app-preview-column {
   min-width: 0;
-  min-height: 100vh;
+  min-height: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
 }
 
 .app-preview-bar {
