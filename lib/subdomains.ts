@@ -34,8 +34,7 @@ export async function createAvailableSubdomain({
     }
   }
 
-  const fallbackWord = pickRandomSubdomainWord();
-  return cleanSubdomain(`${cleanPrefix}-${fallbackWord}-${fallbackId.slice(0, 6)}`);
+  return cleanSubdomain(`${cleanPrefix}-${fallbackId.slice(0, 6)}`);
 }
 
 export function pickRandomSubdomainWord() {
