@@ -11,14 +11,18 @@ const maxRandomAttempts = 30;
 export async function createAvailableSubdomain({
   db,
   fallbackId,
+  prefix,
   rootDomain
 }: {
   db: PrismaClientLike;
   fallbackId: string;
+  prefix: string;
   rootDomain: string;
 }) {
+  const cleanPrefix = cleanSubdomain(prefix);
+
   for (let attempt = 0; attempt < maxRandomAttempts; attempt += 1) {
-    const subdomain = pickRandomSubdomainWord();
+    const subdomain = cleanSubdomain(`${cleanPrefix}-${pickRandomSubdomainWord()}`);
     const domain = `${subdomain}.${rootDomain}`;
     const existingProject = await db.project.findUnique({
       where: { domain },
@@ -31,7 +35,7 @@ export async function createAvailableSubdomain({
   }
 
   const fallbackWord = pickRandomSubdomainWord();
-  return cleanSubdomain(`${fallbackWord}-${fallbackId.slice(0, 6)}`);
+  return cleanSubdomain(`${cleanPrefix}-${fallbackWord}-${fallbackId.slice(0, 6)}`);
 }
 
 export function pickRandomSubdomainWord() {

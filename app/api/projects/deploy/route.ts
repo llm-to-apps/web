@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
     : await createAvailableSubdomain({
         db: prisma,
         fallbackId: id,
+        prefix: template.id,
         rootDomain
       });
 
