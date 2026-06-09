@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { getDeployQueue } from '@/lib/deploy-queue';
 import { prisma } from '@/lib/db';
+import { createAvailableSubdomain } from '@/lib/subdomains';
 import {
   cleanSubdomain,
   createAgentToolsToken,
@@ -42,7 +43,13 @@ export async function POST(request: NextRequest) {
   }
 
   const id = createProjectId();
-  const subdomain = cleanSubdomain(body.subdomain || `money-${id}`);
+  const subdomain = body.subdomain
+    ? cleanSubdomain(body.subdomain)
+    : await createAvailableSubdomain({
+        db: prisma,
+        fallbackId: id,
+        rootDomain
+      });
 
   if (!subdomain) {
     return NextResponse.json(

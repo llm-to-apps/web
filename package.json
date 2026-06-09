@@ -12,7 +12,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
-    "prisma:push": "prisma db push"
+    "prisma:push": "prisma db push",
+    "subdomains:build": "node scripts/build-subdomain-words.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
