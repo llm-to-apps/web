@@ -478,6 +478,10 @@ button {
   font-weight: 700;
 }
 
+.project-token-summary span {
+  color: var(--muted);
+}
+
 .back-link {
   color: var(--muted);
   text-decoration: none;

@@ -109,6 +109,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             {usageSummary ? (
               <span className="project-token-summary" title={usageSummary.title}>
                 <strong>{usageSummary.total}</strong>
+                <span>tokens</span>
               </span>
             ) : null}
             <McpConnectButton
