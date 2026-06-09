@@ -11,36 +11,22 @@ type AgentChatRequest = {
   message?: string;
 };
 
-type MastraGenerateResult = {
-  text?: string;
-  steps?: Array<{
-    toolResults?: Array<{
-      payload?: {
-        toolName?: string;
-        result?: unknown;
-      };
-    }>;
-  }>;
-  response?: {
-    messages?: Array<{
-      content?: unknown;
-    }>;
-  };
-};
-
-type ProjectFileEntry = {
-  path: string;
-  type: 'file' | 'dir';
-  size?: number;
-  depth?: number;
-};
-
-type CommandResult = {
-  command: string;
-  exitCode: number;
-  stdout: string;
-  stderr: string;
-};
+type AgentStreamEvent =
+  | {
+      type: 'text';
+      text: string;
+    }
+  | {
+      type: 'progress';
+      message: string;
+    }
+  | {
+      type: 'error';
+      message: string;
+    }
+  | {
+      type: 'done';
+    };
 
 export async function POST(request: NextRequest, context: AgentChatContext) {
   const requestId = crypto.randomUUID();
@@ -115,16 +101,16 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
     });
   }
 
-  const generateUrl = `${agentUrl.replace(/\/$/, '')}/api/agents/projectAgent/generate`;
+  const streamUrl = `${agentUrl.replace(/\/$/, '')}/api/agents/projectAgent/stream`;
 
   console.info('[agent-chat] forwarding to agent', {
     requestId,
     projectId: project.id,
-    generateUrl
+    streamUrl
   });
 
   const agentResponse = await fetch(
-    generateUrl,
+    streamUrl,
     {
       method: 'POST',
       headers: {
@@ -170,28 +156,21 @@ Rules:
       })
     }
   );
-  const agentResult = (await agentResponse.json().catch(() => null)) as
-    | MastraGenerateResult
-    | null;
-  const durationMs = Date.now() - startedAt;
 
-  console.info('[agent-chat] agent response', {
+  console.info('[agent-chat] agent stream response', {
     requestId,
     projectId: project.id,
     status: agentResponse.status,
     ok: agentResponse.ok,
-    durationMs,
-    hasText: Boolean(agentResult?.text),
-    toolResults: countToolResults(agentResult),
-    responseMessages: agentResult?.response?.messages?.length ?? 0
+    durationMs: Date.now() - startedAt
   });
 
-  if (!agentResponse.ok || !agentResult) {
+  if (!agentResponse.ok || !agentResponse.body) {
     console.error('[agent-chat] agent request failed', {
       requestId,
       projectId: project.id,
       status: agentResponse.status,
-      durationMs
+      durationMs: Date.now() - startedAt
     });
 
     return NextResponse.json(
@@ -203,197 +182,213 @@ Rules:
     );
   }
 
-  return NextResponse.json({
-    ok: true,
-    message: {
-      id: crypto.randomUUID(),
-      role: 'assistant',
-      content: extractAgentText(agentResult)
+  return new Response(createAgentChatStream(agentResponse.body, requestId, project.id), {
+    headers: {
+      'Content-Type': 'application/x-ndjson; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'X-Accel-Buffering': 'no'
     }
   });
 }
 
-function extractAgentText(result: MastraGenerateResult) {
-  const text = collapseRepeatedSentences(
-    result.text || extractLastMessageText(result) || ''
-  );
-  const toolText = extractLatestToolResultText(result);
+function createAgentChatStream(
+  mastraBody: ReadableStream<Uint8Array>,
+  requestId: string,
+  projectId: string
+) {
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  const reader = mastraBody.getReader();
+  let buffer = '';
 
-  if (toolText && isToolPreamble(text)) {
-    return toolText;
-  }
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const writeEvent = (event: AgentStreamEvent) => {
+        controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+      };
 
-  return text || toolText || 'The agent returned an empty response.';
-}
+      writeEvent({ type: 'progress', message: 'Agent started.' });
 
-function extractLastMessageText(result: MastraGenerateResult) {
-  const content = result.response?.messages?.at(-1)?.content;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
 
-  if (typeof content === 'string') {
-    return content;
-  }
+          if (done) {
+            break;
+          }
 
-  if (Array.isArray(content)) {
-    return content
-      .map((part) => {
-        if (
-          part &&
-          typeof part === 'object' &&
-          'type' in part &&
-          part.type === 'text' &&
-          'text' in part &&
-          typeof part.text === 'string'
-        ) {
-          return part.text;
+          buffer += decoder.decode(value, { stream: true });
+          buffer = flushSseBuffer(buffer, writeEvent);
         }
 
-        return '';
-      })
-      .filter(Boolean)
-      .join('\n');
+        buffer += decoder.decode();
+        flushSseBuffer(`${buffer}\n\n`, writeEvent);
+        writeEvent({ type: 'done' });
+
+        console.info('[agent-chat] stream completed', {
+          requestId,
+          projectId
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Agent stream failed';
+
+        console.error('[agent-chat] stream failed', {
+          requestId,
+          projectId,
+          message
+        });
+
+        writeEvent({ type: 'error', message });
+      } finally {
+        controller.close();
+        reader.releaseLock();
+      }
+    }
+  });
+}
+
+function flushSseBuffer(
+  buffer: string,
+  writeEvent: (event: AgentStreamEvent) => void
+) {
+  const parts = buffer.split(/\r?\n\r?\n/);
+  const remainder = parts.pop() ?? '';
+
+  for (const part of parts) {
+    handleSseEvent(part, writeEvent);
+  }
+
+  return remainder;
+}
+
+function handleSseEvent(
+  eventBlock: string,
+  writeEvent: (event: AgentStreamEvent) => void
+) {
+  const data = eventBlock
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith('data:'))
+    .map((line) => line.slice(5).trimStart())
+    .join('\n');
+
+  if (!data || data === '[DONE]') {
+    return;
+  }
+
+  const parsed = parseJson(data);
+
+  if (!parsed) {
+    writeEvent({ type: 'text', text: data });
+    return;
+  }
+
+  for (const event of mapMastraStreamEvent(parsed)) {
+    writeEvent(event);
+  }
+}
+
+function parseJson(value: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function mapMastraStreamEvent(chunk: unknown): AgentStreamEvent[] {
+  if (!isObjectRecord(chunk)) {
+    return [];
+  }
+
+  const type = typeof chunk.type === 'string' ? chunk.type : '';
+  const text = extractStreamText(chunk);
+
+  if (text) {
+    return [{ type: 'text', text }];
+  }
+
+  if (type.includes('tool-call') || type === 'tool-input-start') {
+    return [
+      {
+        type: 'progress',
+        message: `Running ${extractToolName(chunk) ?? 'tool'}...`
+      }
+    ];
+  }
+
+  if (type.includes('tool-result') || type.includes('tool-output')) {
+    return [
+      {
+        type: 'progress',
+        message: `Finished ${extractToolName(chunk) ?? 'tool'}.`
+      }
+    ];
+  }
+
+  if (type.includes('step-start')) {
+    return [{ type: 'progress', message: 'Agent step started.' }];
+  }
+
+  if (type.includes('step-finish') || type.includes('finish-step')) {
+    return [{ type: 'progress', message: 'Agent step finished.' }];
+  }
+
+  if (type === 'error') {
+    return [
+      {
+        type: 'error',
+        message: extractErrorMessage(chunk)
+      }
+    ];
+  }
+
+  return [];
+}
+
+function extractStreamText(chunk: Record<string, unknown>) {
+  for (const key of ['textDelta', 'delta', 'text']) {
+    const value = chunk[key];
+
+    if (typeof value === 'string' && value) {
+      return value;
+    }
   }
 
   return '';
 }
 
-function extractLatestToolResultText(result: MastraGenerateResult) {
-  const toolResult = result.steps
-    ?.flatMap((step) => step.toolResults ?? [])
-    .at(-1)?.payload;
+function extractToolName(chunk: Record<string, unknown>) {
+  for (const key of ['toolName', 'name']) {
+    const value = chunk[key];
 
-  if (!toolResult) {
-    return '';
-  }
-
-  return formatToolResult(toolResult.toolName, toolResult.result);
-}
-
-function formatToolResult(toolName: string | undefined, result: unknown) {
-  if (toolName === 'listProjectFiles' && isFileTreeResult(result)) {
-    return [
-      `Files (${result.entries.length}):`,
-      ...result.entries.map((entry) => {
-        const suffix = entry.type === 'dir' ? '/' : '';
-        return `- ${entry.path}${suffix}`;
-      })
-    ].join('\n');
-  }
-
-  if (toolName === 'readProjectFile' && isReadFileResult(result)) {
-    return [`${result.path}:`, '```', result.content, '```'].join('\n');
-  }
-
-  if (toolName === 'getProjectAppLogs' && isObjectRecord(result)) {
-    const logs = result.logs ?? result.content ?? result.stdout;
-
-    if (typeof logs === 'string') {
-      return logs.trim() || 'No application logs returned.';
+    if (typeof value === 'string' && value) {
+      return value;
     }
   }
 
-  if (toolName === 'searchProjectFiles' && isCommandResult(result)) {
-    if (result.exitCode === 1 || !result.stdout.trim()) {
-      return 'No matches found.';
-    }
+  const toolCall = chunk.toolCall;
 
-    return result.stdout.trim();
+  if (isObjectRecord(toolCall) && typeof toolCall.toolName === 'string') {
+    return toolCall.toolName;
   }
 
-  if (
-    (toolName === 'runProjectCommand' ||
-      toolName === 'patchProjectFiles' ||
-      toolName === 'getProjectGitStatus') &&
-    isCommandResult(result)
-  ) {
-    return [
-      `Command: ${result.command}`,
-      `Exit code: ${result.exitCode}`,
-      result.stdout.trim() ? `stdout:\n${result.stdout.trim()}` : '',
-      result.stderr.trim() ? `stderr:\n${result.stderr.trim()}` : ''
-    ]
-      .filter(Boolean)
-      .join('\n');
+  return null;
+}
+
+function extractErrorMessage(chunk: Record<string, unknown>) {
+  const error = chunk.error;
+
+  if (typeof error === 'string') {
+    return error;
   }
 
-  if (toolName === 'writeProjectFile' && isObjectRecord(result) && typeof result.path === 'string') {
-    return `Wrote ${result.path}.`;
+  if (isObjectRecord(error) && typeof error.message === 'string') {
+    return error.message;
   }
 
-  return JSON.stringify(result, null, 2);
-}
-
-function isFileTreeResult(result: unknown): result is { entries: ProjectFileEntry[] } {
-  return (
-    isObjectRecord(result) &&
-    Array.isArray(result.entries) &&
-    result.entries.every(
-      (entry) =>
-        isObjectRecord(entry) &&
-        typeof entry.path === 'string' &&
-        (entry.type === 'file' || entry.type === 'dir')
-    )
-  );
-}
-
-function isReadFileResult(result: unknown): result is { path: string; content: string } {
-  return (
-    isObjectRecord(result) &&
-    typeof result.path === 'string' &&
-    typeof result.content === 'string'
-  );
-}
-
-function isCommandResult(result: unknown): result is CommandResult {
-  return (
-    isObjectRecord(result) &&
-    typeof result.command === 'string' &&
-    typeof result.exitCode === 'number' &&
-    typeof result.stdout === 'string' &&
-    typeof result.stderr === 'string'
-  );
+  return 'Agent stream returned an error.';
 }
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function isToolPreamble(text: string) {
-  if (!text.trim()) {
-    return true;
-  }
-
-  const normalized = text.trim().toLowerCase();
-
-  return (
-    normalized.startsWith("i'll ") ||
-    normalized.startsWith('i will ') ||
-    normalized.startsWith('let me ') ||
-    normalized.includes('get the list of files')
-  );
-}
-
-function countToolResults(result: MastraGenerateResult | null) {
-  return result?.steps?.reduce((count, step) => count + (step.toolResults?.length ?? 0), 0) ?? 0;
-}
-
-function collapseRepeatedSentences(text: string) {
-  const sentences = text.match(/[^.!?]+[.!?]+|\S[\s\S]*$/g);
-
-  if (!sentences) {
-    return text;
-  }
-
-  const seen = new Set<string>();
-  const deduped = sentences.filter((sentence) => {
-    const key = sentence.trim().toLowerCase();
-
-    if (seen.has(key)) {
-      return false;
-    }
-
-    seen.add(key);
-    return true;
-  });
-
-  return deduped.join('').trim();
 }

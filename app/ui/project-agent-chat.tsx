@@ -17,16 +17,24 @@ type ChatMessage = {
   id: string;
   role: 'assistant' | 'user';
   content: string;
+  kind?: 'message' | 'progress' | 'error';
 };
 
-type ChatResult =
+type AgentStreamEvent =
   | {
-      ok: true;
-      message: ChatMessage;
+      type: 'text';
+      text: string;
     }
   | {
-      ok: false;
+      type: 'progress';
       message: string;
+    }
+  | {
+      type: 'error';
+      message: string;
+    }
+  | {
+      type: 'done';
     };
 
 export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
@@ -53,6 +61,7 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
       role: 'user',
       content
     };
+    const assistantMessageId = crypto.randomUUID();
 
     setMessages((currentMessages) => [...currentMessages, userMessage]);
     setInput('');
@@ -68,30 +77,105 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
           message: content
         })
       });
-      const data = (await response.json()) as ChatResult;
 
-      setMessages((currentMessages) => [
-        ...currentMessages,
-        data.ok
-          ? data.message
-          : {
-              id: crypto.randomUUID(),
-              role: 'assistant',
-              content: data.message
-            }
-      ]);
-    } catch (error) {
-      setMessages((currentMessages) => [
-        ...currentMessages,
-        {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          content: error instanceof Error ? error.message : 'Agent request failed'
+      if (!response.ok || !response.body) {
+        const data = (await response.json().catch(() => null)) as { message?: string } | null;
+        throw new Error(data?.message ?? `Agent request failed with ${response.status}`);
+      }
+
+      await readAgentStream(response.body, (event) => {
+        if (event.type === 'text') {
+          appendToMessage(assistantMessageId, event.text);
+          return;
         }
-      ]);
+
+        if (event.type === 'progress') {
+          addProgressMessage(event.message);
+          return;
+        }
+
+        if (event.type === 'error') {
+          addProgressMessage(event.message, 'error');
+        }
+      });
+
+      ensureAssistantMessage(assistantMessageId, 'Done.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Agent request failed';
+      appendToMessage(assistantMessageId, message, 'error');
     } finally {
       setIsSending(false);
     }
+  }
+
+  function appendToMessage(
+    messageId: string,
+    content: string,
+    kind: ChatMessage['kind'] = 'message'
+  ) {
+    setMessages((currentMessages) =>
+      currentMessages.some((message) => message.id === messageId)
+        ? currentMessages.map((message) =>
+            message.id === messageId
+              ? {
+                  ...message,
+                  content: `${message.content}${content}`,
+                  kind
+                }
+              : message
+          )
+        : [
+            ...currentMessages,
+            {
+              id: messageId,
+              role: 'assistant',
+              content,
+              kind
+            }
+          ]
+    );
+  }
+
+  function ensureAssistantMessage(messageId: string, fallbackContent: string) {
+    setMessages((currentMessages) => {
+      const existingMessage = currentMessages.find((message) => message.id === messageId);
+
+      if (existingMessage?.content.trim()) {
+        return currentMessages;
+      }
+
+      if (existingMessage) {
+        return currentMessages.map((message) =>
+          message.id === messageId
+            ? {
+                ...message,
+                content: fallbackContent
+              }
+            : message
+        );
+      }
+
+      return [
+        ...currentMessages,
+        {
+          id: messageId,
+          role: 'assistant',
+          content: fallbackContent
+        }
+      ];
+    });
+  }
+
+  function addProgressMessage(content: string, kind: ChatMessage['kind'] = 'progress') {
+    setMessages((currentMessages) => [
+      ...currentMessages,
+      {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content,
+        kind
+      }
+    ]);
   }
 
   return (
@@ -103,7 +187,10 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
 
       <div className="chat-messages" aria-live="polite">
         {messages.map((message) => (
-          <article className={`chat-message ${message.role}`} key={message.id}>
+          <article
+            className={`chat-message ${message.role} ${message.kind ?? 'message'}`}
+            key={message.id}
+          >
             <div className="chat-avatar">
               {message.role === 'assistant' ? <Bot size={16} /> : <User size={16} />}
             </div>
@@ -127,4 +214,69 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
       </form>
     </div>
   );
+}
+
+async function readAgentStream(
+  body: ReadableStream<Uint8Array>,
+  onEvent: (event: AgentStreamEvent) => void
+) {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+
+    if (done) {
+      break;
+    }
+
+    buffer += decoder.decode(value, { stream: true });
+    buffer = flushStreamLines(buffer, onEvent);
+  }
+
+  buffer += decoder.decode();
+  flushStreamLines(`${buffer}\n`, onEvent);
+  reader.releaseLock();
+}
+
+function flushStreamLines(
+  buffer: string,
+  onEvent: (event: AgentStreamEvent) => void
+) {
+  const lines = buffer.split('\n');
+  const remainder = lines.pop() ?? '';
+
+  for (const line of lines) {
+    if (!line.trim()) {
+      continue;
+    }
+
+    const event = parseAgentStreamEvent(line);
+
+    if (event) {
+      onEvent(event);
+    }
+  }
+
+  return remainder;
+}
+
+function parseAgentStreamEvent(line: string): AgentStreamEvent | null {
+  try {
+    const event = JSON.parse(line) as AgentStreamEvent;
+
+    if (
+      event.type === 'text' ||
+      event.type === 'progress' ||
+      event.type === 'error' ||
+      event.type === 'done'
+    ) {
+      return event;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
 }

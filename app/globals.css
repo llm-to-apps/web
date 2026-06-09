@@ -478,6 +478,21 @@ button {
   padding: 10px 12px;
   line-height: 1.45;
   color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.chat-message.progress p {
+  border-style: dashed;
+  background: #f4f7f4;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.chat-message.error p {
+  border-color: #e6b8b8;
+  background: #fff6f6;
+  color: #9d2d2d;
 }
 
 .chat-form {
