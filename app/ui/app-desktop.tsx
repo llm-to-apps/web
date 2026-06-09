@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Download, Store } from 'lucide-react';
 import { AppIcon } from './app-icon';
@@ -16,10 +16,10 @@ export type DesktopProject = {
   deployError: string | null;
 };
 
-type ProjectsResult =
+type ProjectResult =
   | {
       ok: true;
-      projects: DesktopProject[];
+      project: DesktopProject;
     }
   | {
       ok: false;
@@ -34,42 +34,71 @@ const installingStatuses = new Set(['queued', 'deploying']);
 
 export function AppDesktop({ initialProjects }: AppDesktopProps) {
   const [projects, setProjects] = useState(initialProjects);
-  const hasInstallingProjects = projects.some((project) =>
-    installingStatuses.has(project.status)
+  const installingProjectIds = useMemo(
+    () =>
+      projects
+        .filter((project) => installingStatuses.has(project.status))
+        .map((project) => project.id),
+    [projects]
   );
+  const installingProjectIdsKey = installingProjectIds.join('|');
 
   useEffect(() => {
     setProjects(initialProjects);
   }, [initialProjects]);
 
   useEffect(() => {
-    if (!hasInstallingProjects) {
+    const projectIds = installingProjectIdsKey.split('|').filter(Boolean);
+
+    if (projectIds.length === 0) {
       return;
     }
 
     let isCurrent = true;
 
-    async function refreshProjects() {
+    async function refreshInstallingProjects() {
       try {
-        const response = await fetch('/api/projects');
-        const data = (await response.json()) as ProjectsResult;
+        const results = await Promise.all(
+          projectIds.map(async (projectId) => {
+            const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}`);
+            const data = (await response.json()) as ProjectResult;
 
-        if (isCurrent && response.ok && data.ok) {
-          setProjects(data.projects);
+            return response.ok && data.ok ? data.project : null;
+          })
+        );
+
+        if (!isCurrent) {
+          return;
+        }
+
+        const updatedProjects = results.filter((project): project is DesktopProject =>
+          Boolean(project)
+        );
+
+        if (updatedProjects.length > 0) {
+          setProjects((currentProjects) =>
+            currentProjects.map((project) => {
+              const updatedProject = updatedProjects.find(
+                (candidate) => candidate.id === project.id
+              );
+
+              return updatedProject ?? project;
+            })
+          );
         }
       } catch {
-        // Keep the current desktop state until the next poll succeeds.
+        // Keep the current icon states until the next poll succeeds.
       }
     }
 
-    const interval = window.setInterval(refreshProjects, 2_000);
-    void refreshProjects();
+    const interval = window.setInterval(refreshInstallingProjects, 2_000);
+    void refreshInstallingProjects();
 
     return () => {
       isCurrent = false;
       window.clearInterval(interval);
     };
-  }, [hasInstallingProjects]);
+  }, [installingProjectIdsKey]);
 
   return (
     <section className="desktop-section">
