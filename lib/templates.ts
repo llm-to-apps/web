@@ -4,6 +4,8 @@ export const templates = {
   money: {
     id: 'money',
     name: 'Money',
+    description: 'Personal finance dashboard with MySQL-backed data.',
+    repository: 'money-template',
     git: 'git@github.com:llm-to-apps/money-template.git',
     image: 'ghcr.io/llm-to-apps/money-template:sha-15f667f',
     appPort: 3001,

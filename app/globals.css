@@ -186,6 +186,274 @@ button {
   align-items: start;
 }
 
+.app-tabs {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 4px;
+  margin-top: 18px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #eef2ee;
+}
+
+.app-tabs a {
+  min-height: 38px;
+  border-radius: 6px;
+  color: var(--muted);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.app-tabs a.active {
+  background: #fff;
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(24, 32, 31, 0.08);
+}
+
+.desktop-section,
+.store-section {
+  margin-top: 22px;
+}
+
+.app-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 24px 18px;
+  align-items: start;
+}
+
+.desktop-app {
+  min-height: 154px;
+  padding: 10px 8px;
+  color: var(--text);
+  text-decoration: none;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 7px;
+  border-radius: 8px;
+  position: relative;
+}
+
+.desktop-app:hover {
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.app-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: #06251f;
+  background: linear-gradient(145deg, #d7f5a2, #77d6bf);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65), 0 10px 22px rgba(24, 32, 31, 0.12);
+}
+
+.app-icon.large {
+  width: 74px;
+  height: 74px;
+  border-radius: 18px;
+}
+
+.desktop-app-name {
+  max-width: 104px;
+  font-weight: 700;
+  font-size: 14px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.desktop-app-domain,
+.desktop-app-status,
+.desktop-app-error {
+  max-width: 112px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.desktop-app-status {
+  min-height: 22px;
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: #eef2ee;
+  font-weight: 700;
+}
+
+.app-state-failed .desktop-app-status {
+  background: #fff0ee;
+  color: #9d2a1d;
+}
+
+.app-state-deploying .desktop-app-status,
+.app-state-queued .desktop-app-status {
+  background: #fff7e8;
+  color: var(--warning);
+}
+
+.desktop-app-error {
+  color: #9d2a1d;
+}
+
+.empty-desktop {
+  min-height: 360px;
+  border: 1px dashed #c6d0cb;
+  border-radius: 8px;
+  background: #fbfcfa;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  padding: 28px;
+  text-align: center;
+}
+
+.empty-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: #e7eee9;
+  color: var(--muted);
+}
+
+.empty-desktop h3 {
+  margin: 4px 0 0;
+  font-size: 20px;
+}
+
+.empty-desktop p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.store-link {
+  min-height: 38px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  padding: 9px 13px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.store-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.store-app {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 18px;
+  display: grid;
+  gap: 16px;
+}
+
+.store-app-main {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.store-app h3 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.store-app p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.store-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.store-meta div {
+  padding: 12px;
+  border-right: 1px solid var(--line);
+}
+
+.store-meta div:last-child {
+  border-right: 0;
+}
+
+.store-meta span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.store-meta strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 14px;
+}
+
+.install-control {
+  display: grid;
+  gap: 8px;
+}
+
+.install-button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font-weight: 700;
+}
+
+.install-button:disabled {
+  cursor: wait;
+  background: #82918d;
+}
+
+.inline-result {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.inline-result.success {
+  color: var(--accent-strong);
+}
+
+.inline-result.error {
+  color: var(--warning);
+}
+
 .projects-section {
   margin-top: 22px;
   display: grid;
