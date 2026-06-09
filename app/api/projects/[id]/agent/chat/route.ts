@@ -18,12 +18,6 @@ type PersistedStreamContext = {
   userId: string;
 };
 
-type KnowledgeChunk = {
-  title: string;
-  content: string;
-  sourceType: string;
-};
-
 type AgentStreamEvent =
   | {
       type: 'text';
@@ -90,29 +84,10 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
   const appMcpUrl = `${project.url.replace(/\/$/, '')}/api/mcp`;
   const mode = body.mode === 'dev' ? 'dev' : 'use';
   const userMessageContent = body.message.trim();
-  const relevantKnowledge = await findRelevantProjectKnowledge({
-    projectId: project.id,
-    query: userMessageContent,
-    userId: user.id
-  });
-  const previousChatMessages = (
-    await prisma.agentChatMessage.findMany({
-      where: {
-        userId: user.id,
-        projectId: project.id
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: 20,
-      select: {
-        role: true,
-        content: true
-      }
-    })
-  ).reverse();
+  const memoryResource = `user:${user.id}:project:${project.id}`;
+  const memoryThreadId = `user:${user.id}:project:${project.id}:main`;
 
-  const userMessage = await prisma.agentChatMessage.create({
+  await prisma.agentChatMessage.create({
     data: {
       userId: user.id,
       projectId: project.id,
@@ -120,14 +95,6 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
       mode,
       content: userMessageContent
     }
-  });
-  await persistKnowledgeChunk({
-    userId: user.id,
-    projectId: project.id,
-    sourceType: `chat:${mode}:user`,
-    sourceId: userMessage.id,
-    title: `User message in ${mode} mode`,
-    content: userMessageContent
   });
 
   console.info('[agent-chat] request', {
@@ -140,7 +107,8 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
     hasAppMcpToken: Boolean(project.appMcpToken),
     mode,
     messageLength: body.message.trim().length,
-    relevantKnowledgeCount: relevantKnowledge.length,
+    memoryResource,
+    memoryThreadId,
     toolsUrl,
     appMcpUrl
   });
@@ -189,15 +157,24 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
       },
       body: JSON.stringify({
         messages: [
-          ...previousChatMessages.map((message) => ({
-            role: message.role === 'user' ? 'user' : 'assistant',
-            content: message.content
-          })),
           {
             role: 'user',
             content: userMessageContent
           }
         ],
+        memory: {
+          resource: memoryResource,
+          thread: {
+            id: memoryThreadId,
+            title: `${project.templateName} main chat`,
+            metadata: {
+              projectId: project.id,
+              projectDomain: project.domain,
+              templateName: project.templateName,
+              userId: user.id
+            }
+          }
+        },
         instructions: `
 You are working on project ${project.id}.
 Application: ${project.templateName}
@@ -205,7 +182,6 @@ Domain: ${project.domain}
 Status: ${project.status}
 Mode: ${mode === 'dev' ? 'Dev' : 'Use'}
 ${mode === 'dev' ? `Agent tools endpoint: ${toolsUrl}` : `Application MCP endpoint: ${appMcpUrl}`}
-${formatRelevantKnowledge(relevantKnowledge)}
 
 Rules:
 - You are the llm-to-apps project coding agent for this app, not the underlying model provider.
@@ -216,7 +192,7 @@ ${mode === 'dev' ? devModeRules() : useModeRules()}
 - Do not say "let me check" unless you actually call a tool.
 - Do not claim you changed files unless a tool call confirms it.
 - When answering about application data, keep the answer concise and do not include internal IDs unless the user asks for them.
-- Treat relevant project memory as helpful context, not proof of current files, runtime state, or app data. Verify current facts with tools.
+- Mastra memory may provide prior conversation context. Treat it as helpful context, not proof of current files, runtime state, or app data. Verify current facts with tools.
 `,
         maxSteps: 15,
         modelSettings: {
@@ -389,182 +365,12 @@ async function persistAssistantMessage(context: PersistedStreamContext, content:
         content: trimmedContent
       }
     })
-    .then((message) =>
-      persistKnowledgeChunk({
-        userId: context.userId,
-        projectId: context.projectId,
-        sourceType: `chat:${context.mode}:assistant`,
-        sourceId: message.id,
-        title: `Assistant response in ${context.mode} mode`,
-        content: trimmedContent
-      })
-    )
     .catch((error) => {
       console.error('[agent-chat] failed to persist assistant message', {
         projectId: context.projectId,
         message: error instanceof Error ? error.message : 'Unknown error'
       });
     });
-}
-
-async function persistKnowledgeChunk({
-  content,
-  projectId,
-  sourceId,
-  sourceType,
-  title,
-  userId
-}: {
-  content: string;
-  projectId: string;
-  sourceId?: string;
-  sourceType: string;
-  title: string;
-  userId: string;
-}) {
-  const trimmedContent = content.trim();
-
-  if (trimmedContent.length < 20) {
-    return;
-  }
-
-  await prisma.agentKnowledgeChunk
-    .create({
-      data: {
-        userId,
-        projectId,
-        sourceType,
-        sourceId,
-        title,
-        content: truncateText(trimmedContent, 4000)
-      }
-    })
-    .catch((error) => {
-      console.error('[agent-chat] failed to persist knowledge chunk', {
-        projectId,
-        sourceType,
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
-    });
-}
-
-async function findRelevantProjectKnowledge({
-  projectId,
-  query,
-  userId
-}: {
-  projectId: string;
-  query: string;
-  userId: string;
-}): Promise<KnowledgeChunk[]> {
-  const terms = extractSearchTerms(query);
-
-  if (terms.length === 0) {
-    return [];
-  }
-
-  const chunks = await prisma.agentKnowledgeChunk.findMany({
-    where: {
-      userId,
-      projectId,
-      OR: terms.map((term) => ({
-        content: {
-          contains: term
-        }
-      }))
-    },
-    orderBy: {
-      updatedAt: 'desc'
-    },
-    take: 40,
-    select: {
-      title: true,
-      content: true,
-      sourceType: true,
-      updatedAt: true
-    }
-  });
-
-  return chunks
-    .map((chunk) => ({
-      ...chunk,
-      score: scoreKnowledgeChunk(chunk.content, terms)
-    }))
-    .filter((chunk) => chunk.score > 0)
-    .sort((a, b) => b.score - a.score || b.updatedAt.getTime() - a.updatedAt.getTime())
-    .slice(0, 6)
-    .map(({ content, sourceType, title }) => ({
-      content,
-      sourceType,
-      title
-    }));
-}
-
-function formatRelevantKnowledge(chunks: KnowledgeChunk[]) {
-  if (chunks.length === 0) {
-    return '';
-  }
-
-  return [
-    '',
-    'Relevant project memory:',
-    ...chunks.map((chunk, index) =>
-      [
-        `${index + 1}. ${chunk.title} (${chunk.sourceType})`,
-        truncateText(chunk.content, 900)
-      ].join('\n')
-    )
-  ].join('\n');
-}
-
-function extractSearchTerms(query: string) {
-  const stopWords = new Set([
-    'about',
-    'agent',
-    'change',
-    'what',
-    'where',
-    'which',
-    'with',
-    'this',
-    'that',
-    'then',
-    'your',
-    'have',
-    'есть',
-    'как',
-    'что',
-    'для',
-    'или',
-    'это',
-    'тут',
-    'нам',
-    'меня',
-    'тебя'
-  ]);
-
-  return Array.from(
-    new Set(
-      query
-        .toLowerCase()
-        .split(/[^\p{L}\p{N}_-]+/u)
-        .map((term) => term.trim())
-        .filter((term) => term.length >= 3 && !stopWords.has(term))
-    )
-  ).slice(0, 8);
-}
-
-function scoreKnowledgeChunk(content: string, terms: string[]) {
-  const lowerContent = content.toLowerCase();
-
-  return terms.reduce((score, term) => {
-    const matches = lowerContent.match(new RegExp(escapeRegExp(term), 'g'));
-    return score + (matches?.length ?? 0);
-  }, 0);
-}
-
-function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function flushSseBuffer(
