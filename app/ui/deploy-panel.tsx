@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
-import { ArrowUpRight, AtSign, Globe2, Loader2 } from 'lucide-react';
+import { ArrowUpRight, Globe2, Loader2 } from 'lucide-react';
 
 type DeployResult =
   | {
@@ -16,7 +16,6 @@ type DeployResult =
     };
 
 export function DeployPanel() {
-  const [email, setEmail] = useState('');
   const [subdomain, setSubdomain] = useState('');
   const [isDeploying, setIsDeploying] = useState(false);
   const [result, setResult] = useState<DeployResult | null>(null);
@@ -33,7 +32,6 @@ export function DeployPanel() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          email,
           subdomain,
           templateId: 'money'
         })
@@ -61,22 +59,6 @@ export function DeployPanel() {
 
   return (
     <form className="form" onSubmit={onSubmit}>
-      <div className="field">
-        <label htmlFor="email">Owner email</label>
-        <div className="input-wrap">
-          <AtSign size={18} />
-          <input
-            id="email"
-            name="email"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="you@example.com"
-            required
-          />
-        </div>
-      </div>
-
       <div className="field">
         <label htmlFor="subdomain">Subdomain</label>
         <div className="input-wrap">

@@ -6,6 +6,7 @@ Next.js app for user registration and template deployment.
 
 ```bash
 npm install
+npm run prisma:push
 npm run dev
 ```
 
@@ -14,6 +15,8 @@ npm run dev
 ```text
 MANAGER_URL=http://manager:8080
 APP_ROOT_DOMAIN=llmagents.com
+DATABASE_URL=mysql://root:password@mysql:3306/llagents_platform
+AUTH_SECRET=change-me
 ```
 
 ## First Template

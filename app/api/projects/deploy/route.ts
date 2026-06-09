@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes } from 'node:crypto';
 
+import { getCurrentUser } from '@/lib/auth';
+
 const templates = {
   money: {
     id: 'money',
@@ -14,7 +16,6 @@ const templates = {
 type TemplateId = keyof typeof templates;
 
 type DeployRequest = {
-  email?: string;
   templateId?: TemplateId;
   subdomain?: string;
 };
@@ -34,6 +35,15 @@ function createId() {
 }
 
 export async function POST(request: NextRequest) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { ok: false, message: 'Sign in before deploying an application' },
+      { status: 401 }
+    );
+  }
+
   const body = (await request.json()) as DeployRequest;
   const templateId = body.templateId ?? 'money';
   const template = templates[templateId];
@@ -43,13 +53,6 @@ export async function POST(request: NextRequest) {
   if (!template) {
     return NextResponse.json(
       { ok: false, message: 'Unknown template' },
-      { status: 400 }
-    );
-  }
-
-  if (!body.email || !body.email.includes('@')) {
-    return NextResponse.json(
-      { ok: false, message: 'A valid email is required' },
       { status: 400 }
     );
   }
@@ -84,7 +87,8 @@ export async function POST(request: NextRequest) {
     },
     env: {
       TEMPLATE_ID: template.id,
-      USER_EMAIL: body.email,
+      USER_ID: user.id,
+      USER_EMAIL: user.email,
       MYSQL_HOST: 'mysql',
       MYSQL_PORT: '3306',
       MYSQL_DATABASE: dbName,

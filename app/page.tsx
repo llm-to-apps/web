@@ -1,7 +1,12 @@
+import { AuthPanel } from './ui/auth-panel';
 import { DeployPanel } from './ui/deploy-panel';
-import { Boxes, CircleDollarSign } from 'lucide-react';
+import { LogoutButton } from './ui/logout-button';
+import { getCurrentUser } from '@/lib/auth';
+import { Boxes, CircleDollarSign, UserRound } from 'lucide-react';
 
-export default function Home() {
+export default async function Home() {
+  const user = await getCurrentUser();
+
   return (
     <main className="shell">
       <aside className="sidebar">
@@ -37,49 +42,94 @@ export default function Home() {
       <section className="main">
         <div className="topbar">
           <span className="pill">Private beta</span>
+          {user ? (
+            <div className="account-pill">
+              <UserRound size={16} />
+              <span>{user.name || user.email}</span>
+              <LogoutButton />
+            </div>
+          ) : null}
         </div>
 
         <div className="workspace">
           <header className="section-heading">
             <div>
-              <h2>Application templates</h2>
-              <p>Register a workspace owner and deploy the first live app.</p>
+              <h2>{user ? 'Application templates' : 'Create your account'}</h2>
+              <p>
+                {user
+                  ? 'Deploy the first live app from your template library.'
+                  : 'Register or sign in before deploying a live application.'}
+              </p>
             </div>
           </header>
 
-          <div className="deploy-grid">
-            <article className="template">
-              <div className="template-header">
-                <div className="template-title">
-                  <div className="template-icon">
-                    <CircleDollarSign size={24} />
+          {user ? (
+            <div className="deploy-grid">
+              <article className="template">
+                <div className="template-header">
+                  <div className="template-title">
+                    <div className="template-icon">
+                      <CircleDollarSign size={24} />
+                    </div>
+                    <div>
+                      <h3>Money</h3>
+                      <p>Personal finance dashboard with MySQL-backed data.</p>
+                    </div>
+                  </div>
+                  <span className="tag">Ready</span>
+                </div>
+
+                <div className="meta">
+                  <div>
+                    <span>Repository</span>
+                    <strong>money-template</strong>
                   </div>
                   <div>
-                    <h3>Money</h3>
-                    <p>Personal finance dashboard with MySQL-backed data.</p>
+                    <span>App port</span>
+                    <strong>3001</strong>
+                  </div>
+                  <div>
+                    <span>Agent port</span>
+                    <strong>7001</strong>
                   </div>
                 </div>
-                <span className="tag">Ready</span>
-              </div>
+              </article>
 
-              <div className="meta">
-                <div>
-                  <span>Repository</span>
-                  <strong>money-template</strong>
+              <DeployPanel />
+            </div>
+          ) : (
+            <div className="auth-grid">
+              <article className="template">
+                <div className="template-header">
+                  <div className="template-title">
+                    <div className="template-icon">
+                      <CircleDollarSign size={24} />
+                    </div>
+                    <div>
+                      <h3>Money</h3>
+                      <p>Sign in to deploy your first MySQL-backed app.</p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <span>App port</span>
-                  <strong>3001</strong>
+                <div className="meta">
+                  <div>
+                    <span>Accounts</span>
+                    <strong>MySQL</strong>
+                  </div>
+                  <div>
+                    <span>Session</span>
+                    <strong>HTTP-only</strong>
+                  </div>
+                  <div>
+                    <span>Deploy</span>
+                    <strong>After sign in</strong>
+                  </div>
                 </div>
-                <div>
-                  <span>Agent port</span>
-                  <strong>7001</strong>
-                </div>
-              </div>
-            </article>
+              </article>
 
-            <DeployPanel />
-          </div>
+              <AuthPanel />
+            </div>
+          )}
         </div>
       </section>
     </main>
