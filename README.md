@@ -31,7 +31,7 @@ npm install
 MANAGER_URL=http://manager:8080
 AGENT_URL=http://agent:4111
 APP_ROOT_DOMAIN=llmagents.com
-DATABASE_URL=mysql://root:password@mysql:3306/llagents_platform
+DATABASE_URL=postgresql://llagents:password@postgres:5432/llagents_platform
 AUTH_SECRET=change-me
 REDIS_URL=redis://localhost:6379
 ```
