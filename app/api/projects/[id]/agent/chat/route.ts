@@ -86,6 +86,7 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
   const userMessageContent = body.message.trim();
   const memoryResource = `user:${user.id}:project:${project.id}`;
   const memoryThreadId = `user:${user.id}:project:${project.id}:main`;
+  const isMemoryDebugEnabled = process.env.AGENT_MEMORY_DEBUG === 'true';
 
   await prisma.agentChatMessage.create({
     data: {
@@ -111,6 +112,18 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
     memoryThreadId,
     toolsUrl,
     appMcpUrl
+  });
+
+  console.info('[agent-chat] Mastra memory scope', {
+    requestId,
+    projectId: project.id,
+    memoryEnabled: true,
+    memoryProvider: 'mastra',
+    memoryKind: 'message-history',
+    memoryResource,
+    memoryThreadId,
+    memorySchema: process.env.MASTRA_DATABASE_SCHEMA ?? 'mastra',
+    lastMessages: 20
   });
 
   if (!agentUrl) {
@@ -239,6 +252,13 @@ ${mode === 'dev' ? devModeRules() : useModeRules()}
 
   return new Response(
     createAgentChatStream(agentResponse.body, requestId, {
+      memoryDebug: isMemoryDebugEnabled
+        ? {
+            memoryResource,
+            memorySchema: process.env.MASTRA_DATABASE_SCHEMA ?? 'mastra',
+            memoryThreadId
+          }
+        : undefined,
       mode,
       projectId: project.id,
       userId: user.id
@@ -281,10 +301,36 @@ function devModeRules() {
 - Final answers after edits must include what changed and what verification ran.`;
 }
 
+function formatMemoryDebugProgress({
+  memoryResource,
+  memorySchema,
+  memoryThreadId
+}: {
+  memoryResource: string;
+  memorySchema: string;
+  memoryThreadId: string;
+}) {
+  return [
+    'Agent started.',
+    'Mastra Memory: enabled',
+    'Memory kind: message-history',
+    'Recall window: lastMessages=20',
+    `Postgres schema: ${memorySchema}`,
+    `Resource: ${memoryResource}`,
+    `Thread: ${memoryThreadId}`
+  ].join('\n');
+}
+
 function createAgentChatStream(
   mastraBody: ReadableStream<Uint8Array>,
   requestId: string,
-  context: PersistedStreamContext
+  context: PersistedStreamContext & {
+    memoryDebug?: {
+      memoryResource: string;
+      memorySchema: string;
+      memoryThreadId: string;
+    };
+  }
 ) {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
@@ -307,7 +353,12 @@ function createAgentChatStream(
         controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
       };
 
-      writeEvent({ type: 'progress', message: 'Agent started.' });
+      writeEvent({
+        type: 'progress',
+        message: context.memoryDebug
+          ? formatMemoryDebugProgress(context.memoryDebug)
+          : 'Agent started.'
+      });
 
       try {
         while (true) {

@@ -34,7 +34,11 @@ APP_ROOT_DOMAIN=llmagents.com
 DATABASE_URL=postgresql://llagents:password@postgres:5432/llagents_platform
 AUTH_SECRET=change-me
 REDIS_URL=redis://localhost:6379
+AGENT_MEMORY_DEBUG=false
 ```
+
+Set `AGENT_MEMORY_DEBUG=true` to show Mastra Memory scope in the agent chat
+progress message while debugging.
 
 ## First Template
 
