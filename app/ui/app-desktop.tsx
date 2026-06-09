@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Download, Store, Trash2 } from 'lucide-react';
 import { AppIcon } from './app-icon';
-import type { TemplateId } from '@/lib/templates';
 
 export type DesktopProject = {
   id: string;
@@ -179,7 +178,7 @@ export function AppDesktop({ initialProjects }: AppDesktopProps) {
                   href={`/apps/${encodeURIComponent(project.id)}`}
                 >
                   <span className="desktop-app-icon-wrap">
-                    <AppIcon templateId={project.templateId as TemplateId} size="large" />
+                    <AppIcon templateId={project.templateId} size="large" />
                     {isBusy ? (
                       <span className="install-spinner" aria-label="Installing" />
                     ) : null}

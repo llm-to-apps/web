@@ -10,12 +10,11 @@ import {
   createAppMcpToken,
   createProjectCredentials,
   createProjectId,
-  getInstallableTemplate,
-  type TemplateId
+  isInstallableTemplate
 } from '@/lib/templates';
 
 type DeployRequest = {
-  templateId?: TemplateId;
+  templateId?: string;
   subdomain?: string;
 };
 
@@ -31,11 +30,13 @@ export async function POST(request: NextRequest) {
 
   const body = (await request.json()) as DeployRequest;
   const templateId = body.templateId ?? 'money';
-  const template = getInstallableTemplate(templateId);
+  const template = await prisma.appTemplate.findUnique({
+    where: { id: templateId }
+  });
   const rootDomain = process.env.APP_ROOT_DOMAIN || 'llmagents.com';
   const managerUrl = process.env.MANAGER_URL || 'http://manager:8080';
 
-  if (!template) {
+  if (!template || !isInstallableTemplate(template)) {
     return NextResponse.json(
       { ok: false, message: 'This template is not available for install yet' },
       { status: 400 }

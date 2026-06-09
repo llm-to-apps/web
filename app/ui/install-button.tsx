@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import type { TemplateId } from '@/lib/templates';
 
 type InstallResult =
   | {
@@ -20,7 +19,7 @@ type InstallResult =
     };
 
 type InstallButtonProps = {
-  templateId: TemplateId;
+  templateId: string;
 };
 
 export function InstallButton({ templateId }: InstallButtonProps) {

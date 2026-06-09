@@ -46,6 +46,26 @@ model Project {
   @@map("projects")
 }
 
+model AppTemplate {
+  id          String   @id @db.VarChar(64)
+  slug        String   @unique @db.VarChar(64)
+  name        String   @db.VarChar(128)
+  description String   @db.Text
+  icon        String   @db.VarChar(64)
+  status      String   @default("coming_soon") @db.VarChar(32)
+  repository  String?  @db.VarChar(128)
+  git         String?  @db.VarChar(255)
+  image       String?  @db.VarChar(255)
+  appPort     Int?
+  agentPort   Int?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status, sortOrder])
+  @@map("app_templates")
+}
+
 model AgentChatMessage {
   id        String   @id @default(cuid())
   userId    String

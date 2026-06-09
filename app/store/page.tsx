@@ -4,12 +4,16 @@ import { AppTabs } from '../ui/app-tabs';
 import { InstallButton } from '../ui/install-button';
 import { SignedOutContent } from '../ui/signed-out-content';
 import { getCurrentUser } from '@/lib/auth';
-import { isInstallableTemplate, templates } from '@/lib/templates';
-
-const appTemplates = Object.values(templates);
+import { prisma } from '@/lib/db';
+import { isInstallableTemplate } from '@/lib/templates';
 
 export default async function StorePage() {
   const user = await getCurrentUser();
+  const appTemplates = user
+    ? await prisma.appTemplate.findMany({
+        orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }]
+      })
+    : [];
 
   return (
     <AppShell
@@ -29,7 +33,7 @@ export default async function StorePage() {
               {appTemplates.map((template) => (
                 <article className="store-app" key={template.id}>
                   <div className="store-app-main">
-                    <AppIcon templateId={template.id} size="large" />
+                    <AppIcon icon={template.icon} templateId={template.id} size="large" />
                     <div>
                       <h3>{template.name}</h3>
                       <p>{template.description}</p>

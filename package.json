@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "prisma generate && prisma db push && next dev",
+    "dev": "prisma generate && prisma db push && npm run seed && next dev",
     "worker": "npm run worker:build && node dist-worker/worker/deploy-worker.js",
     "worker:start": "node dist-worker/worker/deploy-worker.js",
     "worker:build": "tsc -p tsconfig.worker.json",
@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
+    "seed": "node --experimental-strip-types prisma/seed.ts",
     "subdomains:build": "node scripts/build-subdomain-words.mjs"
   },
   "dependencies": {

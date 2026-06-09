@@ -37,4 +37,4 @@ COPY --from=builder /app/next.config.ts ./next.config.ts
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "npm run prisma:push && npm run start"]
+CMD ["sh", "-c", "npm run prisma:push && npm run seed && npm run start"]

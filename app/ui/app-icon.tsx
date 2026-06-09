@@ -12,10 +12,10 @@ import {
   Smile,
   Utensils
 } from 'lucide-react';
-import { templates, type TemplateId } from '@/lib/templates';
 
 type AppIconProps = {
-  templateId: TemplateId | string;
+  icon?: string;
+  templateId: string;
   size?: 'normal' | 'large';
 };
 
@@ -34,14 +34,32 @@ const iconComponents = {
   workout: Dumbbell
 } as const;
 
-export function AppIcon({ templateId, size = 'normal' }: AppIconProps) {
-  const template = templates[templateId as TemplateId];
-  const iconName = template?.icon ?? 'money';
-  const Icon = iconComponents[iconName] ?? CircleDollarSign;
+const templateIconFallbacks: Record<string, keyof typeof iconComponents> = {
+  bookingCalendar: 'booking',
+  habitTracker: 'habits',
+  jobSearchCrm: 'jobs',
+  kanban: 'kanban',
+  mealPlanner: 'meal',
+  money: 'money',
+  moodJournal: 'mood',
+  notes: 'notes',
+  personalCrm: 'crm',
+  pomodoro: 'pomodoro',
+  subscriptionTracker: 'subscriptions',
+  workoutTracker: 'workout'
+};
+
+export function AppIcon({ icon, templateId, size = 'normal' }: AppIconProps) {
+  const iconName = icon ?? templateIconFallbacks[templateId] ?? 'money';
+  const Icon = isTemplateIcon(iconName) ? iconComponents[iconName] : CircleDollarSign;
 
   return (
     <div className={`app-icon app-icon-${templateId} ${size === 'large' ? 'large' : ''}`}>
       <Icon size={size === 'large' ? 34 : 26} />
     </div>
   );
+}
+
+function isTemplateIcon(iconName: string): iconName is keyof typeof iconComponents {
+  return iconName in iconComponents;
 }
