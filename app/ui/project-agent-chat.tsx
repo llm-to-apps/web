@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { Bot, Lock, Send, Unlock, User } from 'lucide-react';
+import { Bot, ExternalLink, Lock, Send, Unlock, User } from 'lucide-react';
 
 type ProjectAgentChatProps = {
   project: {
@@ -10,6 +10,8 @@ type ProjectAgentChatProps = {
     status: string;
     domain: string;
     toolsUrl: string;
+    mcpUrl: string;
+    mcpToken: string | null;
   };
   initialMessages?: ChatMessage[];
 };
@@ -55,6 +57,7 @@ export function ProjectAgentChat({ initialMessages = [], project }: ProjectAgent
   const [input, setInput] = useState('');
   const [mode, setMode] = useState<AgentMode>('use');
   const [isSending, setIsSending] = useState(false);
+  const [showMcpToken, setShowMcpToken] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -249,6 +252,50 @@ export function ProjectAgentChat({ initialMessages = [], project }: ProjectAgent
         ))}
         <div ref={messagesEndRef} />
       </div>
+
+      <details className="mcp-connect">
+        <summary>Connect MCP to ChatGPT</summary>
+        <div className="mcp-connect-panel">
+          <p>
+            Create a custom MCP app in ChatGPT Developer mode and use this server URL.
+            ChatGPT must be able to reach the domain publicly; localhost needs a tunnel.
+          </p>
+          <label>
+            MCP server URL
+            <input readOnly value={project.mcpUrl} />
+          </label>
+          <label>
+            Bearer token
+            <span className="mcp-token-row">
+              <input
+                readOnly
+                type={showMcpToken ? 'text' : 'password'}
+                value={project.mcpToken ?? 'Token is not available'}
+              />
+              <button
+                onClick={() => setShowMcpToken((currentValue) => !currentValue)}
+                type="button"
+              >
+                {showMcpToken ? 'Hide' : 'Show'}
+              </button>
+            </span>
+          </label>
+          <ol>
+            <li>Open ChatGPT workspace settings and enable Developer mode.</li>
+            <li>Create a custom MCP app.</li>
+            <li>Paste the MCP server URL and configure Bearer token auth.</li>
+            <li>Test the app and enable it in ChatGPT.</li>
+          </ol>
+          <a
+            href="https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt"
+            rel="noreferrer"
+            target="_blank"
+          >
+            OpenAI MCP app instructions
+            <ExternalLink size={14} />
+          </a>
+        </div>
+      </details>
 
       <form className="chat-form" onSubmit={sendMessage}>
         <button

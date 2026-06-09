@@ -29,7 +29,8 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
       domain: true,
       url: true,
       status: true,
-      deployError: true
+      deployError: true,
+      appMcpToken: true
     }
   });
 
@@ -70,7 +71,9 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             name: project.templateName,
             status: project.status,
             domain: project.domain,
-            toolsUrl: `${project.url.replace(/\/$/, '')}/agent-tools`
+            toolsUrl: `${project.url.replace(/\/$/, '')}/agent-tools`,
+            mcpUrl: `${project.url.replace(/\/$/, '')}/api/mcp`,
+            mcpToken: project.appMcpToken
           }}
           initialMessages={orderedChatMessages.map((message) => ({
             id: message.id,

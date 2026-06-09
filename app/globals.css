@@ -472,7 +472,7 @@ button {
   min-height: 0;
   overflow: hidden;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto auto;
   gap: 12px;
 }
 
@@ -548,6 +548,84 @@ button {
   border-color: #e6b8b8;
   background: #fff6f6;
   color: #9d2d2d;
+}
+
+.mcp-connect {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.mcp-connect summary {
+  cursor: pointer;
+  padding: 10px 12px;
+  color: var(--accent);
+  font-weight: 700;
+  list-style-position: inside;
+}
+
+.mcp-connect-panel {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  padding: 11px 12px 12px;
+}
+
+.mcp-connect-panel p,
+.mcp-connect-panel ol {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.mcp-connect-panel ol {
+  padding-left: 18px;
+}
+
+.mcp-connect-panel label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mcp-connect-panel input {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  padding: 8px 9px;
+}
+
+.mcp-token-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.mcp-token-row button,
+.mcp-connect-panel a {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 700;
+  min-height: 34px;
+  padding: 0 10px;
+  text-decoration: none;
+}
+
+.mcp-connect-panel a {
+  justify-self: start;
 }
 
 .chat-form {
