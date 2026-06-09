@@ -225,7 +225,12 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
             <div className="chat-avatar">
               {message.role === 'assistant' ? <Bot size={16} /> : <User size={16} />}
             </div>
-            <p>{message.content}</p>
+            <p>
+              {message.kind === 'progress' ? (
+                <span className="chat-progress-spinner" aria-hidden="true" />
+              ) : null}
+              <span>{message.content}</span>
+            </p>
           </article>
         ))}
         <div ref={messagesEndRef} />

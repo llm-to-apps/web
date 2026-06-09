@@ -474,6 +474,19 @@ button {
   font-size: 13px;
   max-height: 160px;
   overflow: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat-progress-spinner {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  border: 2px solid #d9e4dd;
+  border-top-color: var(--accent);
+  border-radius: 999px;
+  animation: chat-spin 0.8s linear infinite;
 }
 
 .chat-message.error p {
@@ -1082,6 +1095,12 @@ button {
   color: var(--warning);
   background: #fff7e8;
   border-color: #f2d8a7;
+}
+
+@keyframes chat-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 860px) {
