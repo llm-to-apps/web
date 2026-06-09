@@ -154,6 +154,7 @@ Rules:
 - After a tool result, answer with the result. Do not call the same tool twice with the same arguments.
 - Do not say "let me check" unless you actually call a tool.
 - Do not claim you changed files unless a tool call confirms it.
+- When answering about application data, keep the answer concise and do not include internal IDs unless the user asks for them.
 `,
         maxSteps: 15,
         modelSettings: {
@@ -322,7 +323,7 @@ function mapMastraStreamEvent(chunk: unknown): AgentStreamEvent[] {
     return [{ type: 'text', text }];
   }
 
-  if (type.includes('tool-call') || type === 'tool-input-start') {
+  if (type === 'tool-call') {
     return [
       {
         type: 'progress',
@@ -331,21 +332,13 @@ function mapMastraStreamEvent(chunk: unknown): AgentStreamEvent[] {
     ];
   }
 
-  if (type.includes('tool-result') || type.includes('tool-output')) {
+  if (type === 'tool-result' || type === 'tool-output') {
     return [
       {
         type: 'progress',
         message: formatToolProgressMessage('Finished', chunk)
       }
     ];
-  }
-
-  if (type.includes('step-start')) {
-    return [{ type: 'progress', message: 'Agent step started.' }];
-  }
-
-  if (type.includes('step-finish') || type.includes('finish-step')) {
-    return [{ type: 'progress', message: 'Agent step finished.' }];
   }
 
   if (type === 'error') {
@@ -366,6 +359,18 @@ function extractStreamText(chunk: Record<string, unknown>) {
 
     if (typeof value === 'string' && value) {
       return value;
+    }
+  }
+
+  const payload = chunk.payload;
+
+  if (isObjectRecord(payload)) {
+    for (const key of ['textDelta', 'delta', 'text']) {
+      const value = payload[key];
+
+      if (typeof value === 'string' && value) {
+        return value;
+      }
     }
   }
 
@@ -403,6 +408,12 @@ function extractToolName(chunk: Record<string, unknown>) {
     return toolCallDelta.toolName;
   }
 
+  const payload = chunk.payload;
+
+  if (isObjectRecord(payload) && typeof payload.toolName === 'string') {
+    return payload.toolName;
+  }
+
   return null;
 }
 
@@ -437,7 +448,7 @@ function firstKnownValue(chunk: Record<string, unknown>, keys: string[]): unknow
     }
   }
 
-  for (const nestedKey of ['toolCall', 'toolCallDelta', 'toolInvocation']) {
+  for (const nestedKey of ['payload', 'toolCall', 'toolCallDelta', 'toolInvocation']) {
     const value = chunk[nestedKey];
 
     if (isObjectRecord(value)) {
