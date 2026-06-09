@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import { ArrowUpRight, Globe2, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 type DeployResult =
   | {
@@ -16,6 +17,7 @@ type DeployResult =
     };
 
 export function DeployPanel() {
+  const router = useRouter();
   const [subdomain, setSubdomain] = useState('');
   const [isDeploying, setIsDeploying] = useState(false);
   const [result, setResult] = useState<DeployResult | null>(null);
@@ -47,6 +49,10 @@ export function DeployPanel() {
                 'message' in data ? data.message : 'Deployment request failed'
             }
       );
+
+      if (response.ok && data.ok) {
+        router.refresh();
+      }
     } catch (error) {
       setResult({
         ok: false,

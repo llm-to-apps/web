@@ -186,6 +186,125 @@ button {
   align-items: start;
 }
 
+.projects-section {
+  margin-top: 22px;
+  display: grid;
+  gap: 12px;
+}
+
+.subheading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.subheading h3 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: 0;
+}
+
+.subheading span {
+  min-width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: #e7eee9;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.project-list {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+.project-row {
+  min-height: 72px;
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.project-row:last-child {
+  border-bottom: 0;
+}
+
+.project-main,
+.project-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.project-main h4 {
+  margin: 0;
+  font-size: 16px;
+  letter-spacing: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-main p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.template-icon.small {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+}
+
+.status {
+  min-height: 28px;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #eef2ee;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.status-deploying {
+  background: #fff7e8;
+  color: var(--warning);
+}
+
+.project-meta a {
+  min-height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 10px;
+  color: var(--text);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.empty-state {
+  border: 1px dashed #c6d0cb;
+  border-radius: 8px;
+  background: #fbfcfa;
+  color: var(--muted);
+  padding: 18px;
+  font-size: 14px;
+}
+
 .auth-grid {
   display: grid;
   grid-template-columns: minmax(280px, 1fr) minmax(300px, 380px);
@@ -441,5 +560,14 @@ button {
 
   .meta div:last-child {
     border-bottom: 0;
+  }
+
+  .project-row {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .project-meta {
+    justify-content: space-between;
   }
 }

@@ -15,8 +15,29 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   sessions     Session[]
+  projects     Project[]
 
   @@map("users")
+}
+
+model Project {
+  id           String   @id
+  userId       String
+  templateId   String
+  templateName String
+  git          String   @db.VarChar(255)
+  domain       String   @unique @db.VarChar(255)
+  url          String   @db.VarChar(255)
+  status       String   @default("deploying") @db.VarChar(32)
+  appPort      Int
+  agentPort    Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("projects")
 }
 
 model Session {

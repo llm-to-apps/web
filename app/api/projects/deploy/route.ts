@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes } from 'node:crypto';
 
 import { getCurrentUser } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 
 const templates = {
   money: {
@@ -67,6 +68,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const existingProject = await prisma.project.findUnique({
+    where: {
+      domain: `${subdomain}.${rootDomain}`
+    }
+  });
+
+  if (existingProject) {
+    return NextResponse.json(
+      { ok: false, message: 'This subdomain is already deployed' },
+      { status: 409 }
+    );
+  }
+
   const dbName = `project_${id}`;
   const dbUser = `project_${id}`;
   const dbPassword = randomBytes(18).toString('base64url');
@@ -123,10 +137,25 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const project = await prisma.project.create({
+    data: {
+      id,
+      userId: user.id,
+      templateId: template.id,
+      templateName: template.name,
+      git: template.git,
+      domain,
+      url: `http://${domain}`,
+      status: 'deploying',
+      appPort: template.appPort,
+      agentPort: template.agentPort
+    }
+  });
+
   return NextResponse.json({
     ok: true,
-    projectId: id,
-    url: `http://${domain}`,
+    projectId: project.id,
+    url: project.url,
     template: template.name,
     manager: result
   });
