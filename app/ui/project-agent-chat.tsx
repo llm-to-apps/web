@@ -11,6 +11,7 @@ type ProjectAgentChatProps = {
     domain: string;
     toolsUrl: string;
   };
+  initialMessages?: ChatMessage[];
 };
 
 type ChatMessage = {
@@ -39,14 +40,18 @@ type AgentStreamEvent =
 
 type AgentMode = 'use' | 'dev';
 
-export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content: `I am attached to ${project.name}. Ask me what you want to change or inspect.`
-    }
-  ]);
+export function ProjectAgentChat({ initialMessages = [], project }: ProjectAgentChatProps) {
+  const [messages, setMessages] = useState<ChatMessage[]>(
+    initialMessages.length > 0
+      ? initialMessages
+      : [
+          {
+            id: 'welcome',
+            role: 'assistant',
+            content: `I am attached to ${project.name}. Ask me what you want to change or inspect.`
+          }
+        ]
+  );
   const [input, setInput] = useState('');
   const [mode, setMode] = useState<AgentMode>('use');
   const [isSending, setIsSending] = useState(false);

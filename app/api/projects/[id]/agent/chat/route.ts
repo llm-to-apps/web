@@ -12,6 +12,12 @@ type AgentChatRequest = {
   mode?: 'use' | 'dev';
 };
 
+type PersistedStreamContext = {
+  mode: 'use' | 'dev';
+  projectId: string;
+  userId: string;
+};
+
 type AgentStreamEvent =
   | {
       type: 'text';
@@ -77,6 +83,33 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
   const toolsUrl = `${project.url.replace(/\/$/, '')}/agent-tools`;
   const appMcpUrl = `${project.url.replace(/\/$/, '')}/api/mcp`;
   const mode = body.mode === 'dev' ? 'dev' : 'use';
+  const userMessageContent = body.message.trim();
+  const previousChatMessages = (
+    await prisma.agentChatMessage.findMany({
+      where: {
+        userId: user.id,
+        projectId: project.id
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      take: 20,
+      select: {
+        role: true,
+        content: true
+      }
+    })
+  ).reverse();
+
+  await prisma.agentChatMessage.create({
+    data: {
+      userId: user.id,
+      projectId: project.id,
+      role: 'user',
+      mode,
+      content: userMessageContent
+    }
+  });
 
   console.info('[agent-chat] request', {
     requestId,
@@ -93,17 +126,28 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
   });
 
   if (!agentUrl) {
+    const content = `I have the project context for ${project.templateName} (${project.domain}). The agent runtime is not connected yet.`;
+
     console.warn('[agent-chat] agent url is not configured', {
       requestId,
       projectId: project.id
     });
+
+    await persistAssistantMessage(
+      {
+        mode,
+        projectId: project.id,
+        userId: user.id
+      },
+      content
+    );
 
     return NextResponse.json({
       ok: true,
       message: {
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: `I have the project context for ${project.templateName} (${project.domain}). The agent runtime is not connected yet.`
+        content
       }
     });
   }
@@ -125,9 +169,13 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
       },
       body: JSON.stringify({
         messages: [
+          ...previousChatMessages.map((message) => ({
+            role: message.role === 'user' ? 'user' : 'assistant',
+            content: message.content
+          })),
           {
             role: 'user',
-            content: body.message.trim()
+            content: userMessageContent
           }
         ],
         instructions: `
@@ -191,13 +239,20 @@ ${mode === 'dev' ? devModeRules() : useModeRules()}
     );
   }
 
-  return new Response(createAgentChatStream(agentResponse.body, requestId, project.id), {
-    headers: {
-      'Content-Type': 'application/x-ndjson; charset=utf-8',
-      'Cache-Control': 'no-store',
-      'X-Accel-Buffering': 'no'
+  return new Response(
+    createAgentChatStream(agentResponse.body, requestId, {
+      mode,
+      projectId: project.id,
+      userId: user.id
+    }),
+    {
+      headers: {
+        'Content-Type': 'application/x-ndjson; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'X-Accel-Buffering': 'no'
+      }
     }
-  });
+  );
 }
 
 function useModeRules() {
@@ -231,16 +286,26 @@ function devModeRules() {
 function createAgentChatStream(
   mastraBody: ReadableStream<Uint8Array>,
   requestId: string,
-  projectId: string
+  context: PersistedStreamContext
 ) {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
   const reader = mastraBody.getReader();
   let buffer = '';
+  let assistantContent = '';
+  let assistantError = '';
 
   return new ReadableStream<Uint8Array>({
     async start(controller) {
       const writeEvent = (event: AgentStreamEvent) => {
+        if (event.type === 'text') {
+          assistantContent += event.text;
+        }
+
+        if (event.type === 'error') {
+          assistantError += assistantError ? `\n${event.message}` : event.message;
+        }
+
         controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
       };
 
@@ -264,24 +329,50 @@ function createAgentChatStream(
 
         console.info('[agent-chat] stream completed', {
           requestId,
-          projectId
+          projectId: context.projectId
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Agent stream failed';
 
         console.error('[agent-chat] stream failed', {
           requestId,
-          projectId,
+          projectId: context.projectId,
           message
         });
 
         writeEvent({ type: 'error', message });
       } finally {
+        await persistAssistantMessage(context, assistantContent || assistantError);
         controller.close();
         reader.releaseLock();
       }
     }
   });
+}
+
+async function persistAssistantMessage(context: PersistedStreamContext, content: string) {
+  const trimmedContent = content.trim();
+
+  if (!trimmedContent) {
+    return;
+  }
+
+  await prisma.agentChatMessage
+    .create({
+      data: {
+        userId: context.userId,
+        projectId: context.projectId,
+        role: 'assistant',
+        mode: context.mode,
+        content: trimmedContent
+      }
+    })
+    .catch((error) => {
+      console.error('[agent-chat] failed to persist assistant message', {
+        projectId: context.projectId,
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    });
 }
 
 function flushSseBuffer(

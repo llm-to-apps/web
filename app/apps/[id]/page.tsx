@@ -37,6 +37,23 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     notFound();
   }
 
+  const chatMessages = await prisma.agentChatMessage.findMany({
+    where: {
+      projectId: project.id,
+      userId: user.id
+    },
+    orderBy: {
+      createdAt: 'desc'
+    },
+    take: 100,
+    select: {
+      id: true,
+      role: true,
+      content: true
+    }
+  });
+  const orderedChatMessages = chatMessages.reverse();
+
   return (
     <main className="project-workspace">
       <section className="agent-column">
@@ -55,6 +72,11 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             domain: project.domain,
             toolsUrl: `${project.url.replace(/\/$/, '')}/agent-tools`
           }}
+          initialMessages={orderedChatMessages.map((message) => ({
+            id: message.id,
+            role: message.role === 'user' ? 'user' : 'assistant',
+            content: message.content
+          }))}
         />
       </section>
 
