@@ -19,6 +19,13 @@ type ChatMessage = {
   role: 'assistant' | 'user';
   content: string;
   kind?: 'message' | 'progress' | 'error';
+  usage?: TokenUsage | null;
+};
+
+type TokenUsage = {
+  completionTokens?: number;
+  promptTokens?: number;
+  totalTokens?: number;
 };
 
 type AgentStreamEvent =
@@ -33,6 +40,10 @@ type AgentStreamEvent =
   | {
       type: 'error';
       message: string;
+    }
+  | {
+      type: 'usage';
+      usage: TokenUsage;
     }
   | {
       type: 'done';
@@ -129,6 +140,11 @@ export function ProjectAgentChat({ initialMessages = [], project }: ProjectAgent
 
         if (event.type === 'error') {
           appendToMessage(assistantMessageId, event.message, 'error');
+          return;
+        }
+
+        if (event.type === 'usage') {
+          updateMessageUsage(assistantMessageId, event.usage);
         }
       });
 
@@ -217,6 +233,19 @@ export function ProjectAgentChat({ initialMessages = [], project }: ProjectAgent
     });
   }
 
+  function updateMessageUsage(messageId: string, usage: TokenUsage) {
+    setMessages((currentMessages) =>
+      currentMessages.map((message) =>
+        message.id === messageId
+          ? {
+              ...message,
+              usage
+            }
+          : message
+      )
+    );
+  }
+
   function formatProgressMessage(content: string) {
     const line = content.split('\n')[0]?.trim();
 
@@ -245,6 +274,9 @@ export function ProjectAgentChat({ initialMessages = [], project }: ProjectAgent
               ) : null}
               <span>{message.content}</span>
             </p>
+            {message.role === 'assistant' && message.usage ? (
+              <span className="chat-usage">{formatTokenUsage(message.usage)}</span>
+            ) : null}
           </article>
         ))}
         <div ref={messagesEndRef} />
@@ -336,6 +368,7 @@ function parseAgentStreamEvent(line: string): AgentStreamEvent | null {
       event.type === 'text' ||
       event.type === 'progress' ||
       event.type === 'error' ||
+      event.type === 'usage' ||
       event.type === 'done'
     ) {
       return event;
@@ -345,4 +378,18 @@ function parseAgentStreamEvent(line: string): AgentStreamEvent | null {
   }
 
   return null;
+}
+
+function formatTokenUsage(usage: TokenUsage) {
+  const totalTokens = usage.totalTokens;
+
+  if (typeof totalTokens === 'number') {
+    return `${new Intl.NumberFormat().format(totalTokens)} tokens`;
+  }
+
+  const promptTokens = usage.promptTokens ?? 0;
+  const completionTokens = usage.completionTokens ?? 0;
+  const knownTokens = promptTokens + completionTokens;
+
+  return knownTokens > 0 ? `${new Intl.NumberFormat().format(knownTokens)} tokens` : 'tokens n/a';
 }

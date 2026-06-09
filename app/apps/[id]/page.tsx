@@ -55,6 +55,30 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     }
   });
   const orderedChatMessages = chatMessages.reverse();
+  const chatMessageIds = orderedChatMessages.map((message) => message.id);
+  const agentUsages =
+    chatMessageIds.length > 0
+      ? await prisma.agentUsage.findMany({
+          where: {
+            assistantMessageId: {
+              in: chatMessageIds
+            },
+            projectId: project.id,
+            userId: user.id
+          },
+          select: {
+            assistantMessageId: true,
+            completionTokens: true,
+            promptTokens: true,
+            totalTokens: true
+          }
+        })
+      : [];
+  const usageByAssistantMessageId = new Map(
+    agentUsages
+      .filter((usage) => usage.assistantMessageId)
+      .map((usage) => [usage.assistantMessageId, usage])
+  );
   const appUrl = project.url.replace(/\/$/, '');
 
   return (
@@ -82,7 +106,11 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
           initialMessages={orderedChatMessages.map((message) => ({
             id: message.id,
             role: message.role === 'user' ? 'user' : 'assistant',
-            content: message.content
+            content: message.content,
+            usage:
+              message.role === 'assistant'
+                ? formatInitialUsage(usageByAssistantMessageId.get(message.id))
+                : null
           }))}
         />
       </section>
@@ -114,4 +142,25 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
       </section>
     </main>
   );
+}
+
+function formatInitialUsage(
+  usage:
+    | {
+        completionTokens: number | null;
+        promptTokens: number | null;
+        totalTokens: number | null;
+      }
+    | null
+    | undefined
+) {
+  if (!usage) {
+    return null;
+  }
+
+  return {
+    completionTokens: usage.completionTokens ?? undefined,
+    promptTokens: usage.promptTokens ?? undefined,
+    totalTokens: usage.totalTokens ?? undefined
+  };
 }

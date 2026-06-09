@@ -524,6 +524,15 @@ button {
   overflow-wrap: anywhere;
 }
 
+.chat-usage {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1;
+  margin-top: -5px;
+  padding-left: 4px;
+}
+
 .chat-message.progress p {
   border-style: dashed;
   background: #f4f7f4;

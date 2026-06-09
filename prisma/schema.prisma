@@ -82,6 +82,25 @@ model AgentChatMessage {
   @@map("agent_chat_messages")
 }
 
+model AgentUsage {
+  id                 String   @id @default(cuid())
+  requestId          String   @unique @db.VarChar(128)
+  userId             String
+  projectId          String
+  userMessageId      String?  @db.VarChar(255)
+  assistantMessageId String?  @db.VarChar(255)
+  mode               String   @db.VarChar(16)
+  model              String?  @db.VarChar(128)
+  promptTokens       Int?
+  completionTokens   Int?
+  totalTokens        Int?
+  createdAt          DateTime @default(now())
+
+  @@index([userId, projectId, createdAt])
+  @@index([assistantMessageId])
+  @@map("agent_usage")
+}
+
 model Session {
   id        String   @id @default(cuid())
   tokenHash String   @unique @db.VarChar(128)

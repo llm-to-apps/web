@@ -14,8 +14,17 @@ type AgentChatRequest = {
 
 type PersistedStreamContext = {
   mode: 'use' | 'dev';
+  model: string;
   projectId: string;
+  requestId: string;
+  userMessageId?: string;
   userId: string;
+};
+
+type TokenUsage = {
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
 };
 
 type AgentStreamEvent =
@@ -30,6 +39,10 @@ type AgentStreamEvent =
   | {
       type: 'error';
       message: string;
+    }
+  | {
+      type: 'usage';
+      usage: TokenUsage;
     }
   | {
       type: 'done';
@@ -87,8 +100,9 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
   const memoryResource = `user:${user.id}:project:${project.id}`;
   const memoryThreadId = `user:${user.id}:project:${project.id}:main`;
   const isMemoryDebugEnabled = process.env.AGENT_MEMORY_DEBUG === 'true';
+  const agentModel = process.env.AGENT_MODEL ?? 'openai/gpt-5-mini';
 
-  await prisma.agentChatMessage.create({
+  const userMessage = await prisma.agentChatMessage.create({
     data: {
       userId: user.id,
       projectId: project.id,
@@ -134,14 +148,16 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
       projectId: project.id
     });
 
-    await persistAssistantMessage(
-      {
-        mode,
-        projectId: project.id,
-        userId: user.id
-      },
-      content
-    );
+    const offlineContext: PersistedStreamContext = {
+      mode,
+      model: agentModel,
+      projectId: project.id,
+      requestId,
+      userMessageId: userMessage.id,
+      userId: user.id
+    };
+    const assistantMessageId = await persistAssistantMessage(offlineContext, content);
+    await persistAgentUsage(offlineContext, {}, assistantMessageId);
 
     return NextResponse.json({
       ok: true,
@@ -260,7 +276,10 @@ ${mode === 'dev' ? devModeRules() : useModeRules()}
           }
         : undefined,
       mode,
+      model: agentModel,
       projectId: project.id,
+      requestId,
+      userMessageId: userMessage.id,
       userId: user.id
     }),
     {
@@ -347,6 +366,7 @@ function createAgentChatStream(
   let buffer = '';
   let assistantContent = '';
   let assistantError = '';
+  let tokenUsage: TokenUsage = {};
 
   return new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -378,11 +398,18 @@ function createAgentChatStream(
           }
 
           buffer += decoder.decode(value, { stream: true });
-          buffer = flushSseBuffer(buffer, writeEvent);
+          buffer = flushSseBuffer(buffer, writeEvent, (usage) => {
+            tokenUsage = mergeTokenUsage(tokenUsage, usage);
+          });
         }
 
         buffer += decoder.decode();
-        flushSseBuffer(`${buffer}\n\n`, writeEvent);
+        flushSseBuffer(`${buffer}\n\n`, writeEvent, (usage) => {
+          tokenUsage = mergeTokenUsage(tokenUsage, usage);
+        });
+        if (hasTokenUsage(tokenUsage)) {
+          writeEvent({ type: 'usage', usage: tokenUsage });
+        }
         writeEvent({ type: 'done' });
 
         console.info('[agent-chat] stream completed', {
@@ -400,7 +427,11 @@ function createAgentChatStream(
 
         writeEvent({ type: 'error', message });
       } finally {
-        await persistAssistantMessage(context, assistantContent || assistantError);
+        const assistantMessageId = await persistAssistantMessage(
+          context,
+          assistantContent || assistantError
+        );
+        await persistAgentUsage(context, tokenUsage, assistantMessageId);
         controller.close();
         reader.releaseLock();
       }
@@ -412,11 +443,11 @@ async function persistAssistantMessage(context: PersistedStreamContext, content:
   const trimmedContent = content.trim();
 
   if (!trimmedContent) {
-    return;
+    return null;
   }
 
-  await prisma.agentChatMessage
-    .create({
+  try {
+    const message = await prisma.agentChatMessage.create({
       data: {
         userId: context.userId,
         projectId: context.projectId,
@@ -424,24 +455,67 @@ async function persistAssistantMessage(context: PersistedStreamContext, content:
         mode: context.mode,
         content: trimmedContent
       }
-    })
-    .catch((error) => {
-      console.error('[agent-chat] failed to persist assistant message', {
-        projectId: context.projectId,
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
     });
+
+    return message.id;
+  } catch (error) {
+    console.error('[agent-chat] failed to persist assistant message', {
+      projectId: context.projectId,
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+    return null;
+  }
+}
+
+async function persistAgentUsage(
+  context: PersistedStreamContext,
+  usage: TokenUsage,
+  assistantMessageId: string | null
+) {
+  try {
+    await prisma.agentUsage.upsert({
+      where: {
+        requestId: context.requestId
+      },
+      update: {
+        assistantMessageId,
+        completionTokens: usage.completionTokens ?? null,
+        model: context.model,
+        promptTokens: usage.promptTokens ?? null,
+        totalTokens: usage.totalTokens ?? null
+      },
+      create: {
+        assistantMessageId,
+        completionTokens: usage.completionTokens ?? null,
+        mode: context.mode,
+        model: context.model,
+        projectId: context.projectId,
+        promptTokens: usage.promptTokens ?? null,
+        requestId: context.requestId,
+        totalTokens: usage.totalTokens ?? null,
+        userId: context.userId,
+        userMessageId: context.userMessageId ?? null
+      }
+    });
+  } catch (error) {
+    console.error('[agent-chat] failed to persist usage', {
+      projectId: context.projectId,
+      requestId: context.requestId,
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 }
 
 function flushSseBuffer(
   buffer: string,
-  writeEvent: (event: AgentStreamEvent) => void
+  writeEvent: (event: AgentStreamEvent) => void,
+  recordUsage: (usage: TokenUsage) => void
 ) {
   const parts = buffer.split(/\r?\n\r?\n/);
   const remainder = parts.pop() ?? '';
 
   for (const part of parts) {
-    handleSseEvent(part, writeEvent);
+    handleSseEvent(part, writeEvent, recordUsage);
   }
 
   return remainder;
@@ -449,7 +523,8 @@ function flushSseBuffer(
 
 function handleSseEvent(
   eventBlock: string,
-  writeEvent: (event: AgentStreamEvent) => void
+  writeEvent: (event: AgentStreamEvent) => void,
+  recordUsage: (usage: TokenUsage) => void
 ) {
   const data = eventBlock
     .split(/\r?\n/)
@@ -468,6 +543,11 @@ function handleSseEvent(
     return;
   }
 
+  const usage = extractTokenUsage(parsed);
+  if (hasTokenUsage(usage)) {
+    recordUsage(usage);
+  }
+
   for (const event of mapMastraStreamEvent(parsed)) {
     writeEvent(event);
   }
@@ -479,6 +559,96 @@ function parseJson(value: string): unknown {
   } catch {
     return null;
   }
+}
+
+function extractTokenUsage(chunk: unknown): TokenUsage {
+  if (!isObjectRecord(chunk)) {
+    return {};
+  }
+
+  const usageSource = findUsageObject(chunk);
+  if (!usageSource) {
+    return {};
+  }
+
+  return {
+    completionTokens: readNumberField(usageSource, [
+      'completionTokens',
+      'outputTokens',
+      'completion_tokens',
+      'output_tokens'
+    ]),
+    promptTokens: readNumberField(usageSource, [
+      'promptTokens',
+      'inputTokens',
+      'prompt_tokens',
+      'input_tokens'
+    ]),
+    totalTokens: readNumberField(usageSource, ['totalTokens', 'total_tokens'])
+  };
+}
+
+function findUsageObject(chunk: Record<string, unknown>): Record<string, unknown> | null {
+  if (isUsageLike(chunk)) {
+    return chunk;
+  }
+
+  for (const key of ['usage', 'totalUsage', 'stepUsage', 'payload', 'data']) {
+    const value = chunk[key];
+
+    if (isObjectRecord(value)) {
+      const nestedUsage = findUsageObject(value);
+
+      if (nestedUsage) {
+        return nestedUsage;
+      }
+    }
+  }
+
+  return null;
+}
+
+function isUsageLike(value: Record<string, unknown>) {
+  return [
+    'completionTokens',
+    'completion_tokens',
+    'inputTokens',
+    'input_tokens',
+    'outputTokens',
+    'output_tokens',
+    'promptTokens',
+    'prompt_tokens',
+    'totalTokens',
+    'total_tokens'
+  ].some((key) => typeof value[key] === 'number');
+}
+
+function readNumberField(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key];
+
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function mergeTokenUsage(currentUsage: TokenUsage, nextUsage: TokenUsage): TokenUsage {
+  return {
+    completionTokens: nextUsage.completionTokens ?? currentUsage.completionTokens,
+    promptTokens: nextUsage.promptTokens ?? currentUsage.promptTokens,
+    totalTokens: nextUsage.totalTokens ?? currentUsage.totalTokens
+  };
+}
+
+function hasTokenUsage(usage: TokenUsage) {
+  return (
+    typeof usage.completionTokens === 'number' ||
+    typeof usage.promptTokens === 'number' ||
+    typeof usage.totalTokens === 'number'
+  );
 }
 
 function mapMastraStreamEvent(chunk: unknown): AgentStreamEvent[] {
