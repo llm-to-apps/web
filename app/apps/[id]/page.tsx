@@ -56,7 +56,8 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             id: project.id,
             name: project.templateName,
             status: project.status,
-            domain: project.domain
+            domain: project.domain,
+            toolsUrl: `${project.url.replace(/\/$/, '')}/agent-tools`
           }}
         />
       </section>

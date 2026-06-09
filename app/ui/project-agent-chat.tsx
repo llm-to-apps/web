@@ -9,6 +9,7 @@ type ProjectAgentChatProps = {
     name: string;
     status: string;
     domain: string;
+    toolsUrl: string;
   };
 };
 
@@ -97,7 +98,7 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
     <div className="agent-chat">
       <div className="agent-context">
         <span>Agent tools</span>
-        <strong>project-{project.id}:7070</strong>
+        <strong>{project.toolsUrl}</strong>
       </div>
 
       <div className="chat-messages" aria-live="polite">
