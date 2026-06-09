@@ -25,7 +25,7 @@ const appTemplates: AppTemplateSeed[] = [
     status: 'available',
     repository: 'money-template',
     git: 'git@github.com:llm-to-apps/money-template.git',
-    image: 'ghcr.io/llm-to-apps/money-template:sha-4825afb',
+    image: 'ghcr.io/llm-to-apps/money-template:sha-86352ce',
     appPort: 3001,
     agentPort: 7070,
     sortOrder: 10
