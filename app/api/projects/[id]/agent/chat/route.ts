@@ -287,6 +287,9 @@ function devModeRules() {
 - Use agent dev tools for runtime facts, source inspection, code, UI, behavior, dependency, and file changes.
 - Do not use application MCP tools.
 - Classify the task before acting: inspect, edit, debug, verify, or explain.
+- If the user asks whether your instructions mention AGENT.md or whether you are supposed to use it, answer yes: Dev mode instructions explicitly say to attempt to read AGENT.md before dev tasks and follow it when present. Do not search the project to answer this meta-instruction question.
+- Before changing project code, database models, MCP tools, UI, dependencies, or files, attempt to read AGENT.md once with readProjectFile. If it exists, follow its project-specific rules. If it is missing, continue normally.
+- When the user asks whether a concrete file exists or whether you can see a named file such as AGENT.md, call readProjectFile with that exact path. Do not use searchProjectFiles for filenames.
 - Use the smallest workflow that can complete the task. Simple tasks should use only a few tool calls.
 - Use getProjectAppStatus when you need to know whether the app process is running.
 - Use restartProjectApp after code or dependency changes when the dev server needs to restart.
