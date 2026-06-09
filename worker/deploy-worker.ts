@@ -7,6 +7,24 @@ import {
 } from '../lib/deploy-queue';
 import { prisma } from '../lib/db';
 
+type ProjectServiceStatus = {
+  ok: true;
+  ready: boolean;
+  serviceName: string;
+  desiredReplicas: number;
+  runningReplicas: number;
+  tasks?: Array<{
+    id?: string;
+    desiredState?: string;
+    state?: string;
+    message?: string;
+    error?: string;
+  }>;
+};
+
+const serviceReadyTimeoutMs = Number(process.env.DEPLOY_READY_TIMEOUT_MS || 120_000);
+const serviceReadyPollMs = Number(process.env.DEPLOY_READY_POLL_MS || 2_000);
+
 const worker = new Worker<DeployProjectJob, unknown, 'deploy-project'>(
   deployQueueName,
   async (job) => {
@@ -45,6 +63,8 @@ const worker = new Worker<DeployProjectJob, unknown, 'deploy-project'>(
         )}`
       );
     }
+
+    await waitForProjectServiceReady(managerUrl, projectId);
 
     await prisma.project.update({
       where: { id: projectId },
@@ -101,3 +121,41 @@ process.on('SIGTERM', () => {
 });
 
 console.log(`deploy worker started on queue ${deployQueueName}`);
+
+async function waitForProjectServiceReady(managerUrl: string, projectId: string) {
+  const startedAt = Date.now();
+  let lastStatus: ProjectServiceStatus | null = null;
+
+  while (Date.now() - startedAt < serviceReadyTimeoutMs) {
+    const response = await fetch(
+      `${managerUrl}/swarm/projects/${encodeURIComponent(projectId)}`
+    );
+    const status = (await response.json().catch(() => null)) as ProjectServiceStatus | null;
+
+    if (!response.ok || !status) {
+      throw new Error(
+        `Manager service status request failed with ${response.status}: ${JSON.stringify(
+          status
+        )}`
+      );
+    }
+
+    lastStatus = status;
+
+    if (status.ready) {
+      return status;
+    }
+
+    await sleep(serviceReadyPollMs);
+  }
+
+  throw new Error(
+    `Project service ${projectId} did not become ready within ${serviceReadyTimeoutMs}ms: ${JSON.stringify(
+      lastStatus
+    )}`
+  );
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
