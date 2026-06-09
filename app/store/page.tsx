@@ -35,16 +35,6 @@ export default async function StorePage() {
                       <p>{template.description}</p>
                     </div>
                   </div>
-                  <div className="store-meta">
-                    <div>
-                      <span>Repository</span>
-                      <strong>{template.repository}</strong>
-                    </div>
-                    <div>
-                      <span>Runtime</span>
-                      <strong>MySQL</strong>
-                    </div>
-                  </div>
                   <InstallButton templateId={template.id} />
                 </article>
               ))}

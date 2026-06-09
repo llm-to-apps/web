@@ -722,35 +722,6 @@ button {
   line-height: 1.45;
 }
 
-.store-meta {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.store-meta div {
-  padding: 12px;
-  border-right: 1px solid var(--line);
-}
-
-.store-meta div:last-child {
-  border-right: 0;
-}
-
-.store-meta span {
-  display: block;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.store-meta strong {
-  display: block;
-  margin-top: 5px;
-  font-size: 14px;
-}
-
 .install-control {
   display: grid;
   gap: 8px;
