@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db';
 import {
   cleanSubdomain,
   createAgentToolsToken,
+  createAppMcpToken,
   createProjectCredentials,
   createProjectId,
   templates,
@@ -66,6 +67,7 @@ export async function POST(request: NextRequest) {
   const { dbName, dbUser, dbPassword, databaseUrl } =
     createProjectCredentials(id);
   const agentToolsToken = createAgentToolsToken();
+  const appMcpToken = createAppMcpToken();
   const domain = `${subdomain}.${rootDomain}`;
 
   const managerPayload = {
@@ -89,7 +91,8 @@ export async function POST(request: NextRequest) {
       MYSQL_USER: dbUser,
       MYSQL_PASSWORD: dbPassword,
       DATABASE_URL: databaseUrl,
-      AGENT_TOOLS_TOKEN: agentToolsToken
+      AGENT_TOOLS_TOKEN: agentToolsToken,
+      APP_MCP_TOKEN: appMcpToken
     },
     domain,
     ports: {
@@ -110,7 +113,8 @@ export async function POST(request: NextRequest) {
       status: 'queued',
       appPort: template.appPort,
       agentPort: template.agentPort,
-      agentToolsToken
+      agentToolsToken,
+      appMcpToken
     }
   });
 

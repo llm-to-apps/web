@@ -33,6 +33,10 @@ export function createAgentToolsToken() {
   return randomBytes(32).toString('base64url');
 }
 
+export function createAppMcpToken() {
+  return randomBytes(32).toString('base64url');
+}
+
 export function createProjectDatabaseNames(projectId: string) {
   const dbName = `project_${projectId}`;
   const dbUser = `project_${projectId}`;

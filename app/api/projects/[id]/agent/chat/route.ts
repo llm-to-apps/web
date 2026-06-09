@@ -53,6 +53,7 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
       domain: true,
       url: true,
       agentToolsToken: true,
+      appMcpToken: true,
       status: true
     }
   });
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
 
   const agentUrl = process.env.AGENT_URL;
   const toolsUrl = `${project.url.replace(/\/$/, '')}/agent-tools`;
+  const appMcpUrl = `${project.url.replace(/\/$/, '')}/api/mcp`;
 
   console.info('[agent-chat] request', {
     requestId,
@@ -81,8 +83,10 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
     status: project.status,
     hasAgentUrl: Boolean(agentUrl),
     hasAgentToolsToken: Boolean(project.agentToolsToken),
+    hasAppMcpToken: Boolean(project.appMcpToken),
     messageLength: body.message.trim().length,
-    toolsUrl
+    toolsUrl,
+    appMcpUrl
   });
 
   if (!agentUrl) {
@@ -129,10 +133,13 @@ Application: ${project.templateName}
 Domain: ${project.domain}
 Status: ${project.status}
 Agent tools endpoint: ${toolsUrl}
+Application MCP endpoint: ${appMcpUrl}
 
 Rules:
 - You are the llm-to-apps project coding agent for this app, not the underlying model provider.
 - Answer once. Do not repeat the same sentence.
+- For application data operations, use application MCP tools: call listAppMcpTools when needed, then callAppMcpTool.
+- For code, UI, behavior, dependency, or file changes, use agent dev tools.
 - Use the tools endpoint for runtime facts and code changes when project tools are available.
 - Search file contents with searchProjectFiles.
 - For simple text changes like renaming app title/copy, use this flow: searchProjectFiles, readProjectFile for matching files or ranges, replaceTextInFile, then getProjectDiff.
@@ -157,7 +164,9 @@ Rules:
           projectDomain: project.domain,
           projectStatus: project.status,
           toolsUrl,
-          agentToolsToken: project.agentToolsToken
+          agentToolsToken: project.agentToolsToken,
+          appMcpUrl,
+          appMcpToken: project.appMcpToken
         }
       })
     }
@@ -455,6 +464,7 @@ function summarizeToolInput(input: unknown) {
   appendField(lines, parsedInput, 'command');
   appendField(lines, parsedInput, 'cwd');
   appendField(lines, parsedInput, 'path');
+  appendField(lines, parsedInput, 'name');
   appendField(lines, parsedInput, 'search');
   appendField(lines, parsedInput, 'replace');
   appendField(lines, parsedInput, 'expectedReplacements');
@@ -466,6 +476,10 @@ function summarizeToolInput(input: unknown) {
 
   if (Array.isArray(changes)) {
     lines.push(`changes: ${changes.length}`);
+  }
+
+  if (isObjectRecord(parsedInput.arguments)) {
+    lines.push(`arguments: ${truncateText(JSON.stringify(parsedInput.arguments), 260)}`);
   }
 
   return lines.length > 0 ? lines.join('\n') : summarizeUnknownValue(parsedInput);
