@@ -7,7 +7,7 @@ export const templates = {
     description: 'Personal finance dashboard with MySQL-backed data.',
     repository: 'money-template',
     git: 'git@github.com:llm-to-apps/money-template.git',
-    image: 'ghcr.io/llm-to-apps/money-template:sha-15f667f',
+    image: 'ghcr.io/llm-to-apps/money-template:sha-94aa25c',
     appPort: 3001,
     agentPort: 7070
   }
