@@ -45,10 +45,6 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             <ArrowLeft size={17} />
             Apps
           </Link>
-          <div>
-            <h1>{project.templateName}</h1>
-            <p>{project.domain}</p>
-          </div>
         </header>
 
         <ProjectAgentChat
