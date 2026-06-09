@@ -11,6 +11,15 @@ type AgentChatRequest = {
   message?: string;
 };
 
+type MastraGenerateResult = {
+  text?: string;
+  response?: {
+    messages?: Array<{
+      content?: string;
+    }>;
+  };
+};
+
 export async function POST(request: NextRequest, context: AgentChatContext) {
   const user = await getCurrentUser();
 
@@ -64,12 +73,64 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
     });
   }
 
+  const agentResponse = await fetch(
+    `${agentUrl.replace(/\/$/, '')}/api/agents/projectAgent/generate`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        messages: [
+          {
+            role: 'user',
+            content: body.message.trim()
+          }
+        ],
+        instructions: `
+You are working on project ${project.id}.
+Application: ${project.templateName}
+Domain: ${project.domain}
+Status: ${project.status}
+Agent tools endpoint: ${toolsUrl}
+
+Use the tools endpoint for runtime facts and code changes. Do not claim you changed files unless a tool call confirms it.
+`,
+        requestContext: {
+          projectId: project.id,
+          projectDomain: project.domain,
+          projectStatus: project.status,
+          toolsUrl
+        }
+      })
+    }
+  );
+  const agentResult = (await agentResponse.json().catch(() => null)) as
+    | MastraGenerateResult
+    | null;
+
+  if (!agentResponse.ok || !agentResult) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: `Agent request failed with ${agentResponse.status}`
+      },
+      { status: 502 }
+    );
+  }
+
   return NextResponse.json({
     ok: true,
     message: {
       id: crypto.randomUUID(),
       role: 'assistant',
-      content: `I am ready to work on ${project.templateName}. Tools endpoint: ${toolsUrl}. Agent runtime: ${agentUrl}.`
+      content: extractAgentText(agentResult)
     }
   });
+}
+
+function extractAgentText(result: MastraGenerateResult) {
+  const lastMessage = result.response?.messages?.at(-1)?.content;
+
+  return result.text || lastMessage || 'The agent returned an empty response.';
 }
