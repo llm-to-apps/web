@@ -104,7 +104,8 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
         if (event.type === 'text') {
           if (!hasAssistantText) {
             hasAssistantText = true;
-            replaceMessage(assistantMessageId, '', 'message');
+            replaceMessage(assistantMessageId, event.text, 'message');
+            return;
           }
           appendToMessage(assistantMessageId, event.text);
           return;
