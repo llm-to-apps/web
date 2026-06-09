@@ -284,6 +284,61 @@ button {
   border-radius: 18px;
 }
 
+.app-icon-kanban {
+  color: #111827;
+  background: linear-gradient(145deg, #b8d8ff, #f2b5d4);
+}
+
+.app-icon-personalCrm {
+  color: #172554;
+  background: linear-gradient(145deg, #c7d2fe, #93c5fd);
+}
+
+.app-icon-habitTracker {
+  color: #123524;
+  background: linear-gradient(145deg, #bbf7d0, #86efac);
+}
+
+.app-icon-pomodoro {
+  color: #3b1111;
+  background: linear-gradient(145deg, #fecaca, #fb7185);
+}
+
+.app-icon-notes {
+  color: #33220a;
+  background: linear-gradient(145deg, #fde68a, #facc15);
+}
+
+.app-icon-mealPlanner {
+  color: #2f1907;
+  background: linear-gradient(145deg, #fed7aa, #fdba74);
+}
+
+.app-icon-workoutTracker {
+  color: #13211b;
+  background: linear-gradient(145deg, #99f6e4, #2dd4bf);
+}
+
+.app-icon-subscriptionTracker {
+  color: #25112d;
+  background: linear-gradient(145deg, #f0abfc, #c084fc);
+}
+
+.app-icon-jobSearchCrm {
+  color: #1f2937;
+  background: linear-gradient(145deg, #d1d5db, #94a3b8);
+}
+
+.app-icon-moodJournal {
+  color: #301515;
+  background: linear-gradient(145deg, #fbcfe8, #f9a8d4);
+}
+
+.app-icon-bookingCalendar {
+  color: #102a43;
+  background: linear-gradient(145deg, #bfdbfe, #67e8f9);
+}
+
 .app-state-deploying .app-icon,
 .app-state-queued .app-icon,
 .app-state-deleting .app-icon {
@@ -743,6 +798,18 @@ button {
 .install-button:disabled {
   cursor: wait;
   background: #82918d;
+}
+
+.coming-soon-pill {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.48);
 }
 
 .inline-result {

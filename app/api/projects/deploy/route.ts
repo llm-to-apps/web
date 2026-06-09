@@ -10,7 +10,7 @@ import {
   createAppMcpToken,
   createProjectCredentials,
   createProjectId,
-  templates,
+  getInstallableTemplate,
   type TemplateId
 } from '@/lib/templates';
 
@@ -31,13 +31,13 @@ export async function POST(request: NextRequest) {
 
   const body = (await request.json()) as DeployRequest;
   const templateId = body.templateId ?? 'money';
-  const template = templates[templateId];
+  const template = getInstallableTemplate(templateId);
   const rootDomain = process.env.APP_ROOT_DOMAIN || 'llmagents.com';
   const managerUrl = process.env.MANAGER_URL || 'http://manager:8080';
 
   if (!template) {
     return NextResponse.json(
-      { ok: false, message: 'Unknown template' },
+      { ok: false, message: 'This template is not available for install yet' },
       { status: 400 }
     );
   }

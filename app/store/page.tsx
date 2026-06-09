@@ -4,7 +4,7 @@ import { AppTabs } from '../ui/app-tabs';
 import { InstallButton } from '../ui/install-button';
 import { SignedOutContent } from '../ui/signed-out-content';
 import { getCurrentUser } from '@/lib/auth';
-import { templates } from '@/lib/templates';
+import { isInstallableTemplate, templates } from '@/lib/templates';
 
 const appTemplates = Object.values(templates);
 
@@ -35,7 +35,11 @@ export default async function StorePage() {
                       <p>{template.description}</p>
                     </div>
                   </div>
-                  <InstallButton templateId={template.id} />
+                  {isInstallableTemplate(template) ? (
+                    <InstallButton templateId={template.id} />
+                  ) : (
+                    <div className="coming-soon-pill">Soon</div>
+                  )}
                 </article>
               ))}
             </div>
