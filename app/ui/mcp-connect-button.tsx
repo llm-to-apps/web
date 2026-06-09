@@ -14,9 +14,14 @@ export function McpConnectButton({ mcpToken, mcpUrl }: McpConnectButtonProps) {
 
   return (
     <>
-      <button className="mcp-connect-button" onClick={() => setIsOpen(true)} type="button">
+      <button
+        aria-label="Connect MCP to ChatGPT"
+        className="mcp-connect-button"
+        onClick={() => setIsOpen(true)}
+        title="Connect MCP to ChatGPT"
+        type="button"
+      >
         <Plug size={16} />
-        MCP
       </button>
 
       {isOpen ? (
