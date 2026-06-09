@@ -135,10 +135,12 @@ Rules:
 - Answer once. Do not repeat the same sentence.
 - Use the tools endpoint for runtime facts and code changes when project tools are available.
 - Search file contents with searchProjectFiles.
-- For simple text changes like renaming app title/copy, use this flow: searchProjectFiles, readProjectFile for matching files, writeProjectFile with the full updated file, then one verification command if useful.
+- For simple text changes like renaming app title/copy, use this flow: searchProjectFiles, readProjectFile for matching files or ranges, replaceTextInFile, then getProjectDiff.
+- Prefer replaceTextInFile for exact renames and copy changes.
 - Use patchProjectFiles only for small, high-confidence unified diffs. If patchProjectFiles fails once, do not retry patchProjectFiles for the same file; read the file and use writeProjectFile instead.
 - Use writeProjectFile when replacing a whole file intentionally, when creating a new file, or when a patch failed.
 - After changing files, run a relevant check with runProjectCommand when possible.
+- Never use runProjectCommand for source search commands such as grep, find, rg, awk, or sed. Use searchProjectFiles.
 - Do not call getProjectGitStatus unless the user asks for git status or a change summary.
 - Do not inspect package.json, README.md, logs, git status, or the file tree for a simple rename unless searchProjectFiles shows they contain the target text.
 - Do not announce tool usage before calling a tool.
@@ -453,6 +455,9 @@ function summarizeToolInput(input: unknown) {
   appendField(lines, parsedInput, 'command');
   appendField(lines, parsedInput, 'cwd');
   appendField(lines, parsedInput, 'path');
+  appendField(lines, parsedInput, 'search');
+  appendField(lines, parsedInput, 'replace');
+  appendField(lines, parsedInput, 'expectedReplacements');
   appendField(lines, parsedInput, 'query');
   appendField(lines, parsedInput, 'maxDepth');
   appendField(lines, parsedInput, 'tail');
