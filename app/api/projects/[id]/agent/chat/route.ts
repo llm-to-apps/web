@@ -207,7 +207,7 @@ ${mode === 'dev' ? devModeRules() : useModeRules()}
 - When answering about application data, keep the answer concise and do not include internal IDs unless the user asks for them.
 - Mastra memory may provide prior conversation context. Treat it as helpful context, not proof of current files, runtime state, or app data. Verify current facts with tools.
 `,
-        maxSteps: 15,
+        maxSteps: 50,
         modelSettings: {
           temperature: 0.2
         },
