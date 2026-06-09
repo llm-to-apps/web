@@ -69,6 +69,7 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
       content
     };
     const assistantMessageId = crypto.randomUUID();
+    let hasAssistantText = false;
 
     setMessages((currentMessages) => [...currentMessages, userMessage]);
     setMessages((currentMessages) => [
@@ -76,7 +77,7 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
       {
         id: assistantMessageId,
         role: 'assistant',
-        content: 'Agent started.\n',
+        content: 'Agent started.',
         kind: 'progress'
       }
     ]);
@@ -101,12 +102,18 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
 
       await readAgentStream(response.body, (event) => {
         if (event.type === 'text') {
+          if (!hasAssistantText) {
+            hasAssistantText = true;
+            replaceMessage(assistantMessageId, '', 'message');
+          }
           appendToMessage(assistantMessageId, event.text);
           return;
         }
 
         if (event.type === 'progress') {
-          appendLineToMessage(assistantMessageId, event.message);
+          if (!hasAssistantText) {
+            replaceMessage(assistantMessageId, formatProgressMessage(event.message), 'progress');
+          }
           return;
         }
 
@@ -122,6 +129,24 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
     } finally {
       setIsSending(false);
     }
+  }
+
+  function replaceMessage(
+    messageId: string,
+    content: string,
+    kind: ChatMessage['kind'] = 'message'
+  ) {
+    setMessages((currentMessages) =>
+      currentMessages.map((message) =>
+        message.id === messageId
+          ? {
+              ...message,
+              content,
+              kind
+            }
+          : message
+      )
+    );
   }
 
   function appendToMessage(
@@ -182,14 +207,10 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
     });
   }
 
-  function appendLineToMessage(messageId: string, content: string) {
+  function formatProgressMessage(content: string) {
     const line = content.split('\n')[0]?.trim();
 
-    if (!line) {
-      return;
-    }
-
-    appendToMessage(messageId, `${line}\n`, 'progress');
+    return line || 'Agent is working.';
   }
 
   return (
