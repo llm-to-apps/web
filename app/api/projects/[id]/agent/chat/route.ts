@@ -203,6 +203,8 @@ ${mode === 'dev' ? devModeRules() : useModeRules()}
 function useModeRules() {
   return `- You are in Use mode.
 - Use application MCP tools for app data operations: call listAppMcpTools when needed, then callAppMcpTool.
+- Use the smallest number of app tool calls that can answer or complete the user's request.
+- Return the business result in plain language. Do not dump raw tool JSON unless the user asks for it.
 - Do not inspect or change source code.
 - Do not use dev project tools.`;
 }
@@ -211,6 +213,8 @@ function devModeRules() {
   return `- You are in Dev mode.
 - Use agent dev tools for runtime facts, source inspection, code, UI, behavior, dependency, and file changes.
 - Do not use application MCP tools.
+- Classify the task before acting: inspect, edit, debug, verify, or explain.
+- Use the smallest workflow that can complete the task. Simple tasks should use only a few tool calls.
 - Search file contents with searchProjectFiles.
 - For simple text changes like renaming app title/copy, use this flow: searchProjectFiles, readProjectFile for matching files or ranges, replaceTextInFile, then getProjectDiff.
 - Prefer replaceTextInFile for exact renames and copy changes.
@@ -219,7 +223,9 @@ function devModeRules() {
 - After changing files, run a relevant check with runProjectCommand when possible.
 - Never use runProjectCommand for source search commands such as grep, find, rg, awk, or sed. Use searchProjectFiles.
 - Do not call getProjectGitStatus unless the user asks for git status or a change summary.
-- Do not inspect package.json, README.md, logs, git status, or the file tree for a simple rename unless searchProjectFiles shows they contain the target text.`;
+- Do not inspect package.json, README.md, logs, git status, or the file tree for a simple rename unless searchProjectFiles shows they contain the target text.
+- Stop when the request is satisfied. Do not keep exploring after a successful edit, diff, and check.
+- Final answers after edits must include what changed and what verification ran.`;
 }
 
 function createAgentChatStream(
