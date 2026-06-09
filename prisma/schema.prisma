@@ -31,6 +31,8 @@ model Project {
   status       String   @default("deploying") @db.VarChar(32)
   appPort      Int
   agentPort    Int
+  managerJobId String?  @db.VarChar(128)
+  deployError  String?  @db.Text
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

@@ -10,6 +10,13 @@ npm run prisma:push
 npm run dev
 ```
 
+For local Docker-based development:
+
+```bash
+make dev
+make worker
+```
+
 ## Environment
 
 ```text
@@ -17,6 +24,7 @@ MANAGER_URL=http://manager:8080
 APP_ROOT_DOMAIN=llmagents.com
 DATABASE_URL=mysql://root:password@mysql:3306/llagents_platform
 AUTH_SECRET=change-me
+REDIS_URL=redis://localhost:6379
 ```
 
 ## First Template

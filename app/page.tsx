@@ -90,6 +90,7 @@ export default async function Home() {
                             <h4>{project.domain}</h4>
                             <p>
                               {project.templateName} &middot; {project.id}
+                              {project.deployError ? ` - ${project.deployError}` : ''}
                             </p>
                           </div>
                         </div>

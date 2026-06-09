@@ -1,39 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { randomBytes } from 'node:crypto';
 
 import { getCurrentUser } from '@/lib/auth';
+import { getDeployQueue } from '@/lib/deploy-queue';
 import { prisma } from '@/lib/db';
-
-const templates = {
-  money: {
-    id: 'money',
-    name: 'Money',
-    git: 'git@github.com:llm-to-apps/money-template.git',
-    appPort: 3001,
-    agentPort: 7001
-  }
-} as const;
-
-type TemplateId = keyof typeof templates;
+import {
+  cleanSubdomain,
+  createProjectCredentials,
+  createProjectId,
+  templates,
+  type TemplateId
+} from '@/lib/templates';
 
 type DeployRequest = {
   templateId?: TemplateId;
   subdomain?: string;
 };
-
-function cleanSubdomain(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-]/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 48);
-}
-
-function createId() {
-  return randomBytes(6).toString('hex');
-}
 
 export async function POST(request: NextRequest) {
   const user = await getCurrentUser();
@@ -58,7 +39,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const id = createId();
+  const id = createProjectId();
   const subdomain = cleanSubdomain(body.subdomain || `money-${id}`);
 
   if (!subdomain) {
@@ -81,13 +62,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const dbName = `project_${id}`;
-  const dbUser = `project_${id}`;
-  const dbPassword = randomBytes(18).toString('base64url');
+  const { dbName, dbUser, dbPassword, databaseUrl } =
+    createProjectCredentials(id);
   const domain = `${subdomain}.${rootDomain}`;
-  const databaseUrl = `mysql://${encodeURIComponent(dbUser)}:${encodeURIComponent(
-    dbPassword
-  )}@mysql:3306/${encodeURIComponent(dbName)}`;
 
   const managerPayload = {
     id,
@@ -117,26 +94,6 @@ export async function POST(request: NextRequest) {
     }
   };
 
-  const response = await fetch(`${managerUrl}/swarm/projects`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(managerPayload)
-  });
-  const result = (await response.json().catch(() => null)) as unknown;
-
-  if (!response.ok) {
-    return NextResponse.json(
-      {
-        ok: false,
-        message: 'Manager deployment request failed',
-        manager: result
-      },
-      { status: response.status }
-    );
-  }
-
   const project = await prisma.project.create({
     data: {
       id,
@@ -146,17 +103,31 @@ export async function POST(request: NextRequest) {
       git: template.git,
       domain,
       url: `http://${domain}`,
-      status: 'deploying',
+      status: 'queued',
       appPort: template.appPort,
       agentPort: template.agentPort
     }
   });
+
+  const deployQueue = getDeployQueue();
+  const job = await deployQueue.add(
+    'deploy-project',
+    {
+      projectId: project.id,
+      managerUrl,
+      managerPayload
+    },
+    {
+      jobId: project.id
+    }
+  );
 
   return NextResponse.json({
     ok: true,
     projectId: project.id,
     url: project.url,
     template: template.name,
-    manager: result
+    status: project.status,
+    jobId: job.id
   });
 }

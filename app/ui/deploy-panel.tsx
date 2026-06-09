@@ -10,6 +10,8 @@ type DeployResult =
       url: string;
       projectId: string;
       template: string;
+      status: string;
+      jobId: string;
     }
   | {
       ok: false;
@@ -89,7 +91,7 @@ export function DeployPanel() {
       {result ? (
         <div className={`result ${result.ok ? 'success' : 'error'}`}>
           {result.ok
-            ? `Project ${result.projectId} is deploying at ${result.url}`
+            ? `Project ${result.projectId} was queued for deployment at ${result.url}`
             : result.message}
         </div>
       ) : (

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "prisma generate && prisma db push && next dev",
+    "worker": "tsx worker/deploy-worker.ts",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -13,11 +14,13 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
+    "bullmq": "^5.78.0",
     "lucide-react": "^0.555.0",
     "next": "^16.0.7",
     "prisma": "^6.19.3",
     "react": "^19.2.1",
-    "react-dom": "^19.2.1"
+    "react-dom": "^19.2.1",
+    "tsx": "^4.22.4"
   },
   "devDependencies": {
     "@types/node": "^22.13.14",

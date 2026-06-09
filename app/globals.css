@@ -282,6 +282,16 @@ button {
   color: var(--warning);
 }
 
+.status-queued {
+  background: #eef2ee;
+  color: var(--muted);
+}
+
+.status-failed {
+  background: #fff0ee;
+  color: #9d2a1d;
+}
+
 .project-meta a {
   min-height: 32px;
   border: 1px solid var(--line);
