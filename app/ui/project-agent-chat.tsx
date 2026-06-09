@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { Bot, Lock, Send, Unlock, User } from 'lucide-react';
+import { Bot, Lock, Send, Sparkles, Unlock, User } from 'lucide-react';
 
 type ProjectAgentChatProps = {
   project: {
@@ -275,7 +275,7 @@ export function ProjectAgentChat({ initialMessages = [], project }: ProjectAgent
               <span>{message.content}</span>
             </p>
             {message.role === 'assistant' && message.usage ? (
-              <span className="chat-usage">{formatTokenUsage(message.usage)}</span>
+              <TokenUsageBadge usage={message.usage} />
             ) : null}
           </article>
         ))}
@@ -380,16 +380,54 @@ function parseAgentStreamEvent(line: string): AgentStreamEvent | null {
   return null;
 }
 
-function formatTokenUsage(usage: TokenUsage) {
-  const totalTokens = usage.totalTokens;
+function TokenUsageBadge({ usage }: { usage: TokenUsage }) {
+  const totalTokens = usage.totalTokens ?? sumKnownTokens(usage);
 
-  if (typeof totalTokens === 'number') {
-    return `${new Intl.NumberFormat().format(totalTokens)} tokens`;
+  if (!totalTokens) {
+    return null;
   }
 
+  return (
+    <span className="chat-usage" title={formatTokenUsageTitle(usage)}>
+      <Sparkles aria-hidden="true" size={12} />
+      <strong>{formatTokenCount(totalTokens)}</strong>
+      <span>tokens</span>
+      {formatTokenBreakdown(usage) ? (
+        <span className="chat-usage-breakdown">{formatTokenBreakdown(usage)}</span>
+      ) : null}
+    </span>
+  );
+}
+
+function sumKnownTokens(usage: TokenUsage) {
   const promptTokens = usage.promptTokens ?? 0;
   const completionTokens = usage.completionTokens ?? 0;
-  const knownTokens = promptTokens + completionTokens;
 
-  return knownTokens > 0 ? `${new Intl.NumberFormat().format(knownTokens)} tokens` : 'tokens n/a';
+  return promptTokens + completionTokens;
+}
+
+function formatTokenBreakdown(usage: TokenUsage) {
+  if (typeof usage.promptTokens !== 'number' || typeof usage.completionTokens !== 'number') {
+    return '';
+  }
+
+  return `${formatTokenCount(usage.promptTokens)} in / ${formatTokenCount(
+    usage.completionTokens
+  )} out`;
+}
+
+function formatTokenUsageTitle(usage: TokenUsage) {
+  const parts = [
+    typeof usage.totalTokens === 'number' ? `Total: ${formatTokenCount(usage.totalTokens)}` : '',
+    typeof usage.promptTokens === 'number' ? `Input: ${formatTokenCount(usage.promptTokens)}` : '',
+    typeof usage.completionTokens === 'number'
+      ? `Output: ${formatTokenCount(usage.completionTokens)}`
+      : ''
+  ].filter(Boolean);
+
+  return parts.join(' · ');
+}
+
+function formatTokenCount(value: number) {
+  return new Intl.NumberFormat().format(value);
 }

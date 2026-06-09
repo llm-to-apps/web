@@ -526,11 +526,35 @@ button {
 
 .chat-usage {
   grid-column: 2;
-  color: var(--muted);
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  border: 1px solid #dde7df;
+  border-radius: 999px;
+  background: #f7faf8;
+  color: #607368;
   font-size: 11px;
-  line-height: 1;
-  margin-top: -5px;
-  padding-left: 4px;
+  line-height: 1.1;
+  margin-top: -4px;
+  padding: 4px 8px;
+}
+
+.chat-usage svg {
+  color: var(--accent);
+}
+
+.chat-usage strong {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.chat-usage-breakdown {
+  border-left: 1px solid #d8e3dc;
+  color: var(--muted);
+  margin-left: 2px;
+  padding-left: 7px;
 }
 
 .chat-message.progress p {
