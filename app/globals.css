@@ -450,6 +450,43 @@ button {
   gap: 12px;
 }
 
+.project-header-actions {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.project-token-summary {
+  min-width: 0;
+  max-width: 215px;
+  border: 1px solid #dde7df;
+  border-radius: 999px;
+  background: #f7faf8;
+  color: #607368;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  line-height: 1.1;
+  padding: 6px 9px;
+  white-space: nowrap;
+}
+
+.project-token-summary strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.project-token-summary span {
+  min-width: 0;
+  border-left: 1px solid #d8e3dc;
+  color: var(--muted);
+  overflow: hidden;
+  padding-left: 7px;
+  text-overflow: ellipsis;
+}
+
 .back-link {
   color: var(--muted);
   text-decoration: none;

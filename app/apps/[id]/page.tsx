@@ -79,6 +79,22 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
       .filter((usage) => usage.assistantMessageId)
       .map((usage) => [usage.assistantMessageId, usage])
   );
+  const agentUsageSummary = await prisma.agentUsage.aggregate({
+    where: {
+      projectId: project.id,
+      userId: user.id
+    },
+    _sum: {
+      completionTokens: true,
+      promptTokens: true,
+      totalTokens: true
+    }
+  });
+  const usageSummary = formatUsageSummary({
+    completionTokens: agentUsageSummary._sum.completionTokens,
+    promptTokens: agentUsageSummary._sum.promptTokens,
+    totalTokens: agentUsageSummary._sum.totalTokens
+  });
   const appUrl = project.url.replace(/\/$/, '');
 
   return (
@@ -89,10 +105,18 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             <ArrowLeft size={17} />
             Apps
           </Link>
-          <McpConnectButton
-            mcpToken={project.appMcpToken}
-            mcpUrl={`${appUrl}/api/mcp`}
-          />
+          <div className="project-header-actions">
+            {usageSummary ? (
+              <span className="project-token-summary" title={usageSummary.title}>
+                <strong>{usageSummary.total}</strong>
+                {usageSummary.breakdown ? <span>{usageSummary.breakdown}</span> : null}
+              </span>
+            ) : null}
+            <McpConnectButton
+              mcpToken={project.appMcpToken}
+              mcpUrl={`${appUrl}/api/mcp`}
+            />
+          </div>
         </header>
 
         <ProjectAgentChat
@@ -163,4 +187,40 @@ function formatInitialUsage(
     promptTokens: usage.promptTokens ?? undefined,
     totalTokens: usage.totalTokens ?? undefined
   };
+}
+
+function formatUsageSummary(usage: {
+  completionTokens: number | null;
+  promptTokens: number | null;
+  totalTokens: number | null;
+}) {
+  const promptTokens = usage.promptTokens ?? 0;
+  const completionTokens = usage.completionTokens ?? 0;
+  const knownTotal = promptTokens + completionTokens;
+  const totalTokens = usage.totalTokens ?? knownTotal;
+
+  if (totalTokens <= 0) {
+    return null;
+  }
+
+  const breakdown =
+    promptTokens > 0 || completionTokens > 0
+      ? `${formatTokenCount(promptTokens)} in / ${formatTokenCount(completionTokens)} out`
+      : '';
+
+  return {
+    breakdown,
+    title: [
+      `Total: ${formatTokenCount(totalTokens)}`,
+      promptTokens > 0 ? `Input: ${formatTokenCount(promptTokens)}` : '',
+      completionTokens > 0 ? `Output: ${formatTokenCount(completionTokens)}` : ''
+    ]
+      .filter(Boolean)
+      .join(' · '),
+    total: formatTokenCount(totalTokens)
+  };
+}
+
+function formatTokenCount(value: number) {
+  return new Intl.NumberFormat().format(value);
 }
