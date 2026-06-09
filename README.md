@@ -17,6 +17,14 @@ make dev
 make worker
 ```
 
+If you use local macOS Node/npm after running Docker-based commands, reinstall
+dependencies locally once:
+
+```bash
+rm -rf node_modules
+npm install
+```
+
 ## Environment
 
 ```text

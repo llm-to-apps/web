@@ -4,8 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "prisma generate && prisma db push && next dev",
-    "worker": "tsx worker/deploy-worker.ts",
-    "build": "next build",
+    "worker": "npm run worker:build && node dist-worker/worker/deploy-worker.js",
+    "worker:start": "node dist-worker/worker/deploy-worker.js",
+    "worker:build": "tsc -p tsconfig.worker.json",
+    "build": "next build && npm run worker:build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
@@ -19,8 +21,7 @@
     "next": "^16.0.7",
     "prisma": "^6.19.3",
     "react": "^19.2.1",
-    "react-dom": "^19.2.1",
-    "tsx": "^4.22.4"
+    "react-dom": "^19.2.1"
   },
   "devDependencies": {
     "@types/node": "^22.13.14",
