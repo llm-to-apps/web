@@ -444,8 +444,10 @@ button {
 }
 
 .project-header {
-  display: grid;
-  gap: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .back-link {
@@ -472,7 +474,7 @@ button {
   min-height: 0;
   overflow: hidden;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto auto;
+  grid-template-rows: minmax(0, 1fr) auto;
   gap: 12px;
 }
 
@@ -550,40 +552,90 @@ button {
   color: #9d2d2d;
 }
 
-.mcp-connect {
+.mcp-connect-button {
+  min-height: 34px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.7);
-}
-
-.mcp-connect summary {
-  cursor: pointer;
-  padding: 10px 12px;
+  background: #fff;
   color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   font-weight: 700;
-  list-style-position: inside;
+  padding: 0 10px;
 }
 
-.mcp-connect-panel {
-  border-top: 1px solid var(--line);
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgba(17, 24, 39, 0.42);
   display: grid;
-  gap: 10px;
-  padding: 11px 12px 12px;
+  place-items: center;
+  padding: 18px;
 }
 
-.mcp-connect-panel p,
-.mcp-connect-panel ol {
+.mcp-modal {
+  width: min(520px, 100%);
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
+}
+
+.mcp-modal-header {
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px;
+}
+
+.mcp-modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.mcp-modal-header p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.mcp-modal-header button {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+}
+
+.mcp-modal-body {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.mcp-modal-body p,
+.mcp-modal-body ol {
   margin: 0;
   color: var(--muted);
   font-size: 13px;
   line-height: 1.45;
 }
 
-.mcp-connect-panel ol {
+.mcp-modal-body ol {
   padding-left: 18px;
 }
 
-.mcp-connect-panel label {
+.mcp-modal-body label {
   display: grid;
   gap: 5px;
   color: var(--muted);
@@ -591,7 +643,7 @@ button {
   font-weight: 700;
 }
 
-.mcp-connect-panel input {
+.mcp-modal-body input {
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -609,7 +661,7 @@ button {
 }
 
 .mcp-token-row button,
-.mcp-connect-panel a {
+.mcp-modal-body a {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
@@ -624,7 +676,7 @@ button {
   text-decoration: none;
 }
 
-.mcp-connect-panel a {
+.mcp-modal-body a {
   justify-self: start;
 }
 

@@ -4,6 +4,7 @@ import { ArrowLeft, ExternalLink } from 'lucide-react';
 
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { McpConnectButton } from '../../ui/mcp-connect-button';
 import { ProjectAgentChat } from '../../ui/project-agent-chat';
 
 type ProjectPageProps = {
@@ -54,6 +55,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     }
   });
   const orderedChatMessages = chatMessages.reverse();
+  const appUrl = project.url.replace(/\/$/, '');
 
   return (
     <main className="project-workspace">
@@ -63,6 +65,10 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             <ArrowLeft size={17} />
             Apps
           </Link>
+          <McpConnectButton
+            mcpToken={project.appMcpToken}
+            mcpUrl={`${appUrl}/api/mcp`}
+          />
         </header>
 
         <ProjectAgentChat
@@ -71,9 +77,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             name: project.templateName,
             status: project.status,
             domain: project.domain,
-            toolsUrl: `${project.url.replace(/\/$/, '')}/agent-tools`,
-            mcpUrl: `${project.url.replace(/\/$/, '')}/api/mcp`,
-            mcpToken: project.appMcpToken
+            toolsUrl: `${appUrl}/agent-tools`
           }}
           initialMessages={orderedChatMessages.map((message) => ({
             id: message.id,
