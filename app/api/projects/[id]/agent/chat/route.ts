@@ -94,8 +94,16 @@ Domain: ${project.domain}
 Status: ${project.status}
 Agent tools endpoint: ${toolsUrl}
 
-Use the tools endpoint for runtime facts and code changes. Do not claim you changed files unless a tool call confirms it.
+Rules:
+- Answer once. Do not repeat the same sentence.
+- Use the tools endpoint for runtime facts and code changes when project tools are available.
+- Do not say "let me check" unless you actually call a tool.
+- Do not claim you changed files unless a tool call confirms it.
 `,
+        maxSteps: 3,
+        modelSettings: {
+          temperature: 0.2
+        },
         requestContext: {
           projectId: project.id,
           projectDomain: project.domain,
@@ -132,5 +140,29 @@ Use the tools endpoint for runtime facts and code changes. Do not claim you chan
 function extractAgentText(result: MastraGenerateResult) {
   const lastMessage = result.response?.messages?.at(-1)?.content;
 
-  return result.text || lastMessage || 'The agent returned an empty response.';
+  return collapseRepeatedSentences(
+    result.text || lastMessage || 'The agent returned an empty response.'
+  );
+}
+
+function collapseRepeatedSentences(text: string) {
+  const sentences = text.match(/[^.!?]+[.!?]+|\S[\s\S]*$/g);
+
+  if (!sentences) {
+    return text;
+  }
+
+  const seen = new Set<string>();
+  const deduped = sentences.filter((sentence) => {
+    const key = sentence.trim().toLowerCase();
+
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+
+  return deduped.join('').trim();
 }
