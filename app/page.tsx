@@ -33,23 +33,30 @@ export default async function Home() {
           <section className="desktop-section">
             {projects.length > 0 ? (
               <div className="app-grid" aria-label="Installed applications">
-                {projects.map((project) => (
-                  <a
-                    className={`desktop-app app-state-${project.status}`}
-                    href={project.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    key={project.id}
-                  >
-                    <AppIcon templateId={project.templateId as TemplateId} size="large" />
-                    <span className="desktop-app-name">{project.templateName}</span>
-                    <span className="desktop-app-domain">{project.domain}</span>
-                    <span className="desktop-app-status">{project.status}</span>
-                    {project.deployError ? (
-                      <span className="desktop-app-error">{project.deployError}</span>
-                    ) : null}
-                  </a>
-                ))}
+                {projects.map((project) => {
+                  const isInstalling = project.status === 'queued' || project.status === 'deploying';
+
+                  return (
+                    <a
+                      className={`desktop-app app-state-${project.status}`}
+                      href={project.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      key={project.id}
+                    >
+                      <span className="desktop-app-icon-wrap">
+                        <AppIcon templateId={project.templateId as TemplateId} size="large" />
+                        {isInstalling ? (
+                          <span className="install-spinner" aria-label="Installing" />
+                        ) : null}
+                      </span>
+                      <span className="desktop-app-name">{project.templateName}</span>
+                      {project.deployError ? (
+                        <span className="desktop-app-error">{project.deployError}</span>
+                      ) : null}
+                    </a>
+                  );
+                })}
               </div>
             ) : (
               <div className="empty-desktop">
