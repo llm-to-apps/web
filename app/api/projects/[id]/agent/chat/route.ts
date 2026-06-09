@@ -13,11 +13,26 @@ type AgentChatRequest = {
 
 type MastraGenerateResult = {
   text?: string;
+  steps?: Array<{
+    toolResults?: Array<{
+      payload?: {
+        toolName?: string;
+        result?: unknown;
+      };
+    }>;
+  }>;
   response?: {
     messages?: Array<{
-      content?: string;
+      content?: unknown;
     }>;
   };
+};
+
+type ProjectFileEntry = {
+  path: string;
+  type: 'file' | 'dir';
+  size?: number;
+  depth?: number;
 };
 
 export async function POST(request: NextRequest, context: AgentChatContext) {
@@ -125,10 +140,12 @@ Agent tools endpoint: ${toolsUrl}
 Rules:
 - Answer once. Do not repeat the same sentence.
 - Use the tools endpoint for runtime facts and code changes when project tools are available.
+- Do not announce tool usage before calling a tool.
+- After a tool result, answer with the result. Do not call the same tool twice with the same arguments.
 - Do not say "let me check" unless you actually call a tool.
 - Do not claim you changed files unless a tool call confirms it.
 `,
-        maxSteps: 3,
+        maxSteps: 1,
         modelSettings: {
           temperature: 0.2
         },
@@ -154,6 +171,7 @@ Rules:
     ok: agentResponse.ok,
     durationMs,
     hasText: Boolean(agentResult?.text),
+    toolResults: countToolResults(agentResult),
     responseMessages: agentResult?.response?.messages?.length ?? 0
   });
 
@@ -185,11 +203,128 @@ Rules:
 }
 
 function extractAgentText(result: MastraGenerateResult) {
-  const lastMessage = result.response?.messages?.at(-1)?.content;
-
-  return collapseRepeatedSentences(
-    result.text || lastMessage || 'The agent returned an empty response.'
+  const text = collapseRepeatedSentences(
+    result.text || extractLastMessageText(result) || ''
   );
+  const toolText = extractLatestToolResultText(result);
+
+  if (toolText && isToolPreamble(text)) {
+    return toolText;
+  }
+
+  return text || toolText || 'The agent returned an empty response.';
+}
+
+function extractLastMessageText(result: MastraGenerateResult) {
+  const content = result.response?.messages?.at(-1)?.content;
+
+  if (typeof content === 'string') {
+    return content;
+  }
+
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (
+          part &&
+          typeof part === 'object' &&
+          'type' in part &&
+          part.type === 'text' &&
+          'text' in part &&
+          typeof part.text === 'string'
+        ) {
+          return part.text;
+        }
+
+        return '';
+      })
+      .filter(Boolean)
+      .join('\n');
+  }
+
+  return '';
+}
+
+function extractLatestToolResultText(result: MastraGenerateResult) {
+  const toolResult = result.steps
+    ?.flatMap((step) => step.toolResults ?? [])
+    .at(-1)?.payload;
+
+  if (!toolResult) {
+    return '';
+  }
+
+  return formatToolResult(toolResult.toolName, toolResult.result);
+}
+
+function formatToolResult(toolName: string | undefined, result: unknown) {
+  if (toolName === 'listProjectFiles' && isFileTreeResult(result)) {
+    return [
+      `Files (${result.entries.length}):`,
+      ...result.entries.map((entry) => {
+        const suffix = entry.type === 'dir' ? '/' : '';
+        return `- ${entry.path}${suffix}`;
+      })
+    ].join('\n');
+  }
+
+  if (toolName === 'readProjectFile' && isReadFileResult(result)) {
+    return [`${result.path}:`, '```', result.content, '```'].join('\n');
+  }
+
+  if (toolName === 'getProjectAppLogs' && isObjectRecord(result)) {
+    const logs = result.logs ?? result.content ?? result.stdout;
+
+    if (typeof logs === 'string') {
+      return logs.trim() || 'No application logs returned.';
+    }
+  }
+
+  return JSON.stringify(result, null, 2);
+}
+
+function isFileTreeResult(result: unknown): result is { entries: ProjectFileEntry[] } {
+  return (
+    isObjectRecord(result) &&
+    Array.isArray(result.entries) &&
+    result.entries.every(
+      (entry) =>
+        isObjectRecord(entry) &&
+        typeof entry.path === 'string' &&
+        (entry.type === 'file' || entry.type === 'dir')
+    )
+  );
+}
+
+function isReadFileResult(result: unknown): result is { path: string; content: string } {
+  return (
+    isObjectRecord(result) &&
+    typeof result.path === 'string' &&
+    typeof result.content === 'string'
+  );
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isToolPreamble(text: string) {
+  if (!text.trim()) {
+    return true;
+  }
+
+  const normalized = text.trim().toLowerCase();
+
+  return (
+    normalized.startsWith("i'll ") ||
+    normalized.startsWith('i will ') ||
+    normalized.startsWith('let me ') ||
+    normalized.includes('get the list of files')
+  );
+}
+
+function countToolResults(result: MastraGenerateResult | null) {
+  return result?.steps?.reduce((count, step) => count + (step.toolResults?.length ?? 0), 0) ?? 0;
 }
 
 function collapseRepeatedSentences(text: string) {
