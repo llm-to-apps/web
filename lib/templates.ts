@@ -5,7 +5,7 @@ export const templates = {
     id: 'money',
     name: 'Money',
     git: 'git@github.com:llm-to-apps/money-template.git',
-    image: 'ghcr.io/llm-to-apps/money-template:sha-8f1defc',
+    image: 'ghcr.io/llm-to-apps/money-template:sha-dfa36b3',
     appPort: 3001,
     agentPort: 7001
   }
