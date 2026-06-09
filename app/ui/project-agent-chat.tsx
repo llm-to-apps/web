@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { Bot, Lock, Send, Sparkles, Unlock, User } from 'lucide-react';
+import { Bot, Lock, Send, Unlock, User } from 'lucide-react';
 
 type ProjectAgentChatProps = {
   project: {
@@ -389,9 +389,7 @@ function TokenUsageBadge({ usage }: { usage: TokenUsage }) {
 
   return (
     <span className="chat-usage" title={formatTokenUsageTitle(usage)}>
-      <Sparkles aria-hidden="true" size={12} />
       <strong>{formatTokenCount(totalTokens)}</strong>
-      <span>tokens</span>
       {formatTokenBreakdown(usage) ? (
         <span className="chat-usage-breakdown">{formatTokenBreakdown(usage)}</span>
       ) : null}

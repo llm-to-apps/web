@@ -541,10 +541,6 @@ button {
   padding: 4px 8px;
 }
 
-.chat-usage svg {
-  color: var(--accent);
-}
-
 .chat-usage strong {
   color: var(--text);
   font-weight: 650;
