@@ -156,7 +156,7 @@ Rules:
 - Do not say "let me check" unless you actually call a tool.
 - Do not claim you changed files unless a tool call confirms it.
 `,
-        maxSteps: 6,
+        maxSteps: 15,
         modelSettings: {
           temperature: 0.2
         },
