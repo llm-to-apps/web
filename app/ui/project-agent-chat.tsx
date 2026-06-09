@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { Bot, Send, User } from 'lucide-react';
+import { Bot, Lock, Send, Unlock, User } from 'lucide-react';
 
 type ProjectAgentChatProps = {
   project: {
@@ -218,6 +218,11 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
     return line || 'Agent is working.';
   }
 
+  const modeButtonLabel =
+    mode === 'use'
+      ? 'Use mode is active. Click to enable Dev mode.'
+      : 'Dev mode is active. Click to return to Use mode.';
+
   return (
     <div className="agent-chat">
       <div className="chat-messages" aria-live="polite">
@@ -241,28 +246,17 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
       </div>
 
       <form className="chat-form" onSubmit={sendMessage}>
-        <div className="agent-mode-toggle" role="tablist" aria-label="Agent mode">
-          <button
-            aria-selected={mode === 'use'}
-            className={mode === 'use' ? 'active' : ''}
-            disabled={isSending}
-            onClick={() => setMode('use')}
-            role="tab"
-            type="button"
-          >
-            Use
-          </button>
-          <button
-            aria-selected={mode === 'dev'}
-            className={mode === 'dev' ? 'active' : ''}
-            disabled={isSending}
-            onClick={() => setMode('dev')}
-            role="tab"
-            type="button"
-          >
-            Dev
-          </button>
-        </div>
+        <button
+          aria-label={modeButtonLabel}
+          aria-pressed={mode === 'dev'}
+          className={`agent-mode-button mode-${mode}`}
+          disabled={isSending}
+          onClick={() => setMode((currentMode) => (currentMode === 'use' ? 'dev' : 'use'))}
+          title={modeButtonLabel}
+          type="button"
+        >
+          {mode === 'use' ? <Lock size={16} /> : <Unlock size={16} />}
+        </button>
         <textarea
           aria-label="Message agent"
           disabled={isSending}

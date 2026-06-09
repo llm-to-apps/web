@@ -501,35 +501,35 @@ button {
   gap: 8px;
 }
 
-.agent-mode-toggle {
+.chat-form .agent-mode-button {
   grid-column: 1 / -1;
-  width: max-content;
-  display: inline-grid;
-  grid-template-columns: 1fr 1fr;
+  justify-self: start;
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  overflow: hidden;
   background: #fff;
-}
-
-.chat-form .agent-mode-toggle button {
-  min-height: 32px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
   color: var(--muted);
-  padding: 0 14px;
-  font-size: 13px;
-  font-weight: 700;
+  display: grid;
+  place-items: center;
 }
 
-.chat-form .agent-mode-toggle button.active {
-  background: var(--accent);
-  color: #fff;
+.chat-form .agent-mode-button.mode-dev {
+  border-color: #b7d0c3;
+  background: #edf6f0;
+  color: var(--accent);
 }
 
-.chat-form .agent-mode-toggle button:disabled {
+.chat-form .agent-mode-button:disabled {
+  background: #fff;
+  color: var(--muted);
   opacity: 0.65;
+}
+
+.chat-form .agent-mode-button.mode-dev:disabled {
+  background: #edf6f0;
+  color: var(--accent);
 }
 
 .chat-form textarea {
