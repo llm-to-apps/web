@@ -232,13 +232,20 @@ button {
   min-height: 120px;
   padding: 10px 8px;
   color: var(--text);
-  text-decoration: none;
   display: grid;
   justify-items: center;
   align-content: start;
   gap: 7px;
   border-radius: 8px;
   position: relative;
+}
+
+.desktop-app-link {
+  color: var(--text);
+  text-decoration: none;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
 }
 
 .desktop-app:hover {
@@ -273,12 +280,14 @@ button {
 }
 
 .app-state-deploying .app-icon,
-.app-state-queued .app-icon {
+.app-state-queued .app-icon,
+.app-state-deleting .app-icon {
   filter: brightness(0.55) saturate(0.82);
 }
 
 .app-state-deploying .desktop-app-icon-wrap::after,
-.app-state-queued .desktop-app-icon-wrap::after {
+.app-state-queued .desktop-app-icon-wrap::after,
+.app-state-deleting .desktop-app-icon-wrap::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -325,6 +334,33 @@ button {
 
 .desktop-app-error {
   color: #9d2a1d;
+}
+
+.delete-app-button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(216, 222, 216, 0.9);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #9d2a1d;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  position: absolute;
+  right: 14px;
+  top: 6px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.desktop-app:hover .delete-app-button,
+.delete-app-button:focus-visible {
+  opacity: 1;
+}
+
+.delete-app-button:disabled {
+  cursor: wait;
+  color: var(--muted);
 }
 
 .empty-desktop {

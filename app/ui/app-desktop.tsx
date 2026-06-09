@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Download, Store } from 'lucide-react';
+import { Download, Store, Trash2 } from 'lucide-react';
 import { AppIcon } from './app-icon';
 import type { TemplateId } from '@/lib/templates';
 
@@ -31,9 +31,13 @@ type AppDesktopProps = {
 };
 
 const installingStatuses = new Set(['queued', 'deploying']);
+const busyStatuses = new Set(['queued', 'deploying', 'deleting']);
 
 export function AppDesktop({ initialProjects }: AppDesktopProps) {
   const [projects, setProjects] = useState(initialProjects);
+  const [deletingProjectIds, setDeletingProjectIds] = useState<Set<string>>(
+    () => new Set()
+  );
   const installingProjectIds = useMemo(
     () =>
       projects
@@ -100,32 +104,103 @@ export function AppDesktop({ initialProjects }: AppDesktopProps) {
     };
   }, [installingProjectIdsKey]);
 
+  async function deleteProject(projectId: string) {
+    const project = projects.find((candidate) => candidate.id === projectId);
+
+    if (!project || !window.confirm(`Delete ${project.templateName}?`)) {
+      return;
+    }
+
+    setDeletingProjectIds((currentIds) => new Set(currentIds).add(projectId));
+    setProjects((currentProjects) =>
+      currentProjects.map((project) =>
+        project.id === projectId
+          ? {
+              ...project,
+              status: 'deleting',
+              deployError: null
+            }
+          : project
+      )
+    );
+
+    try {
+      const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}`, {
+        method: 'DELETE'
+      });
+      const data = (await response.json().catch(() => null)) as
+        | { ok: true }
+        | { ok: false; message?: string }
+        | null;
+
+      if (!response.ok || !data?.ok) {
+        throw new Error(data && 'message' in data ? data.message : 'Delete failed');
+      }
+
+      setProjects((currentProjects) =>
+        currentProjects.filter((project) => project.id !== projectId)
+      );
+    } catch (error) {
+      setProjects((currentProjects) =>
+        currentProjects.map((project) =>
+          project.id === projectId
+            ? {
+                ...project,
+                status: 'failed',
+                deployError: error instanceof Error ? error.message : 'Delete failed'
+              }
+            : project
+        )
+      );
+    } finally {
+      setDeletingProjectIds((currentIds) => {
+        const nextIds = new Set(currentIds);
+        nextIds.delete(projectId);
+        return nextIds;
+      });
+    }
+  }
+
   return (
     <section className="desktop-section">
       {projects.length > 0 ? (
         <div className="app-grid" aria-label="Installed applications">
           {projects.map((project) => {
-            const isInstalling = installingStatuses.has(project.status);
+            const isBusy = busyStatuses.has(project.status);
+            const isDeleting = deletingProjectIds.has(project.id) || project.status === 'deleting';
 
             return (
-              <a
+              <div
                 className={`desktop-app app-state-${project.status}`}
-                href={project.url}
-                target="_blank"
-                rel="noreferrer"
                 key={project.id}
               >
-                <span className="desktop-app-icon-wrap">
-                  <AppIcon templateId={project.templateId as TemplateId} size="large" />
-                  {isInstalling ? (
-                    <span className="install-spinner" aria-label="Installing" />
-                  ) : null}
-                </span>
-                <span className="desktop-app-name">{project.templateName}</span>
+                <a
+                  className="desktop-app-link"
+                  href={project.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <span className="desktop-app-icon-wrap">
+                    <AppIcon templateId={project.templateId as TemplateId} size="large" />
+                    {isBusy ? (
+                      <span className="install-spinner" aria-label="Installing" />
+                    ) : null}
+                  </span>
+                  <span className="desktop-app-name">{project.templateName}</span>
+                </a>
+                <button
+                  aria-label={`Delete ${project.templateName}`}
+                  className="delete-app-button"
+                  disabled={isDeleting}
+                  onClick={() => void deleteProject(project.id)}
+                  type="button"
+                >
+                  <Trash2 size={15} />
+                </button>
                 {project.deployError ? (
                   <span className="desktop-app-error">{project.deployError}</span>
                 ) : null}
-              </a>
+              </div>
             );
           })}
         </div>

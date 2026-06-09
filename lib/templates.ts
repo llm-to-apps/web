@@ -29,9 +29,18 @@ export function createProjectId() {
   return randomBytes(6).toString('hex');
 }
 
-export function createProjectCredentials(projectId: string) {
+export function createProjectDatabaseNames(projectId: string) {
   const dbName = `project_${projectId}`;
   const dbUser = `project_${projectId}`;
+
+  return {
+    dbName,
+    dbUser
+  };
+}
+
+export function createProjectCredentials(projectId: string) {
+  const { dbName, dbUser } = createProjectDatabaseNames(projectId);
   const dbPassword = randomBytes(18).toString('base64url');
 
   return {
