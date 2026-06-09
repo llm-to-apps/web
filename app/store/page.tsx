@@ -1,0 +1,59 @@
+import { AppIcon } from '../ui/app-icon';
+import { AppShell } from '../ui/app-shell';
+import { AppTabs } from '../ui/app-tabs';
+import { InstallButton } from '../ui/install-button';
+import { SignedOutContent } from '../ui/signed-out-content';
+import { getCurrentUser } from '@/lib/auth';
+import { templates } from '@/lib/templates';
+
+const appTemplates = Object.values(templates);
+
+export default async function StorePage() {
+  const user = await getCurrentUser();
+
+  return (
+    <AppShell
+      user={user}
+      title={user ? 'App Store' : 'Create your account'}
+      description={
+        user
+          ? 'Install new templates into your workspace.'
+          : 'Register or sign in before deploying a live application.'
+      }
+    >
+      {user ? (
+        <>
+          <AppTabs active="store" />
+          <section className="store-section">
+            <div className="store-grid">
+              {appTemplates.map((template) => (
+                <article className="store-app" key={template.id}>
+                  <div className="store-app-main">
+                    <AppIcon templateId={template.id} size="large" />
+                    <div>
+                      <h3>{template.name}</h3>
+                      <p>{template.description}</p>
+                    </div>
+                  </div>
+                  <div className="store-meta">
+                    <div>
+                      <span>Repository</span>
+                      <strong>{template.repository}</strong>
+                    </div>
+                    <div>
+                      <span>Runtime</span>
+                      <strong>MySQL</strong>
+                    </div>
+                  </div>
+                  <InstallButton templateId={template.id} />
+                </article>
+              ))}
+            </div>
+          </section>
+        </>
+      ) : (
+        <SignedOutContent />
+      )}
+    </AppShell>
+  );
+}
