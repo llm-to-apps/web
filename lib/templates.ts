@@ -8,7 +8,7 @@ export const templates = {
     icon: 'money',
     repository: 'money-template',
     git: 'git@github.com:llm-to-apps/money-template.git',
-    image: 'ghcr.io/llm-to-apps/money-template:sha-2f5b27b',
+    image: 'ghcr.io/llm-to-apps/money-template:sha-4825afb',
     appPort: 3001,
     agentPort: 7070
   },
