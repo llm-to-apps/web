@@ -6,6 +6,7 @@ export type DeployProjectJob = {
   managerPayload: {
     id: string;
     git: string;
+    image: string;
     services: {
       mysql: {
         db: string;
@@ -44,21 +45,21 @@ export function getDeployQueue() {
   deployQueue ??= new Queue<DeployProjectJob, unknown, 'deploy-project'>(
     deployQueueName,
     {
-    connection: redisConnectionOptions(),
-    defaultJobOptions: {
-      attempts: 3,
-      backoff: {
-        type: 'exponential',
-        delay: 5_000
-      },
-      removeOnComplete: {
-        age: 60 * 60 * 24,
-        count: 500
-      },
-      removeOnFail: {
-        age: 60 * 60 * 24 * 7
+      connection: redisConnectionOptions(),
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 5_000
+        },
+        removeOnComplete: {
+          age: 60 * 60 * 24,
+          count: 500
+        },
+        removeOnFail: {
+          age: 60 * 60 * 24 * 7
+        }
       }
-    }
     }
   );
 

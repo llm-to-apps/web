@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
   const managerPayload = {
     id,
     git: template.git,
+    image: template.image,
     services: {
       mysql: {
         db: dbName,
