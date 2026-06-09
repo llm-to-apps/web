@@ -5,6 +5,7 @@ import { getDeployQueue } from '@/lib/deploy-queue';
 import { prisma } from '@/lib/db';
 import {
   cleanSubdomain,
+  createAgentToolsToken,
   createProjectCredentials,
   createProjectId,
   templates,
@@ -64,6 +65,7 @@ export async function POST(request: NextRequest) {
 
   const { dbName, dbUser, dbPassword, databaseUrl } =
     createProjectCredentials(id);
+  const agentToolsToken = createAgentToolsToken();
   const domain = `${subdomain}.${rootDomain}`;
 
   const managerPayload = {
@@ -86,7 +88,8 @@ export async function POST(request: NextRequest) {
       MYSQL_DATABASE: dbName,
       MYSQL_USER: dbUser,
       MYSQL_PASSWORD: dbPassword,
-      DATABASE_URL: databaseUrl
+      DATABASE_URL: databaseUrl,
+      AGENT_TOOLS_TOKEN: agentToolsToken
     },
     domain,
     ports: {
@@ -106,7 +109,8 @@ export async function POST(request: NextRequest) {
       url: `http://${domain}`,
       status: 'queued',
       appPort: template.appPort,
-      agentPort: template.agentPort
+      agentPort: template.agentPort,
+      agentToolsToken
     }
   });
 

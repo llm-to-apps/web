@@ -41,6 +41,8 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
       id: true,
       templateName: true,
       domain: true,
+      url: true,
+      agentToolsToken: true,
       status: true
     }
   });
@@ -60,7 +62,7 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
   }
 
   const agentUrl = process.env.AGENT_URL;
-  const toolsUrl = `http://project-${project.id}:7070`;
+  const toolsUrl = `${project.url.replace(/\/$/, '')}/agent-tools`;
 
   if (!agentUrl) {
     return NextResponse.json({
@@ -108,7 +110,8 @@ Rules:
           projectId: project.id,
           projectDomain: project.domain,
           projectStatus: project.status,
-          toolsUrl
+          toolsUrl,
+          agentToolsToken: project.agentToolsToken
         }
       })
     }

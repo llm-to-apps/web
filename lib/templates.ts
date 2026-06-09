@@ -9,7 +9,7 @@ export const templates = {
     git: 'git@github.com:llm-to-apps/money-template.git',
     image: 'ghcr.io/llm-to-apps/money-template:sha-15f667f',
     appPort: 3001,
-    agentPort: 7001
+    agentPort: 7070
   }
 } as const;
 
@@ -27,6 +27,10 @@ export function cleanSubdomain(value: string) {
 
 export function createProjectId() {
   return randomBytes(6).toString('hex');
+}
+
+export function createAgentToolsToken() {
+  return randomBytes(32).toString('base64url');
 }
 
 export function createProjectDatabaseNames(projectId: string) {
