@@ -37,6 +37,8 @@ type AgentStreamEvent =
       type: 'done';
     };
 
+type AgentMode = 'use' | 'dev';
+
 export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -46,6 +48,7 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
     }
   ]);
   const [input, setInput] = useState('');
+  const [mode, setMode] = useState<AgentMode>('use');
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -91,7 +94,8 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          message: content
+          message: content,
+          mode
         })
       });
 
@@ -237,11 +241,37 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
       </div>
 
       <form className="chat-form" onSubmit={sendMessage}>
+        <div className="agent-mode-toggle" role="tablist" aria-label="Agent mode">
+          <button
+            aria-selected={mode === 'use'}
+            className={mode === 'use' ? 'active' : ''}
+            disabled={isSending}
+            onClick={() => setMode('use')}
+            role="tab"
+            type="button"
+          >
+            Use
+          </button>
+          <button
+            aria-selected={mode === 'dev'}
+            className={mode === 'dev' ? 'active' : ''}
+            disabled={isSending}
+            onClick={() => setMode('dev')}
+            role="tab"
+            type="button"
+          >
+            Dev
+          </button>
+        </div>
         <textarea
           aria-label="Message agent"
           disabled={isSending}
           onChange={(event) => setInput(event.target.value)}
-          placeholder="Ask the agent to inspect or change the app..."
+          placeholder={
+            mode === 'use'
+              ? 'Ask the agent to use the app...'
+              : 'Ask the agent to inspect or change code...'
+          }
           rows={3}
           value={input}
         />

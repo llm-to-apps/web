@@ -501,6 +501,37 @@ button {
   gap: 8px;
 }
 
+.agent-mode-toggle {
+  grid-column: 1 / -1;
+  width: max-content;
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.chat-form .agent-mode-toggle button {
+  min-height: 32px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.chat-form .agent-mode-toggle button.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.chat-form .agent-mode-toggle button:disabled {
+  opacity: 0.65;
+}
+
 .chat-form textarea {
   width: 100%;
   resize: none;

@@ -9,6 +9,7 @@ type AgentChatContext = {
 
 type AgentChatRequest = {
   message?: string;
+  mode?: 'use' | 'dev';
 };
 
 type AgentStreamEvent =
@@ -75,6 +76,7 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
   const agentUrl = process.env.AGENT_URL;
   const toolsUrl = `${project.url.replace(/\/$/, '')}/agent-tools`;
   const appMcpUrl = `${project.url.replace(/\/$/, '')}/api/mcp`;
+  const mode = body.mode === 'dev' ? 'dev' : 'use';
 
   console.info('[agent-chat] request', {
     requestId,
@@ -84,6 +86,7 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
     hasAgentUrl: Boolean(agentUrl),
     hasAgentToolsToken: Boolean(project.agentToolsToken),
     hasAppMcpToken: Boolean(project.appMcpToken),
+    mode,
     messageLength: body.message.trim().length,
     toolsUrl,
     appMcpUrl
@@ -132,24 +135,13 @@ You are working on project ${project.id}.
 Application: ${project.templateName}
 Domain: ${project.domain}
 Status: ${project.status}
-Agent tools endpoint: ${toolsUrl}
-Application MCP endpoint: ${appMcpUrl}
+Mode: ${mode === 'dev' ? 'Dev' : 'Use'}
+${mode === 'dev' ? `Agent tools endpoint: ${toolsUrl}` : `Application MCP endpoint: ${appMcpUrl}`}
 
 Rules:
 - You are the llm-to-apps project coding agent for this app, not the underlying model provider.
 - Answer once. Do not repeat the same sentence.
-- For application data operations, use application MCP tools: call listAppMcpTools when needed, then callAppMcpTool.
-- For code, UI, behavior, dependency, or file changes, use agent dev tools.
-- Use the tools endpoint for runtime facts and code changes when project tools are available.
-- Search file contents with searchProjectFiles.
-- For simple text changes like renaming app title/copy, use this flow: searchProjectFiles, readProjectFile for matching files or ranges, replaceTextInFile, then getProjectDiff.
-- Prefer replaceTextInFile for exact renames and copy changes.
-- Use patchProjectFiles only for small, high-confidence unified diffs. If patchProjectFiles fails once, do not retry patchProjectFiles for the same file; read the file and use writeProjectFile instead.
-- Use writeProjectFile when replacing a whole file intentionally, when creating a new file, or when a patch failed.
-- After changing files, run a relevant check with runProjectCommand when possible.
-- Never use runProjectCommand for source search commands such as grep, find, rg, awk, or sed. Use searchProjectFiles.
-- Do not call getProjectGitStatus unless the user asks for git status or a change summary.
-- Do not inspect package.json, README.md, logs, git status, or the file tree for a simple rename unless searchProjectFiles shows they contain the target text.
+${mode === 'dev' ? devModeRules() : useModeRules()}
 - Do not announce tool usage before calling a tool.
 - After a tool result, answer with the result. Do not call the same tool twice with the same arguments.
 - Do not say "let me check" unless you actually call a tool.
@@ -164,10 +156,11 @@ Rules:
           projectId: project.id,
           projectDomain: project.domain,
           projectStatus: project.status,
-          toolsUrl,
-          agentToolsToken: project.agentToolsToken,
-          appMcpUrl,
-          appMcpToken: project.appMcpToken
+          mode,
+          toolsUrl: mode === 'dev' ? toolsUrl : undefined,
+          agentToolsToken: mode === 'dev' ? project.agentToolsToken : undefined,
+          appMcpUrl: mode === 'use' ? appMcpUrl : undefined,
+          appMcpToken: mode === 'use' ? project.appMcpToken : undefined
         }
       })
     }
@@ -205,6 +198,28 @@ Rules:
       'X-Accel-Buffering': 'no'
     }
   });
+}
+
+function useModeRules() {
+  return `- You are in Use mode.
+- Use application MCP tools for app data operations: call listAppMcpTools when needed, then callAppMcpTool.
+- Do not inspect or change source code.
+- Do not use dev project tools.`;
+}
+
+function devModeRules() {
+  return `- You are in Dev mode.
+- Use agent dev tools for runtime facts, source inspection, code, UI, behavior, dependency, and file changes.
+- Do not use application MCP tools.
+- Search file contents with searchProjectFiles.
+- For simple text changes like renaming app title/copy, use this flow: searchProjectFiles, readProjectFile for matching files or ranges, replaceTextInFile, then getProjectDiff.
+- Prefer replaceTextInFile for exact renames and copy changes.
+- Use patchProjectFiles only for small, high-confidence unified diffs. If patchProjectFiles fails once, do not retry patchProjectFiles for the same file; read the file and use writeProjectFile instead.
+- Use writeProjectFile when replacing a whole file intentionally, when creating a new file, or when a patch failed.
+- After changing files, run a relevant check with runProjectCommand when possible.
+- Never use runProjectCommand for source search commands such as grep, find, rg, awk, or sed. Use searchProjectFiles.
+- Do not call getProjectGitStatus unless the user asks for git status or a change summary.
+- Do not inspect package.json, README.md, logs, git status, or the file tree for a simple rename unless searchProjectFiles shows they contain the target text.`;
 }
 
 function createAgentChatStream(
