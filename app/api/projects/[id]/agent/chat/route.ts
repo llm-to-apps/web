@@ -191,6 +191,7 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
             content: userMessageContent
           }
         ],
+        sendUsage: true,
         memory: {
           resource: memoryResource,
           thread: {
@@ -574,11 +575,13 @@ function extractTokenUsage(chunk: unknown): TokenUsage {
   return {
     completionTokens: readNumberField(usageSource, [
       'completionTokens',
+      'output',
       'outputTokens',
       'completion_tokens',
       'output_tokens'
     ]),
     promptTokens: readNumberField(usageSource, [
+      'input',
       'promptTokens',
       'inputTokens',
       'prompt_tokens',
@@ -612,8 +615,10 @@ function isUsageLike(value: Record<string, unknown>) {
   return [
     'completionTokens',
     'completion_tokens',
+    'input',
     'inputTokens',
     'input_tokens',
+    'output',
     'outputTokens',
     'output_tokens',
     'promptTokens',
