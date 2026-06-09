@@ -591,20 +591,33 @@ function extractTokenUsage(chunk: unknown): TokenUsage {
   };
 }
 
-function findUsageObject(chunk: Record<string, unknown>): Record<string, unknown> | null {
-  if (isUsageLike(chunk)) {
-    return chunk;
-  }
-
-  for (const key of ['usage', 'totalUsage', 'stepUsage', 'payload', 'data']) {
-    const value = chunk[key];
-
-    if (isObjectRecord(value)) {
-      const nestedUsage = findUsageObject(value);
+function findUsageObject(value: unknown): Record<string, unknown> | null {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const nestedUsage = findUsageObject(item);
 
       if (nestedUsage) {
         return nestedUsage;
       }
+    }
+
+    return null;
+  }
+
+  if (!isObjectRecord(value)) {
+    return null;
+  }
+
+  if (isUsageLike(value)) {
+    return value;
+  }
+
+  for (const key of ['usage', 'totalUsage', 'stepUsage', 'payload', 'data', 'output', 'steps']) {
+    const nestedValue = value[key];
+    const nestedUsage = findUsageObject(nestedValue);
+
+    if (nestedUsage) {
+      return nestedUsage;
     }
   }
 
