@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { Bot, Send, User } from 'lucide-react';
+import { Bot, Send, User, Wrench } from 'lucide-react';
 
 type ProjectAgentChatProps = {
   project: {
@@ -47,6 +47,7 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
   ]);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [agentActivity, setAgentActivity] = useState('');
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -73,6 +74,7 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
     setMessages((currentMessages) => [...currentMessages, userMessage]);
     setInput('');
     setIsSending(true);
+    setAgentActivity('Thinking');
 
     try {
       const response = await fetch(`/api/projects/${encodeURIComponent(project.id)}/agent/chat`, {
@@ -97,12 +99,12 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
         }
 
         if (event.type === 'progress') {
-          addProgressMessage(event.message);
+          setAgentActivity(formatAgentActivity(event.message));
           return;
         }
 
         if (event.type === 'error') {
-          addProgressMessage(event.message, 'error');
+          appendToMessage(assistantMessageId, event.message, 'error');
         }
       });
 
@@ -112,6 +114,7 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
       appendToMessage(assistantMessageId, message, 'error');
     } finally {
       setIsSending(false);
+      setAgentActivity('');
     }
   }
 
@@ -173,23 +176,20 @@ export function ProjectAgentChat({ project }: ProjectAgentChatProps) {
     });
   }
 
-  function addProgressMessage(content: string, kind: ChatMessage['kind'] = 'progress') {
-    setMessages((currentMessages) => [
-      ...currentMessages,
-      {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content,
-        kind
-      }
-    ]);
-  }
-
   return (
     <div className="agent-chat">
       <div className="agent-context">
-        <span>Agent tools</span>
-        <strong>{project.toolsUrl}</strong>
+        <div>
+          <span>Agent tools</span>
+          <strong>{project.toolsUrl}</strong>
+        </div>
+        {isSending ? (
+          <div className="agent-activity" aria-live="polite">
+            <span className="agent-activity-spinner" aria-hidden="true" />
+            <Wrench size={14} />
+            <span>{agentActivity || 'Working'}</span>
+          </div>
+        ) : null}
       </div>
 
       <div className="chat-messages" aria-live="polite">
@@ -287,4 +287,16 @@ function parseAgentStreamEvent(line: string): AgentStreamEvent | null {
   }
 
   return null;
+}
+
+function formatAgentActivity(message: string) {
+  const firstLine = message.split('\n')[0]?.trim();
+
+  if (!firstLine) {
+    return 'Working';
+  }
+
+  return firstLine
+    .replace(/^Running\s+/, 'Using ')
+    .replace(/^Finished\s+/, 'Finished ');
 }
