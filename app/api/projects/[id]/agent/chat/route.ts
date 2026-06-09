@@ -288,6 +288,8 @@ function devModeRules() {
 - Do not use application MCP tools.
 - Classify the task before acting: inspect, edit, debug, verify, or explain.
 - Use the smallest workflow that can complete the task. Simple tasks should use only a few tool calls.
+- Use getProjectAppStatus when you need to know whether the app process is running.
+- Use restartProjectApp after code or dependency changes when the dev server needs to restart.
 - Search file contents with searchProjectFiles.
 - For simple text changes like renaming app title/copy, use this flow: searchProjectFiles, readProjectFile for matching files or ranges, replaceTextInFile, then getProjectDiff.
 - Prefer replaceTextInFile for exact renames and copy changes.
