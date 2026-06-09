@@ -49,7 +49,7 @@ const worker = new Worker<DeployProjectJob, unknown, 'deploy-project'>(
     await prisma.project.update({
       where: { id: projectId },
       data: {
-        status: 'deploying',
+        status: 'ready',
         deployError: null,
         managerJobId: String(job.id ?? '')
       }
