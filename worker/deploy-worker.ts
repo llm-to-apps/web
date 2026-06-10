@@ -27,11 +27,15 @@ type ProjectServiceStatus = {
 const serviceReadyTimeoutMs = Number(process.env.DEPLOY_READY_TIMEOUT_MS || 120_000);
 const serviceReadyPollMs = Number(process.env.DEPLOY_READY_POLL_MS || 2_000);
 const appReadyBaseUrl = process.env.APP_READY_BASE_URL || 'http://127.0.0.1';
+const appReadyTimeoutMs = Number(process.env.DEPLOY_APP_READY_TIMEOUT_MS || 300_000);
 const appReadyRequestTimeoutMs = Number(
   process.env.DEPLOY_APP_READY_REQUEST_TIMEOUT_MS || 2_000
 );
-const appReadyAttempts = Number(process.env.DEPLOY_APP_READY_ATTEMPTS || 60);
 const appReadyRetryDelayMs = Number(process.env.DEPLOY_APP_READY_RETRY_DELAY_MS || 2_000);
+const appReadyAttempts = Number(
+  process.env.DEPLOY_APP_READY_ATTEMPTS ||
+    Math.ceil(appReadyTimeoutMs / appReadyRetryDelayMs) + 5
+);
 
 const worker = new Worker(
   deployQueueName,
@@ -52,7 +56,15 @@ const worker = new Worker(
   }
 );
 
-worker.on('completed', (job) => {
+worker.on('completed', (job, result) => {
+  if (isTimedOutResult(result)) {
+    console.warn(`${job.name} job ${job.id} stopped after readiness timeout`, {
+      projectId: job.data.projectId,
+      elapsedMs: result.elapsedMs
+    });
+    return;
+  }
+
   console.log(`${job.name} job ${job.id} completed for project ${job.data.projectId}`);
 });
 
@@ -163,7 +175,8 @@ async function deployProject(job: Job<DeployProjectJob>) {
     'check-project-ready',
     {
       projectId,
-      domain: managerPayload.domain
+      domain: managerPayload.domain,
+      readinessStartedAt: new Date().toISOString()
     },
     {
       jobId: `ready-${projectId}`,
@@ -179,7 +192,7 @@ async function deployProject(job: Job<DeployProjectJob>) {
 }
 
 async function checkProjectReady(job: Job<CheckProjectReadyJob>) {
-  const { projectId, domain } = job.data;
+  const { projectId, domain, readinessStartedAt } = job.data;
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     select: { id: true }
@@ -188,6 +201,33 @@ async function checkProjectReady(job: Job<CheckProjectReadyJob>) {
   if (!project) {
     console.warn(`readiness job ${job.id} skipped because project ${projectId} no longer exists`);
     return { skipped: true };
+  }
+
+  const elapsedMs = Date.now() - readTimestamp(readinessStartedAt, job.timestamp);
+
+  if (elapsedMs > appReadyTimeoutMs) {
+    const message = `Project app ${domain} did not become ready within ${appReadyTimeoutMs}ms`;
+
+    await prisma.project.update({
+      where: { id: projectId },
+      data: {
+        status: 'failed',
+        deployError: message
+      }
+    });
+
+    console.error(`check-project-ready job ${job.id} timed out`, {
+      projectId,
+      domain,
+      elapsedMs,
+      readinessStartedAt
+    });
+
+    return {
+      ok: false,
+      timedOut: true,
+      elapsedMs
+    };
   }
 
   const response = await fetchProjectApp(domain);
@@ -266,6 +306,24 @@ async function fetchProjectApp(domain: string) {
     const message = error instanceof Error ? error.message : 'Unknown app readiness error';
     throw new Error(`Project app ${domain} is not ready via ${url}: ${message}`);
   }
+}
+
+function readTimestamp(value: string | undefined, fallback: number) {
+  if (!value) {
+    return fallback;
+  }
+
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? timestamp : fallback;
+}
+
+function isTimedOutResult(result: unknown): result is { timedOut: true; elapsedMs: number } {
+  if (!result || typeof result !== 'object') {
+    return false;
+  }
+
+  const record = result as { elapsedMs?: unknown; timedOut?: unknown };
+  return record.timedOut === true && typeof record.elapsedMs === 'number';
 }
 
 function sleep(ms: number) {

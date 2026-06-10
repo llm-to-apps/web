@@ -36,6 +36,7 @@ export type DeployProjectJob = {
 export type CheckProjectReadyJob = {
   projectId: string;
   domain: string;
+  readinessStartedAt: string;
 };
 
 export type ProjectDeploymentJob = DeployProjectJob | CheckProjectReadyJob;
