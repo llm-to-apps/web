@@ -31,7 +31,7 @@ type ProjectServiceStatus = {
 
 const serviceReadyTimeoutMs = Number(process.env.DEPLOY_READY_TIMEOUT_MS || 120_000);
 const serviceReadyPollMs = Number(process.env.DEPLOY_READY_POLL_MS || 2_000);
-const appReadyBaseUrl = process.env.APP_READY_BASE_URL || 'http://127.0.0.1';
+const appReadyBaseUrl = process.env.APP_READY_BASE_URL || 'http://traefik';
 const appReadyTimeoutMs = Number(process.env.DEPLOY_APP_READY_TIMEOUT_MS || 900_000);
 const appReadyRequestTimeoutMs = Number(
   process.env.DEPLOY_APP_READY_REQUEST_TIMEOUT_MS || 2_000
@@ -383,7 +383,7 @@ async function waitForProjectServiceReady(managerUrl: string, projectId: string)
 }
 
 async function fetchProjectApp(domain: string) {
-  const url = appReadyBaseUrl.replace(/\/$/, '') || 'http://127.0.0.1';
+  const url = appReadyBaseUrl.replace(/\/$/, '') || 'http://traefik';
 
   try {
     const response = await fetch(url, {
