@@ -123,17 +123,26 @@ worker.on('failed', async (job, error) => {
     });
 });
 
-async function shutdown() {
-  await worker.close();
+let isShuttingDown = false;
+
+async function shutdown(signal: NodeJS.Signals) {
+  if (isShuttingDown) {
+    console.warn(`deploy worker received ${signal} while already shutting down; exiting now`);
+    process.exit(1);
+  }
+
+  isShuttingDown = true;
+  console.log(`deploy worker received ${signal}, shutting down`);
+  await worker.close(true);
   await prisma.$disconnect();
 }
 
 process.on('SIGINT', () => {
-  shutdown().finally(() => process.exit(0));
+  shutdown('SIGINT').finally(() => process.exit(0));
 });
 
 process.on('SIGTERM', () => {
-  shutdown().finally(() => process.exit(0));
+  shutdown('SIGTERM').finally(() => process.exit(0));
 });
 
 console.log(`deploy worker started on queue ${deployQueueName}`);
