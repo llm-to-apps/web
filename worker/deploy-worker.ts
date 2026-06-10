@@ -57,9 +57,8 @@ worker.on('completed', (job) => {
 });
 
 worker.on('failed', async (job, error) => {
-  console.error(`${job?.name ?? 'deployment'} job ${job?.id} failed`, error);
-
   if (!job) {
+    console.error('deployment job failed without job context', error);
     return;
   }
 
@@ -67,8 +66,16 @@ worker.on('failed', async (job, error) => {
   const maxAttempts = job.opts.attempts ?? 1;
 
   if (attemptsMade < maxAttempts) {
+    console.info(`${job.name} job ${job.id} will retry`, {
+      projectId: job.data.projectId,
+      attempt: attemptsMade,
+      maxAttempts,
+      reason: error.message
+    });
     return;
   }
+
+  console.error(`${job.name} job ${job.id} failed permanently`, error);
 
   await prisma.project
     .update({
