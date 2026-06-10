@@ -135,7 +135,7 @@ export function AuthPanel() {
         ) : (
           <LogIn size={18} />
         )}
-        {isSubmitting ? 'Working' : step === 'email' ? 'Send code' : 'Sign in'}
+        {isSubmitting ? 'Working' : step === 'email' ? 'Continue' : 'Sign in'}
       </button>
 
       {step === 'code' ? (
@@ -144,13 +144,11 @@ export function AuthPanel() {
         </button>
       ) : null}
 
-      <div className={`result ${result?.ok === false ? 'error' : ''}`}>
-        {result?.ok === false
-          ? result.message
-          : step === 'email'
-            ? 'Enter your email to continue.'
-            : 'Development mode accepts any code.'}
-      </div>
+      {result?.ok === false || step === 'code' ? (
+        <div className={`result ${result?.ok === false ? 'error' : ''}`}>
+          {result?.ok === false ? result.message : 'Development mode accepts any code.'}
+        </div>
+      ) : null}
     </form>
   );
 }
