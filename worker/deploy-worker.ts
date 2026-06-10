@@ -1,3 +1,5 @@
+import http from 'node:http';
+import https from 'node:https';
 import { Worker, type Job } from 'bullmq';
 import { loadEnvConfig } from '@next/env';
 
@@ -386,13 +388,7 @@ async function fetchProjectApp(domain: string) {
   const url = appReadyBaseUrl.replace(/\/$/, '') || 'http://traefik';
 
   try {
-    const response = await fetch(url, {
-      headers: {
-        Host: domain
-      },
-      redirect: 'manual',
-      signal: AbortSignal.timeout(appReadyRequestTimeoutMs)
-    });
+    const response = await requestProjectApp(url, domain);
 
     if (response.status >= 200 && response.status < 400) {
       return response;
@@ -403,6 +399,40 @@ async function fetchProjectApp(domain: string) {
     const message = error instanceof Error ? error.message : 'Unknown app readiness error';
     throw new Error(`Project app ${domain} is not ready via ${url}: ${message}`);
   }
+}
+
+function requestProjectApp(url: string, domain: string) {
+  return new Promise<{ status: number }>((resolve, reject) => {
+    const parsedUrl = new URL(url);
+    const client = parsedUrl.protocol === 'https:' ? https : http;
+    const path = `${parsedUrl.pathname || '/'}${parsedUrl.search}`;
+    const request = client.request(
+      {
+        protocol: parsedUrl.protocol,
+        hostname: parsedUrl.hostname,
+        port: parsedUrl.port || undefined,
+        method: 'GET',
+        path,
+        headers: {
+          Host: domain
+        },
+        timeout: appReadyRequestTimeoutMs
+      },
+      (response) => {
+        response.resume();
+
+        resolve({
+          status: response.statusCode ?? 0
+        });
+      }
+    );
+
+    request.on('timeout', () => {
+      request.destroy(new Error(`Request timed out after ${appReadyRequestTimeoutMs}ms`));
+    });
+    request.on('error', reject);
+    request.end();
+  });
 }
 
 function readTimestamp(value: string | undefined, fallback: number) {
