@@ -26,6 +26,14 @@ export function hashPassword(password: string) {
   return `scrypt$${salt}$${hash}`;
 }
 
+export function passwordlessHash() {
+  return `passwordless$${randomBytes(24).toString('base64url')}`;
+}
+
+export function isDevelopmentEmailCodeEnabled() {
+  return process.env.AUTH_ACCEPT_ANY_EMAIL_CODE === 'true' || process.env.NODE_ENV !== 'production';
+}
+
 export function verifyPassword(password: string, storedHash: string) {
   const [scheme, salt, hash] = storedHash.split('$');
   if (scheme !== 'scrypt' || !salt || !hash) {

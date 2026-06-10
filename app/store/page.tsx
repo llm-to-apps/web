@@ -18,11 +18,11 @@ export default async function StorePage() {
   return (
     <AppShell
       user={user}
-      title={user ? 'App Store' : 'Create your account'}
+      title={user ? 'App Store' : 'Sign in'}
       description={
         user
           ? 'Install new templates into your workspace.'
-          : 'Register or sign in before deploying a live application.'
+          : 'Enter your email and confirm the code before deploying a live application.'
       }
     >
       {user ? (

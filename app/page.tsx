@@ -32,11 +32,11 @@ export default async function Home() {
   return (
     <AppShell
       user={user}
-      title={user ? 'Applications' : 'Create your account'}
+      title={user ? 'Applications' : 'Sign in'}
       description={
         user
           ? 'Open installed apps or install new templates from the store.'
-          : 'Register or sign in before deploying a live application.'
+          : 'Enter your email and confirm the code to deploy a live application.'
       }
     >
       {user ? (

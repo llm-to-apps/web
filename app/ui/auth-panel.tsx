@@ -1,9 +1,9 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
-import { AtSign, Loader2, Lock, LogIn, UserPlus } from 'lucide-react';
+import { FormEvent, MouseEvent, useState } from 'react';
+import { AtSign, KeyRound, Loader2, LogIn, Mail } from 'lucide-react';
 
-type AuthMode = 'register' | 'login';
+type AuthStep = 'email' | 'code';
 
 type AuthResult =
   | {
@@ -15,10 +15,9 @@ type AuthResult =
     };
 
 export function AuthPanel() {
-  const [mode, setMode] = useState<AuthMode>('register');
-  const [name, setName] = useState('');
+  const [step, setStep] = useState<AuthStep>('email');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<AuthResult | null>(null);
 
@@ -28,23 +27,33 @@ export function AuthPanel() {
     setResult(null);
 
     try {
-      const response = await fetch(`/api/auth/${mode}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name,
-          email,
-          password
-        })
-      });
+      const response = await fetch(
+        step === 'email' ? '/api/auth/email/start' : '/api/auth/email/verify',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email,
+            code
+          })
+        }
+      );
       const data = (await response.json()) as AuthResult;
 
       if (!response.ok || !data.ok) {
         setResult({
           ok: false,
           message: 'message' in data ? data.message : 'Authentication failed'
+        });
+        return;
+      }
+
+      if (step === 'email') {
+        setStep('code');
+        setResult({
+          ok: true
         });
         return;
       }
@@ -60,48 +69,35 @@ export function AuthPanel() {
     }
   }
 
+  function restart(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    setStep('email');
+    setCode('');
+    setResult(null);
+  }
+
   return (
     <form className="form auth-form" onSubmit={onSubmit}>
-      <div className="segmented" role="tablist" aria-label="Authentication mode">
-        <button
-          type="button"
-          className={mode === 'register' ? 'active' : ''}
-          onClick={() => setMode('register')}
-        >
-          <UserPlus size={16} />
-          Register
-        </button>
-        <button
-          type="button"
-          className={mode === 'login' ? 'active' : ''}
-          onClick={() => setMode('login')}
-        >
-          <LogIn size={16} />
-          Sign in
-        </button>
-      </div>
-
-      {mode === 'register' ? (
-        <div className="field">
-          <label htmlFor="name">Name</label>
-          <div className="input-wrap">
-            <UserPlus size={18} />
-            <input
-              id="name"
-              name="name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Anton"
-            />
-          </div>
+      <div className="auth-title">
+        <div className="auth-title-icon">
+          {step === 'email' ? <Mail size={18} /> : <KeyRound size={18} />}
         </div>
-      ) : null}
+        <div>
+          <h3>{step === 'email' ? 'Sign in with email' : 'Enter your code'}</h3>
+          <p>
+            {step === 'email'
+              ? 'Use one email for new and existing accounts.'
+              : `Code sent to ${email}. Any code works in development.`}
+          </p>
+        </div>
+      </div>
 
       <div className="field">
         <label htmlFor="email">Email</label>
         <div className="input-wrap">
           <AtSign size={18} />
           <input
+            disabled={step === 'code'}
             id="email"
             name="email"
             type="email"
@@ -113,40 +109,47 @@ export function AuthPanel() {
         </div>
       </div>
 
-      <div className="field">
-        <label htmlFor="password">Password</label>
-        <div className="input-wrap">
-          <Lock size={18} />
-          <input
-            id="password"
-            name="password"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="At least 8 characters"
-            minLength={8}
-            required
-          />
+      {step === 'code' ? (
+        <div className="field">
+          <label htmlFor="code">Code</label>
+          <div className="input-wrap">
+            <KeyRound size={18} />
+            <input
+              autoFocus
+              id="code"
+              name="code"
+              value={code}
+              onChange={(event) => setCode(event.target.value)}
+              placeholder="123456"
+              required
+            />
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <button className="deploy-button" type="submit" disabled={isSubmitting}>
         {isSubmitting ? (
           <Loader2 size={18} />
-        ) : mode === 'register' ? (
-          <UserPlus size={18} />
+        ) : step === 'email' ? (
+          <Mail size={18} />
         ) : (
           <LogIn size={18} />
         )}
-        {isSubmitting ? 'Working' : mode === 'register' ? 'Create account' : 'Sign in'}
+        {isSubmitting ? 'Working' : step === 'email' ? 'Send code' : 'Sign in'}
       </button>
+
+      {step === 'code' ? (
+        <button className="ghost-button auth-secondary-button" type="button" onClick={restart}>
+          Use another email
+        </button>
+      ) : null}
 
       <div className={`result ${result?.ok === false ? 'error' : ''}`}>
         {result?.ok === false
           ? result.message
-          : mode === 'register'
-            ? 'Create an account to deploy and manage apps.'
-            : 'Sign in to continue to your templates.'}
+          : step === 'email'
+            ? 'Enter your email to continue.'
+            : 'Development mode accepts any code.'}
       </div>
     </form>
   );
