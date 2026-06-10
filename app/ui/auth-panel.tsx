@@ -132,11 +132,7 @@ export function AuthPanel() {
         {isSubmitting ? 'Working' : step === 'email' ? 'Continue' : 'Sign in'}
       </button>
 
-      {result?.ok === false || step === 'code' ? (
-        <div className={`result ${result?.ok === false ? 'error' : ''}`}>
-          {result?.ok === false ? result.message : 'Development mode accepts any code.'}
-        </div>
-      ) : null}
+      {result?.ok === false ? <div className="result error">{result.message}</div> : null}
     </form>
   );
 }
