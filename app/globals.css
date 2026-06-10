@@ -731,6 +731,122 @@ button {
   justify-self: start;
 }
 
+.delete-modal {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+  border: 1px solid #efc6bf;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
+}
+
+.delete-modal-header {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 34px;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid #f2d5cf;
+}
+
+.delete-modal-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  background: #fff1ee;
+  color: #a83325;
+  display: grid;
+  place-items: center;
+}
+
+.delete-modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.delete-modal-header p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.delete-modal-header button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+}
+
+.delete-modal-body {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.delete-modal-body p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.delete-modal-body strong {
+  color: var(--text);
+}
+
+.delete-confirm-row {
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.delete-confirm-row input {
+  width: 16px;
+  height: 16px;
+  accent-color: #a83325;
+}
+
+.delete-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 16px 16px;
+  border-top: 1px solid var(--line);
+}
+
+.danger-button {
+  min-height: 36px;
+  border: 1px solid #a83325;
+  border-radius: 8px;
+  background: #a83325;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 12px;
+  font-weight: 800;
+}
+
+.danger-button:disabled {
+  cursor: not-allowed;
+  border-color: #e5c9c4;
+  background: #edd9d5;
+}
+
 .chat-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 44px;
