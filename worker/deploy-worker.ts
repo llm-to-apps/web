@@ -1,8 +1,10 @@
-import { Worker } from 'bullmq';
+import { Worker, type Job } from 'bullmq';
 
 import {
   deployQueueName,
+  getDeployQueue,
   redisConnectionOptions,
+  type CheckProjectReadyJob,
   type DeployProjectJob
 } from '../lib/deploy-queue';
 import { prisma } from '../lib/db';
@@ -25,73 +27,24 @@ type ProjectServiceStatus = {
 const serviceReadyTimeoutMs = Number(process.env.DEPLOY_READY_TIMEOUT_MS || 120_000);
 const serviceReadyPollMs = Number(process.env.DEPLOY_READY_POLL_MS || 2_000);
 const appReadyBaseUrl = process.env.APP_READY_BASE_URL || 'http://127.0.0.1';
-const appReadyTimeoutMs = Number(process.env.DEPLOY_APP_READY_TIMEOUT_MS || 120_000);
-const appReadyPollMs = Number(process.env.DEPLOY_APP_READY_POLL_MS || 2_000);
 const appReadyRequestTimeoutMs = Number(
   process.env.DEPLOY_APP_READY_REQUEST_TIMEOUT_MS || 2_000
 );
+const appReadyAttempts = Number(process.env.DEPLOY_APP_READY_ATTEMPTS || 60);
+const appReadyRetryDelayMs = Number(process.env.DEPLOY_APP_READY_RETRY_DELAY_MS || 2_000);
 
-const worker = new Worker<DeployProjectJob, unknown, 'deploy-project'>(
+const worker = new Worker(
   deployQueueName,
-  async (job) => {
-    const { projectId, managerUrl, managerPayload } = job.data;
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-      select: { id: true }
-    });
-
-    if (!project) {
-      console.warn(`deploy job ${job.id} skipped because project ${projectId} no longer exists`);
-      return { skipped: true };
+  async (job: Job) => {
+    if (job.name === 'check-project-ready') {
+      return checkProjectReady(job as Job<CheckProjectReadyJob>);
     }
 
-    await prisma.project.update({
-      where: { id: projectId },
-      data: {
-        status: 'deploying',
-        deployError: null
-      }
-    });
-
-    const response = await fetch(`${managerUrl}/swarm/projects`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(managerPayload)
-    });
-    const result = (await response.json().catch(() => null)) as unknown;
-
-    if (!response.ok) {
-      throw new Error(
-        `Manager deployment request failed with ${response.status}: ${JSON.stringify(
-          result
-        )}`
-      );
+    if (job.name === 'deploy-project') {
+      return deployProject(job as Job<DeployProjectJob>);
     }
 
-    await waitForProjectServiceReady(managerUrl, projectId);
-
-    await prisma.project.update({
-      where: { id: projectId },
-      data: {
-        status: 'starting',
-        deployError: null
-      }
-    });
-
-    await waitForProjectAppReady(managerPayload.domain);
-
-    await prisma.project.update({
-      where: { id: projectId },
-      data: {
-        status: 'ready',
-        deployError: null,
-        managerJobId: String(job.id ?? '')
-      }
-    });
-
-    return result;
+    throw new Error(`Unknown deployment job name: ${job.name}`);
   },
   {
     connection: redisConnectionOptions(),
@@ -100,13 +53,20 @@ const worker = new Worker<DeployProjectJob, unknown, 'deploy-project'>(
 );
 
 worker.on('completed', (job) => {
-  console.log(`deploy job ${job.id} completed for project ${job.data.projectId}`);
+  console.log(`${job.name} job ${job.id} completed for project ${job.data.projectId}`);
 });
 
 worker.on('failed', async (job, error) => {
-  console.error(`deploy job ${job?.id} failed`, error);
+  console.error(`${job?.name ?? 'deployment'} job ${job?.id} failed`, error);
 
   if (!job) {
+    return;
+  }
+
+  const attemptsMade = job.attemptsMade;
+  const maxAttempts = job.opts.attempts ?? 1;
+
+  if (attemptsMade < maxAttempts) {
     return;
   }
 
@@ -147,6 +107,103 @@ process.on('SIGTERM', () => {
 
 console.log(`deploy worker started on queue ${deployQueueName}`);
 
+async function deployProject(job: Job<DeployProjectJob>) {
+  const { projectId, managerUrl, managerPayload } = job.data;
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { id: true }
+  });
+
+  if (!project) {
+    console.warn(`deploy job ${job.id} skipped because project ${projectId} no longer exists`);
+    return { skipped: true };
+  }
+
+  await prisma.project.update({
+    where: { id: projectId },
+    data: {
+      status: 'deploying',
+      deployError: null
+    }
+  });
+
+  const response = await fetch(`${managerUrl}/swarm/projects`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(managerPayload)
+  });
+  const result = (await response.json().catch(() => null)) as unknown;
+
+  if (!response.ok) {
+    throw new Error(
+      `Manager deployment request failed with ${response.status}: ${JSON.stringify(result)}`
+    );
+  }
+
+  await waitForProjectServiceReady(managerUrl, projectId);
+
+  await prisma.project.update({
+    where: { id: projectId },
+    data: {
+      status: 'starting',
+      deployError: null
+    }
+  });
+
+  await getDeployQueue().add(
+    'check-project-ready',
+    {
+      projectId,
+      domain: managerPayload.domain
+    },
+    {
+      jobId: `ready-${projectId}`,
+      attempts: appReadyAttempts,
+      backoff: {
+        type: 'fixed',
+        delay: appReadyRetryDelayMs
+      }
+    }
+  );
+
+  return result;
+}
+
+async function checkProjectReady(job: Job<CheckProjectReadyJob>) {
+  const { projectId, domain } = job.data;
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { id: true }
+  });
+
+  if (!project) {
+    console.warn(`readiness job ${job.id} skipped because project ${projectId} no longer exists`);
+    return { skipped: true };
+  }
+
+  const response = await fetchProjectApp(domain);
+
+  await prisma.project.update({
+    where: { id: projectId },
+    data: {
+      status: 'ready',
+      deployError: null,
+      managerJobId: String(job.id ?? '')
+    }
+  });
+
+  console.log(
+    `project app ${domain} became ready with HTTP ${response.status} on attempt ${job.attemptsMade + 1}`
+  );
+
+  return {
+    ok: true,
+    status: response.status
+  };
+}
+
 async function waitForProjectServiceReady(managerUrl: string, projectId: string) {
   const startedAt = Date.now();
   let lastStatus: ProjectServiceStatus | null = null;
@@ -181,45 +238,27 @@ async function waitForProjectServiceReady(managerUrl: string, projectId: string)
   );
 }
 
-async function waitForProjectAppReady(domain: string) {
-  const startedAt = Date.now();
-  let lastError = '';
-  let lastStatus: number | null = null;
+async function fetchProjectApp(domain: string) {
   const url = appReadyBaseUrl.replace(/\/$/, '') || 'http://127.0.0.1';
 
-  while (Date.now() - startedAt < appReadyTimeoutMs) {
-    try {
-      const response = await fetch(url, {
-        headers: {
-          Host: domain
-        },
-        redirect: 'manual',
-        signal: AbortSignal.timeout(appReadyRequestTimeoutMs)
-      });
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Host: domain
+      },
+      redirect: 'manual',
+      signal: AbortSignal.timeout(appReadyRequestTimeoutMs)
+    });
 
-      lastStatus = response.status;
-
-      if (response.status >= 200 && response.status < 400) {
-        console.log(
-          `project app ${domain} became ready with HTTP ${response.status} after ${Date.now() - startedAt}ms`
-        );
-        return response;
-      }
-    } catch (error) {
-      lastError = error instanceof Error ? error.message : 'Unknown app readiness error';
+    if (response.status >= 200 && response.status < 400) {
+      return response;
     }
 
-    await sleep(appReadyPollMs);
+    throw new Error(`HTTP ${response.status}`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown app readiness error';
+    throw new Error(`Project app ${domain} is not ready via ${url}: ${message}`);
   }
-
-  throw new Error(
-    `Project app ${domain} did not answer with HTTP 2xx/3xx within ${appReadyTimeoutMs}ms via ${url}: ${JSON.stringify(
-      {
-        lastStatus,
-        lastError
-      }
-    )}`
-  );
 }
 
 function sleep(ms: number) {

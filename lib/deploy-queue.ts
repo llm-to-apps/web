@@ -33,6 +33,14 @@ export type DeployProjectJob = {
   };
 };
 
+export type CheckProjectReadyJob = {
+  projectId: string;
+  domain: string;
+};
+
+export type ProjectDeploymentJob = DeployProjectJob | CheckProjectReadyJob;
+export type ProjectDeploymentJobName = 'deploy-project' | 'check-project-ready';
+
 export const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
 
 export function redisConnectionOptions() {
@@ -49,10 +57,11 @@ export function redisConnectionOptions() {
 
 export const deployQueueName = 'project-deployments';
 
-let deployQueue: Queue<DeployProjectJob, unknown, 'deploy-project'> | null = null;
+let deployQueue: Queue<ProjectDeploymentJob, unknown, ProjectDeploymentJobName> | null =
+  null;
 
 export function getDeployQueue() {
-  deployQueue ??= new Queue<DeployProjectJob, unknown, 'deploy-project'>(
+  deployQueue ??= new Queue<ProjectDeploymentJob, unknown, ProjectDeploymentJobName>(
     deployQueueName,
     {
       connection: redisConnectionOptions(),
