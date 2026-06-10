@@ -105,7 +105,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     <main className="project-workspace">
       <section className="agent-column">
         <header className="project-header">
-          <Link className="back-link" href="/">
+          <Link className="back-link" href="/home">
             <ArrowLeft size={17} />
             Apps
           </Link>

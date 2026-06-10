@@ -58,7 +58,7 @@ export function AuthPanel() {
         return;
       }
 
-      window.location.reload();
+      window.location.assign('/home');
     } catch (error) {
       setResult({
         ok: false,

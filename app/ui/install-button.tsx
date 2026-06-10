@@ -50,7 +50,7 @@ export function InstallButton({ templateId }: InstallButtonProps) {
       }
 
       setResult(data);
-      router.push('/');
+      router.push('/home');
       router.refresh();
     } catch (error) {
       setResult({

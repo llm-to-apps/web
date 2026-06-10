@@ -8,7 +8,7 @@ type AppTabsProps = {
 export function AppTabs({ active }: AppTabsProps) {
   return (
     <nav className="app-tabs" aria-label="Application sections">
-      <Link className={active === 'apps' ? 'active' : ''} href="/">
+      <Link className={active === 'apps' ? 'active' : ''} href="/home">
         <Grid2X2 size={17} />
         Apps
       </Link>
