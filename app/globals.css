@@ -1150,6 +1150,10 @@ button {
   align-items: start;
 }
 
+.auth-grid-single {
+  grid-template-columns: minmax(300px, 380px);
+}
+
 .template {
   border: 1px solid var(--line);
   background: var(--panel);
