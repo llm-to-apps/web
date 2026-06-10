@@ -9,6 +9,7 @@
     "worker:build": "tsc -p tsconfig.worker.json",
     "build": "next build && npm run worker:build",
     "start": "next start",
+    "cli": "tsx cli/index.ts",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
@@ -18,7 +19,9 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
+    "ajv": "^8.20.0",
     "bullmq": "^5.78.0",
+    "commander": "^15.0.0",
     "lucide-react": "^0.555.0",
     "next": "^16.0.7",
     "prisma": "^6.19.3",
@@ -29,6 +32,7 @@
     "@types/node": "^22.13.14",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "tsx": "^4.22.4",
     "typescript": "^5.8.3"
   }
 }

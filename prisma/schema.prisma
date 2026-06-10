@@ -26,7 +26,7 @@ model Project {
   userId          String
   templateId      String
   templateName    String
-  git             String   @db.VarChar(255)
+  git             String   @db.VarChar(1024)
   domain          String   @unique @db.VarChar(255)
   url             String   @db.VarChar(255)
   status          String   @default("deploying") @db.VarChar(32)
@@ -59,6 +59,8 @@ model AppTemplate {
   appPort     Int?
   agentPort   Int?
   sortOrder   Int      @default(0)
+  manifestUrl String?  @db.VarChar(512)
+  manifest    Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

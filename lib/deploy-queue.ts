@@ -6,7 +6,7 @@ export type DeployProjectJob = {
   managerPayload: {
     id: string;
     git: string;
-    image: string;
+    image: string | null;
     services: {
       mysql: {
         db: string;

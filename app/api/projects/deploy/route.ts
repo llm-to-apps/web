@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { getDeployQueue } from '@/lib/deploy-queue';
 import { prisma } from '@/lib/db';
+import { createProjectRepository } from '@/lib/forgejo';
 import { createAvailableSubdomain } from '@/lib/subdomains';
 import {
   cleanSubdomain,
@@ -78,10 +79,11 @@ export async function POST(request: NextRequest) {
   const agentToolsToken = createAgentToolsToken();
   const appMcpToken = createAppMcpToken();
   const domain = `${subdomain}.${rootDomain}`;
+  const projectRepository = await createProjectRepository(id);
 
   const managerPayload = {
     id,
-    git: template.git,
+    git: projectRepository.authenticatedCloneUrl,
     image: template.image,
     services: {
       mysql: {
@@ -100,6 +102,8 @@ export async function POST(request: NextRequest) {
       MYSQL_USER: dbUser,
       MYSQL_PASSWORD: dbPassword,
       DATABASE_URL: databaseUrl,
+      GIT_REPO_URL: projectRepository.authenticatedCloneUrl,
+      GIT_BRANCH: 'main',
       AGENT_TOOLS_TOKEN: agentToolsToken,
       APP_MCP_TOKEN: appMcpToken
     },
@@ -116,7 +120,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       templateId: template.id,
       templateName: template.name,
-      git: template.git,
+      git: projectRepository.authenticatedCloneUrl,
       domain,
       url: `http://${domain}`,
       status: 'queued',

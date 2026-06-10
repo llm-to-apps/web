@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llm-to-apps.local/schemas/template-manifest.schema.json",
+  "title": "LLM to Apps template manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "slug",
+    "name",
+    "description",
+    "icon",
+    "status",
+    "source",
+    "git",
+    "runtime",
+    "services",
+    "env"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]{1,63}$"
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,62}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "icon": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "status": {
+      "type": "string",
+      "enum": ["available", "coming_soon"]
+    },
+    "sortOrder": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "remote"],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "remote": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "git": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mount"],
+      "properties": {
+        "mount": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["target", "strategy"],
+          "properties": {
+            "target": {
+              "type": "string",
+              "pattern": "^/"
+            },
+            "strategy": {
+              "type": "string",
+              "enum": ["clone", "copy-template"]
+            },
+            "defaultBranch": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "image": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workdir", "appPort", "agentPort"],
+      "properties": {
+        "workdir": {
+          "type": "string",
+          "pattern": "^/"
+        },
+        "appPort": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "agentPort": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "startupCommands": {
+          "type": "string",
+          "minLength": 1
+        },
+        "appCommand": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "services": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mysql"],
+      "properties": {
+        "mysql": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["required", "database"],
+          "properties": {
+            "required": {
+              "type": "boolean"
+            },
+            "database": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "env": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["template"],
+      "properties": {
+        "template": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
