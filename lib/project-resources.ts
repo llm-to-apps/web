@@ -7,6 +7,7 @@ export type ProjectResources = {
     owner: string;
     name: string;
     cloneUrl: string;
+    user?: string;
   };
   swarm?: {
     serviceName: string;

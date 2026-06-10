@@ -330,7 +330,11 @@ async function deleteProject(job: Job<DeleteProjectJob>) {
   }
 
   const gitResult = resources.git
-    ? await deleteProjectRepository(resources.git.owner, resources.git.name)
+    ? await deleteProjectRepository(
+        resources.git.owner,
+        resources.git.name,
+        resources.git.user
+      )
     : { deleted: false };
 
   await prisma.project.update({

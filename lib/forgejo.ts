@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto';
+
 type ForgejoRepository = {
   clone_url?: string;
   default_branch?: string;
@@ -13,6 +15,7 @@ export type ProjectRepository = {
   name: string;
   cloneUrl: string;
   authenticatedCloneUrl: string;
+  user: string;
 };
 
 const forgejoUrl = trimTrailingSlash(
@@ -25,25 +28,84 @@ const forgejoAdminPassword = process.env.FORGEJO_ADMIN_PASSWORD || 'admin1234';
 export async function createProjectRepository(
   projectId: string
 ): Promise<ProjectRepository> {
-  const name = `project-${projectId}`;
-  const repository = await ensureRepository(name);
-  const token = await createRepositoryToken(projectId);
+  const user = projectUserName(projectId);
+  const password = randomPassword();
+  const name = 'app';
+
+  await ensureProjectUser(user, password);
+  const repository = await ensureRepository(user, password, name);
+  const token = await createRepositoryToken(user, projectId);
   const cloneUrl = rewriteBaseUrl(
-    repository.clone_url || `${forgejoUrl}/${forgejoAdminUser}/${name}.git`,
+    repository.clone_url || `${forgejoUrl}/${user}/${name}.git`,
     forgejoGitUrl
   );
 
   return {
-    owner: forgejoAdminUser,
+    owner: user,
     name,
     cloneUrl,
-    authenticatedCloneUrl: withBasicAuth(cloneUrl, forgejoAdminUser, token)
+    authenticatedCloneUrl: withBasicAuth(cloneUrl, user, token),
+    user
   };
 }
 
-export async function deleteProjectRepository(owner: string, name: string) {
+export async function deleteProjectRepository(owner: string, name: string, user?: string) {
+  const userToDelete = user || (owner !== forgejoAdminUser ? owner : null);
   const response = await forgejoFetch(
     `/api/v1/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`,
+    {
+      method: 'DELETE'
+    }
+  );
+
+  if (response.status === 404) {
+    if (userToDelete) {
+      await deleteProjectUser(userToDelete);
+    }
+
+    return {
+      deleted: false
+    };
+  }
+
+  if (!response.ok) {
+    throw new Error(`Forgejo repository deletion failed: ${response.status}`);
+  }
+
+  if (userToDelete) {
+    await deleteProjectUser(userToDelete);
+  }
+
+  return {
+    deleted: true
+  };
+}
+
+async function ensureProjectUser(username: string, password: string) {
+  const response = await forgejoFetch('/api/v1/admin/users', {
+    method: 'POST',
+    body: JSON.stringify({
+      email: `${username}@projects.local`,
+      username,
+      password,
+      must_change_password: false,
+      send_notify: false,
+      visibility: 'private'
+    })
+  });
+
+  if (response.status === 409 || response.status === 422) {
+    return;
+  }
+
+  if (!response.ok) {
+    throw new Error(`Forgejo project user creation failed: ${response.status}`);
+  }
+}
+
+async function deleteProjectUser(username: string) {
+  const response = await forgejoFetch(
+    `/api/v1/admin/users/${encodeURIComponent(username)}?purge=true`,
     {
       method: 'DELETE'
     }
@@ -56,7 +118,7 @@ export async function deleteProjectRepository(owner: string, name: string) {
   }
 
   if (!response.ok) {
-    throw new Error(`Forgejo repository deletion failed: ${response.status}`);
+    throw new Error(`Forgejo project user deletion failed: ${response.status}`);
   }
 
   return {
@@ -64,8 +126,8 @@ export async function deleteProjectRepository(owner: string, name: string) {
   };
 }
 
-async function ensureRepository(name: string) {
-  const response = await forgejoFetch('/api/v1/user/repos', {
+async function ensureRepository(username: string, password: string, name: string) {
+  const response = await forgejoUserFetch(username, password, '/api/v1/user/repos', {
     method: 'POST',
     body: JSON.stringify({
       name,
@@ -76,7 +138,7 @@ async function ensureRepository(name: string) {
 
   if (response.status === 409) {
     const existing = await forgejoFetch(
-      `/api/v1/repos/${encodeURIComponent(forgejoAdminUser)}/${encodeURIComponent(name)}`
+      `/api/v1/repos/${encodeURIComponent(username)}/${encodeURIComponent(name)}`
     );
 
     if (!existing.ok) {
@@ -93,9 +155,9 @@ async function ensureRepository(name: string) {
   return (await response.json()) as ForgejoRepository;
 }
 
-async function createRepositoryToken(projectId: string) {
+async function createRepositoryToken(username: string, projectId: string) {
   const response = await forgejoFetch(
-    `/api/v1/users/${encodeURIComponent(forgejoAdminUser)}/tokens`,
+    `/api/v1/users/${encodeURIComponent(username)}/tokens`,
     {
       method: 'POST',
       body: JSON.stringify({
@@ -119,6 +181,14 @@ async function createRepositoryToken(projectId: string) {
   return token;
 }
 
+function projectUserName(projectId: string) {
+  return `project-${projectId}`;
+}
+
+function randomPassword() {
+  return randomBytes(24).toString('base64url');
+}
+
 async function forgejoFetch(path: string, init: RequestInit = {}) {
   return fetch(`${forgejoUrl}${path}`, {
     ...init,
@@ -127,6 +197,22 @@ async function forgejoFetch(path: string, init: RequestInit = {}) {
       Authorization: `Basic ${Buffer.from(
         `${forgejoAdminUser}:${forgejoAdminPassword}`
       ).toString('base64')}`,
+      'Content-Type': 'application/json'
+    }
+  });
+}
+
+async function forgejoUserFetch(
+  username: string,
+  password: string,
+  path: string,
+  init: RequestInit = {}
+) {
+  return fetch(`${forgejoUrl}${path}`, {
+    ...init,
+    headers: {
+      ...init.headers,
+      Authorization: `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`,
       'Content-Type': 'application/json'
     }
   });

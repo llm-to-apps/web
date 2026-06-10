@@ -109,7 +109,8 @@ async function deployProject(request: NextRequest) {
     git: {
       owner: projectRepository.owner,
       name: projectRepository.name,
-      cloneUrl: projectRepository.cloneUrl
+      cloneUrl: projectRepository.cloneUrl,
+      user: projectRepository.user
     },
     swarm: {
       serviceName: `project-${id}`
