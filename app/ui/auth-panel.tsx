@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, MouseEvent, useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { AtSign, KeyRound, Loader2, LogIn, Mail } from 'lucide-react';
 
 type AuthStep = 'email' | 'code';
@@ -69,13 +69,6 @@ export function AuthPanel() {
     }
   }
 
-  function restart(event: MouseEvent<HTMLButtonElement>) {
-    event.preventDefault();
-    setStep('email');
-    setCode('');
-    setResult(null);
-  }
-
   return (
     <form className="form auth-form" onSubmit={onSubmit}>
       <div className="auth-title">
@@ -92,22 +85,23 @@ export function AuthPanel() {
         </div>
       </div>
 
-      <div className="field">
-        <label htmlFor="email">Email</label>
-        <div className="input-wrap">
-          <AtSign size={18} />
-          <input
-            disabled={step === 'code'}
-            id="email"
-            name="email"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="you@example.com"
-            required
-          />
+      {step === 'email' ? (
+        <div className="field">
+          <label htmlFor="email">Email</label>
+          <div className="input-wrap">
+            <AtSign size={18} />
+            <input
+              id="email"
+              name="email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@example.com"
+              required
+            />
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {step === 'code' ? (
         <div className="field">
@@ -137,12 +131,6 @@ export function AuthPanel() {
         )}
         {isSubmitting ? 'Working' : step === 'email' ? 'Continue' : 'Sign in'}
       </button>
-
-      {step === 'code' ? (
-        <button className="ghost-button auth-secondary-button" type="button" onClick={restart}>
-          Use another email
-        </button>
-      ) : null}
 
       {result?.ok === false || step === 'code' ? (
         <div className={`result ${result?.ok === false ? 'error' : ''}`}>
