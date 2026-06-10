@@ -321,7 +321,9 @@ function useModeRules() {
 - Use the smallest number of app tool calls that can answer or complete the user's request.
 - Return the business result in plain language. Do not dump raw tool JSON unless the user asks for it.
 - Do not inspect or change source code.
-- Do not use dev project tools.`;
+- Do not use dev project tools, do not call project tools, and do not attempt to commit or push code changes.
+- If the user asks to change UI, styles, source code, files, dependencies, runtime behavior, or developer configuration, stop and tell them to switch to Development mode to make that change.
+- Do not offer to retry code changes from Use mode.`;
 }
 
 function devModeRules() {
