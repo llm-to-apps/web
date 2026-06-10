@@ -41,7 +41,7 @@ export type TemplateManifest = {
     };
   };
   services: {
-    mysql: {
+    mysql?: {
       required: boolean;
       database: string;
     };

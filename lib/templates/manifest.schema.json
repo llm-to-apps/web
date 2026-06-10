@@ -173,7 +173,6 @@
     "services": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["mysql"],
       "properties": {
         "mysql": {
           "type": "object",

@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { getDeployQueue } from '@/lib/deploy-queue';
 import { prisma } from '@/lib/db';
-import { createProjectDatabaseNames } from '@/lib/templates';
+import { deleteProjectRepository } from '@/lib/forgejo';
+import { parseProjectResources } from '@/lib/project-resources';
 
 type ProjectRouteContext = {
   params: Promise<{ id: string }> | { id: string };
@@ -66,7 +67,8 @@ export async function DELETE(_request: NextRequest, context: ProjectRouteContext
       userId: user.id
     },
     select: {
-      id: true
+      id: true,
+      resources: true
     }
   });
 
@@ -93,7 +95,7 @@ export async function DELETE(_request: NextRequest, context: ProjectRouteContext
   }
 
   const managerUrl = process.env.MANAGER_URL || 'http://manager:8080';
-  const { dbName, dbUser } = createProjectDatabaseNames(id);
+  const resources = parseProjectResources(project.resources);
   const response = await fetch(
     `${managerUrl}/swarm/projects/${encodeURIComponent(id)}`,
     {
@@ -102,12 +104,15 @@ export async function DELETE(_request: NextRequest, context: ProjectRouteContext
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        services: {
-          mysql: {
-            db: dbName,
-            user: dbUser
-          }
-        }
+        serviceName: resources.swarm?.serviceName,
+        services: resources.mysql
+          ? {
+              mysql: {
+                db: resources.mysql.db,
+                user: resources.mysql.user
+              }
+            }
+          : {}
       })
     }
   );
@@ -132,6 +137,33 @@ export async function DELETE(_request: NextRequest, context: ProjectRouteContext
     );
   }
 
+  let gitResult: Awaited<ReturnType<typeof deleteProjectRepository>> | null = null;
+
+  try {
+    gitResult = resources.git
+      ? await deleteProjectRepository(resources.git.owner, resources.git.name)
+      : null;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Git repository deletion failed';
+
+    await prisma.project.update({
+      where: { id },
+      data: {
+        status: 'failed',
+        deployError: message
+      }
+    });
+
+    return NextResponse.json(
+      {
+        ok: false,
+        message,
+        manager: result
+      },
+      { status: 502 }
+    );
+  }
+
   await prisma.project.delete({
     where: { id }
   });
@@ -139,6 +171,7 @@ export async function DELETE(_request: NextRequest, context: ProjectRouteContext
   return NextResponse.json({
     ok: true,
     projectId: id,
-    manager: result
+    manager: result,
+    git: gitResult
   });
 }

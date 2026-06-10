@@ -1,0 +1,22 @@
+export type ProjectResources = {
+  mysql?: {
+    db: string;
+    user: string;
+  };
+  git?: {
+    owner: string;
+    name: string;
+    cloneUrl: string;
+  };
+  swarm?: {
+    serviceName: string;
+  };
+};
+
+export function parseProjectResources(input: unknown): ProjectResources {
+  if (!input || typeof input !== 'object') {
+    return {};
+  }
+
+  return input as ProjectResources;
+}

@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { getDeployQueue } from '@/lib/deploy-queue';
 import { prisma } from '@/lib/db';
 import { createProjectRepository } from '@/lib/forgejo';
+import { type ProjectResources } from '@/lib/project-resources';
 import { createAvailableSubdomain } from '@/lib/subdomains';
 import { parseTemplateManifest } from '@/lib/templates/manifest';
 import {
@@ -91,37 +92,60 @@ async function deployProject(request: NextRequest) {
     );
   }
 
-  const { dbName, dbUser, dbPassword, databaseUrl } =
-    createProjectCredentials(id);
   const agentToolsToken = createAgentToolsToken();
   const appMcpToken = createAppMcpToken();
   const domain = `${subdomain}.${rootDomain}`;
-  const projectRepository = await createProjectRepository(id);
   const manifest = template.manifest
     ? parseTemplateManifest(template.manifest)
     : null;
+  const needsMysql = manifest?.services.mysql?.required ?? false;
+  const projectRepository = await createProjectRepository(id);
+  const credentials = needsMysql ? createProjectCredentials(id) : null;
+  const resourceState: ProjectResources = {
+    git: {
+      owner: projectRepository.owner,
+      name: projectRepository.name,
+      cloneUrl: projectRepository.cloneUrl
+    },
+    swarm: {
+      serviceName: `project-${id}`
+    }
+  };
+
+  if (credentials) {
+    resourceState.mysql = {
+      db: credentials.dbName,
+      user: credentials.dbUser
+    };
+  }
 
   const managerPayload = {
     id,
     git: projectRepository.authenticatedCloneUrl,
     image: template.image,
-    services: {
-      mysql: {
-        db: dbName,
-        user: dbUser,
-        password: dbPassword
-      }
-    },
+    services: credentials
+      ? {
+          mysql: {
+            db: credentials.dbName,
+            user: credentials.dbUser,
+            password: credentials.dbPassword
+          }
+        }
+      : {},
     env: {
       TEMPLATE_ID: template.id,
       USER_ID: user.id,
       USER_EMAIL: user.email,
-      MYSQL_HOST: 'mysql',
-      MYSQL_PORT: '3306',
-      MYSQL_DATABASE: dbName,
-      MYSQL_USER: dbUser,
-      MYSQL_PASSWORD: dbPassword,
-      DATABASE_URL: databaseUrl,
+      ...(credentials
+        ? {
+            MYSQL_HOST: 'mysql',
+            MYSQL_PORT: '3306',
+            MYSQL_DATABASE: credentials.dbName,
+            MYSQL_USER: credentials.dbUser,
+            MYSQL_PASSWORD: credentials.dbPassword,
+            DATABASE_URL: credentials.databaseUrl
+          }
+        : {}),
       GIT_REPO_URL: projectRepository.authenticatedCloneUrl,
       GIT_BRANCH: 'main',
       AGENT_TOOLS_TOKEN: agentToolsToken,
@@ -148,7 +172,8 @@ async function deployProject(request: NextRequest) {
       appPort: template.appPort,
       agentPort: template.agentPort,
       agentToolsToken,
-      appMcpToken
+      appMcpToken,
+      resources: resourceState
     }
   });
 

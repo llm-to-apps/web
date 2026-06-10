@@ -8,7 +8,7 @@ export type DeployProjectJob = {
     git: string;
     image: string | null;
     services: {
-      mysql: {
+      mysql?: {
         db: string;
         user: string;
         password: string;

@@ -41,6 +41,29 @@ export async function createProjectRepository(
   };
 }
 
+export async function deleteProjectRepository(owner: string, name: string) {
+  const response = await forgejoFetch(
+    `/api/v1/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`,
+    {
+      method: 'DELETE'
+    }
+  );
+
+  if (response.status === 404) {
+    return {
+      deleted: false
+    };
+  }
+
+  if (!response.ok) {
+    throw new Error(`Forgejo repository deletion failed: ${response.status}`);
+  }
+
+  return {
+    deleted: true
+  };
+}
+
 async function ensureRepository(name: string) {
   const response = await forgejoFetch('/api/v1/user/repos', {
     method: 'POST',
