@@ -21,6 +21,22 @@ type DeployRequest = {
 };
 
 export async function POST(request: NextRequest) {
+  try {
+    return await deployProject(request);
+  } catch (error) {
+    console.error('Failed to deploy project', error);
+
+    return NextResponse.json(
+      {
+        ok: false,
+        message: errorMessage(error)
+      },
+      { status: 500 }
+    );
+  }
+}
+
+async function deployProject(request: NextRequest) {
   const user = await getCurrentUser();
 
   if (!user) {
@@ -157,4 +173,12 @@ export async function POST(request: NextRequest) {
     status: project.status,
     jobId: job.id
   });
+}
+
+function errorMessage(error: unknown) {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return 'Deploy failed';
 }

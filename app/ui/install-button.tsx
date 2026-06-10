@@ -39,7 +39,7 @@ export function InstallButton({ templateId }: InstallButtonProps) {
         },
         body: JSON.stringify({ templateId })
       });
-      const data = (await response.json()) as InstallResult;
+      const data = await readInstallResult(response);
 
       if (!response.ok || !data.ok) {
         setResult({
@@ -75,4 +75,24 @@ export function InstallButton({ templateId }: InstallButtonProps) {
       ) : null}
     </div>
   );
+}
+
+async function readInstallResult(response: Response): Promise<InstallResult> {
+  const text = await response.text();
+
+  if (!text) {
+    return {
+      ok: false,
+      message: `Install failed with empty response (${response.status})`
+    };
+  }
+
+  try {
+    return JSON.parse(text) as InstallResult;
+  } catch {
+    return {
+      ok: false,
+      message: text.slice(0, 200) || `Install failed (${response.status})`
+    };
+  }
 }
