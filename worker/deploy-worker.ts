@@ -5,9 +5,11 @@ import {
   getDeployQueue,
   redisConnectionOptions,
   type CheckProjectReadyJob,
+  type DeleteProjectJob,
   type DeployProjectJob
 } from '../lib/deploy-queue';
 import { prisma } from '../lib/db';
+import { deleteProjectRepository } from '../lib/forgejo';
 
 type ProjectServiceStatus = {
   ok: true;
@@ -46,6 +48,10 @@ const worker = new Worker(
 
     if (job.name === 'deploy-project') {
       return deployProject(job as Job<DeployProjectJob>);
+    }
+
+    if (job.name === 'delete-project') {
+      return deleteProject(job as Job<DeleteProjectJob>);
     }
 
     throw new Error(`Unknown deployment job name: ${job.name}`);
@@ -89,11 +95,13 @@ worker.on('failed', async (job, error) => {
 
   console.error(`${job.name} job ${job.id} failed permanently`, error);
 
+  const failedStatus = job.name === 'delete-project' ? 'delete_failed' : 'failed';
+
   await prisma.project
     .update({
       where: { id: job.data.projectId },
       data: {
-        status: 'failed',
+        status: failedStatus,
         deployError: error.message
       }
     })
@@ -128,13 +136,21 @@ console.log(`deploy worker started on queue ${deployQueueName}`);
 
 async function deployProject(job: Job<DeployProjectJob>) {
   const { projectId, managerUrl, managerPayload } = job.data;
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
+  const project = await prisma.project.findFirst({
+    where: {
+      id: projectId,
+      deletedAt: null,
+      status: {
+        notIn: ['deleting', 'deleted']
+      }
+    },
     select: { id: true }
   });
 
   if (!project) {
-    console.warn(`deploy job ${job.id} skipped because project ${projectId} no longer exists`);
+    console.warn(
+      `deploy job ${job.id} skipped because project ${projectId} is not active`
+    );
     return { skipped: true };
   }
 
@@ -193,13 +209,21 @@ async function deployProject(job: Job<DeployProjectJob>) {
 
 async function checkProjectReady(job: Job<CheckProjectReadyJob>) {
   const { projectId, domain, readinessStartedAt } = job.data;
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
+  const project = await prisma.project.findFirst({
+    where: {
+      id: projectId,
+      deletedAt: null,
+      status: {
+        notIn: ['deleting', 'deleted']
+      }
+    },
     select: { id: true }
   });
 
   if (!project) {
-    console.warn(`readiness job ${job.id} skipped because project ${projectId} no longer exists`);
+    console.warn(
+      `readiness job ${job.id} skipped because project ${projectId} is not active`
+    );
     return { skipped: true };
   }
 
@@ -248,6 +272,76 @@ async function checkProjectReady(job: Job<CheckProjectReadyJob>) {
   return {
     ok: true,
     status: response.status
+  };
+}
+
+async function deleteProject(job: Job<DeleteProjectJob>) {
+  const { projectId, managerUrl, resources } = job.data;
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { id: true, deletedAt: true }
+  });
+
+  if (!project) {
+    console.warn(`delete job ${job.id} skipped because project ${projectId} no longer exists`);
+    return { skipped: true };
+  }
+
+  if (project.deletedAt) {
+    console.info(`delete job ${job.id} skipped because project ${projectId} is already deleted`);
+    return { skipped: true };
+  }
+
+  const managerPayload = {
+    serviceName: resources.swarm?.serviceName,
+    services: resources.mysql
+      ? {
+          mysql: {
+            db: resources.mysql.db,
+            user: resources.mysql.user
+          }
+        }
+      : undefined
+  };
+
+  const response = await fetch(
+    `${managerUrl}/swarm/projects/${encodeURIComponent(projectId)}`,
+    {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(managerPayload)
+    }
+  );
+  const managerResult = (await response.json().catch(() => null)) as unknown;
+
+  if (!response.ok) {
+    throw new Error(
+      `Manager project deletion failed with ${response.status}: ${JSON.stringify(
+        managerResult
+      )}`
+    );
+  }
+
+  const gitResult = resources.git
+    ? await deleteProjectRepository(resources.git.owner, resources.git.name)
+    : { deleted: false };
+
+  await prisma.project.update({
+    where: { id: projectId },
+    data: {
+      status: 'deleted',
+      deletedAt: new Date(),
+      deployError: null,
+      managerJobId: String(job.id ?? '')
+    }
+  });
+
+  return {
+    ok: true,
+    manager: managerResult,
+    git: gitResult
   };
 }
 

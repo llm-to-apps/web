@@ -22,7 +22,11 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   const project = await prisma.project.findFirst({
     where: {
       id,
-      userId: user.id
+      userId: user.id,
+      deletedAt: null,
+      status: {
+        notIn: ['deleting', 'deleted']
+      }
     },
     select: {
       id: true,

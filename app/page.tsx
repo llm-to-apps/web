@@ -9,7 +9,13 @@ export default async function Home() {
   const user = await getCurrentUser();
   const projects = user
     ? await prisma.project.findMany({
-        where: { userId: user.id },
+        where: {
+          userId: user.id,
+          deletedAt: null,
+          status: {
+            notIn: ['deleting', 'deleted']
+          }
+        },
         orderBy: { createdAt: 'desc' },
         select: {
           id: true,

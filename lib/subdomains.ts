@@ -24,8 +24,14 @@ export async function createAvailableSubdomain({
   for (let attempt = 0; attempt < maxRandomAttempts; attempt += 1) {
     const subdomain = cleanSubdomain(`${cleanPrefix}-${pickRandomSubdomainWord()}`);
     const domain = `${subdomain}.${rootDomain}`;
-    const existingProject = await db.project.findUnique({
-      where: { domain },
+    const existingProject = await db.project.findFirst({
+      where: {
+        domain,
+        deletedAt: null,
+        status: {
+          notIn: ['deleting', 'deleted']
+        }
+      },
       select: { id: true }
     });
 

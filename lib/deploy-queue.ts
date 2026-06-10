@@ -1,4 +1,5 @@
 import { Queue } from 'bullmq';
+import { type ProjectResources } from './project-resources';
 
 export type DeployProjectJob = {
   projectId: string;
@@ -39,8 +40,20 @@ export type CheckProjectReadyJob = {
   readinessStartedAt: string;
 };
 
-export type ProjectDeploymentJob = DeployProjectJob | CheckProjectReadyJob;
-export type ProjectDeploymentJobName = 'deploy-project' | 'check-project-ready';
+export type DeleteProjectJob = {
+  projectId: string;
+  managerUrl: string;
+  resources: ProjectResources;
+};
+
+export type ProjectDeploymentJob =
+  | DeployProjectJob
+  | CheckProjectReadyJob
+  | DeleteProjectJob;
+export type ProjectDeploymentJobName =
+  | 'deploy-project'
+  | 'check-project-ready'
+  | 'delete-project';
 
 export const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
 

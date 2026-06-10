@@ -79,9 +79,13 @@ async function deployProject(request: NextRequest) {
     );
   }
 
-  const existingProject = await prisma.project.findUnique({
+  const existingProject = await prisma.project.findFirst({
     where: {
-      domain: `${subdomain}.${rootDomain}`
+      domain: `${subdomain}.${rootDomain}`,
+      deletedAt: null,
+      status: {
+        notIn: ['deleting', 'deleted']
+      }
     }
   });
 

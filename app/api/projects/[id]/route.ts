@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { getDeployQueue } from '@/lib/deploy-queue';
 import { prisma } from '@/lib/db';
-import { deleteProjectRepository } from '@/lib/forgejo';
 import { parseProjectResources } from '@/lib/project-resources';
 
 type ProjectRouteContext = {
@@ -24,7 +23,11 @@ export async function GET(_request: NextRequest, context: ProjectRouteContext) {
   const project = await prisma.project.findFirst({
     where: {
       id,
-      userId: user.id
+      userId: user.id,
+      deletedAt: null,
+      status: {
+        notIn: ['deleting', 'deleted']
+      }
     },
     select: {
       id: true,
@@ -64,7 +67,11 @@ export async function DELETE(_request: NextRequest, context: ProjectRouteContext
   const project = await prisma.project.findFirst({
     where: {
       id,
-      userId: user.id
+      userId: user.id,
+      deletedAt: null,
+      status: {
+        notIn: ['deleting', 'deleted']
+      }
     },
     select: {
       id: true,
@@ -89,89 +96,42 @@ export async function DELETE(_request: NextRequest, context: ProjectRouteContext
 
   const deployQueue = getDeployQueue();
   const deployJob = await deployQueue.getJob(id);
+  const readyJob = await deployQueue.getJob(`ready-${id}`);
+  const deleteJob = await deployQueue.getJob(`delete-${id}`);
 
   if (deployJob) {
     await deployJob.remove().catch(() => null);
   }
 
+  if (readyJob) {
+    await readyJob.remove().catch(() => null);
+  }
+
+  if (deleteJob) {
+    await deleteJob.remove().catch(() => null);
+  }
+
   const managerUrl = process.env.MANAGER_URL || 'http://manager:8080';
   const resources = parseProjectResources(project.resources);
-  const response = await fetch(
-    `${managerUrl}/swarm/projects/${encodeURIComponent(id)}`,
+  await deployQueue.add(
+    'delete-project',
     {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        serviceName: resources.swarm?.serviceName,
-        services: resources.mysql
-          ? {
-              mysql: {
-                db: resources.mysql.db,
-                user: resources.mysql.user
-              }
-            }
-          : {}
-      })
+      projectId: id,
+      managerUrl,
+      resources
+    },
+    {
+      jobId: `delete-${id}`,
+      attempts: 5,
+      backoff: {
+        type: 'exponential',
+        delay: 5_000
+      }
     }
   );
-  const result = (await response.json().catch(() => null)) as unknown;
-
-  if (!response.ok) {
-    await prisma.project.update({
-      where: { id },
-      data: {
-        status: 'failed',
-        deployError: `Delete failed: ${JSON.stringify(result)}`
-      }
-    });
-
-    return NextResponse.json(
-      {
-        ok: false,
-        message: 'Manager failed to delete application',
-        manager: result
-      },
-      { status: 502 }
-    );
-  }
-
-  let gitResult: Awaited<ReturnType<typeof deleteProjectRepository>> | null = null;
-
-  try {
-    gitResult = resources.git
-      ? await deleteProjectRepository(resources.git.owner, resources.git.name)
-      : null;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Git repository deletion failed';
-
-    await prisma.project.update({
-      where: { id },
-      data: {
-        status: 'failed',
-        deployError: message
-      }
-    });
-
-    return NextResponse.json(
-      {
-        ok: false,
-        message,
-        manager: result
-      },
-      { status: 502 }
-    );
-  }
-
-  await prisma.project.delete({
-    where: { id }
-  });
 
   return NextResponse.json({
     ok: true,
-    projectId: id,
-    manager: result,
-    git: gitResult
+    projectId: id
   });
 }

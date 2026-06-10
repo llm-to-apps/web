@@ -65,7 +65,11 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
   const project = await prisma.project.findFirst({
     where: {
       id,
-      userId: user.id
+      userId: user.id,
+      deletedAt: null,
+      status: {
+        notIn: ['deleting', 'deleted']
+      }
     },
     select: {
       id: true,
