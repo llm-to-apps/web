@@ -24,6 +24,12 @@ type ProjectServiceStatus = {
 
 const serviceReadyTimeoutMs = Number(process.env.DEPLOY_READY_TIMEOUT_MS || 120_000);
 const serviceReadyPollMs = Number(process.env.DEPLOY_READY_POLL_MS || 2_000);
+const appReadyBaseUrl = process.env.APP_READY_BASE_URL || 'http://127.0.0.1';
+const appReadyTimeoutMs = Number(process.env.DEPLOY_APP_READY_TIMEOUT_MS || 120_000);
+const appReadyPollMs = Number(process.env.DEPLOY_APP_READY_POLL_MS || 2_000);
+const appReadyRequestTimeoutMs = Number(
+  process.env.DEPLOY_APP_READY_REQUEST_TIMEOUT_MS || 2_000
+);
 
 const worker = new Worker<DeployProjectJob, unknown, 'deploy-project'>(
   deployQueueName,
@@ -65,6 +71,16 @@ const worker = new Worker<DeployProjectJob, unknown, 'deploy-project'>(
     }
 
     await waitForProjectServiceReady(managerUrl, projectId);
+
+    await prisma.project.update({
+      where: { id: projectId },
+      data: {
+        status: 'starting',
+        deployError: null
+      }
+    });
+
+    await waitForProjectAppReady(managerPayload.domain);
 
     await prisma.project.update({
       where: { id: projectId },
@@ -152,6 +168,47 @@ async function waitForProjectServiceReady(managerUrl: string, projectId: string)
   throw new Error(
     `Project service ${projectId} did not become ready within ${serviceReadyTimeoutMs}ms: ${JSON.stringify(
       lastStatus
+    )}`
+  );
+}
+
+async function waitForProjectAppReady(domain: string) {
+  const startedAt = Date.now();
+  let lastError = '';
+  let lastStatus: number | null = null;
+  const url = appReadyBaseUrl.replace(/\/$/, '') || 'http://127.0.0.1';
+
+  while (Date.now() - startedAt < appReadyTimeoutMs) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          Host: domain
+        },
+        redirect: 'manual',
+        signal: AbortSignal.timeout(appReadyRequestTimeoutMs)
+      });
+
+      lastStatus = response.status;
+
+      if (response.status >= 200 && response.status < 400) {
+        console.log(
+          `project app ${domain} became ready with HTTP ${response.status} after ${Date.now() - startedAt}ms`
+        );
+        return response;
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : 'Unknown app readiness error';
+    }
+
+    await sleep(appReadyPollMs);
+  }
+
+  throw new Error(
+    `Project app ${domain} did not answer with HTTP 2xx/3xx within ${appReadyTimeoutMs}ms via ${url}: ${JSON.stringify(
+      {
+        lastStatus,
+        lastError
+      }
     )}`
   );
 }

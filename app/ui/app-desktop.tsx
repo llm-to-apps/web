@@ -29,8 +29,8 @@ type AppDesktopProps = {
   initialProjects: DesktopProject[];
 };
 
-const installingStatuses = new Set(['queued', 'deploying']);
-const busyStatuses = new Set(['queued', 'deploying', 'deleting']);
+const installingStatuses = new Set(['queued', 'deploying', 'starting']);
+const busyStatuses = new Set(['queued', 'deploying', 'starting', 'deleting']);
 
 export function AppDesktop({ initialProjects }: AppDesktopProps) {
   const [projects, setProjects] = useState(initialProjects);
