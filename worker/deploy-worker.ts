@@ -1,4 +1,5 @@
 import { Worker, type Job } from 'bullmq';
+import { loadEnvConfig } from '@next/env';
 
 import {
   deployQueueName,
@@ -10,6 +11,8 @@ import {
 } from '../lib/deploy-queue';
 import { prisma } from '../lib/db';
 import { deleteProjectRepository } from '../lib/forgejo';
+
+loadEnvConfig(process.cwd());
 
 type ProjectServiceStatus = {
   ok: true;
@@ -29,7 +32,7 @@ type ProjectServiceStatus = {
 const serviceReadyTimeoutMs = Number(process.env.DEPLOY_READY_TIMEOUT_MS || 120_000);
 const serviceReadyPollMs = Number(process.env.DEPLOY_READY_POLL_MS || 2_000);
 const appReadyBaseUrl = process.env.APP_READY_BASE_URL || 'http://127.0.0.1';
-const appReadyTimeoutMs = Number(process.env.DEPLOY_APP_READY_TIMEOUT_MS || 300_000);
+const appReadyTimeoutMs = Number(process.env.DEPLOY_APP_READY_TIMEOUT_MS || 900_000);
 const appReadyRequestTimeoutMs = Number(
   process.env.DEPLOY_APP_READY_REQUEST_TIMEOUT_MS || 2_000
 );
