@@ -5,6 +5,7 @@ import { getDeployQueue } from '@/lib/deploy-queue';
 import { prisma } from '@/lib/db';
 import { createProjectRepository } from '@/lib/forgejo';
 import { createAvailableSubdomain } from '@/lib/subdomains';
+import { parseTemplateManifest } from '@/lib/templates/manifest';
 import {
   cleanSubdomain,
   createAgentToolsToken,
@@ -80,6 +81,9 @@ export async function POST(request: NextRequest) {
   const appMcpToken = createAppMcpToken();
   const domain = `${subdomain}.${rootDomain}`;
   const projectRepository = await createProjectRepository(id);
+  const manifest = template.manifest
+    ? parseTemplateManifest(template.manifest)
+    : null;
 
   const managerPayload = {
     id,
@@ -108,6 +112,7 @@ export async function POST(request: NextRequest) {
       APP_MCP_TOKEN: appMcpToken
     },
     domain,
+    resources: manifest?.resources,
     ports: {
       app: template.appPort,
       agent: template.agentPort

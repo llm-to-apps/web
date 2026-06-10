@@ -136,6 +136,40 @@
         }
       }
     },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "memory": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "reservationMb": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "limitMb": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "cpu": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "reservation": {
+              "type": "number",
+              "minimum": 0.001
+            },
+            "limit": {
+              "type": "number",
+              "minimum": 0.001
+            }
+          }
+        }
+      }
+    },
     "services": {
       "type": "object",
       "additionalProperties": false,

@@ -30,6 +30,16 @@ export type TemplateManifest = {
     startupCommands?: string;
     appCommand?: string;
   };
+  resources?: {
+    memory?: {
+      reservationMb?: number;
+      limitMb?: number;
+    };
+    cpu?: {
+      reservation?: number;
+      limit?: number;
+    };
+  };
   services: {
     mysql: {
       required: boolean;

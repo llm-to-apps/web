@@ -16,6 +16,16 @@ export type DeployProjectJob = {
     };
     env: Record<string, string>;
     domain: string;
+    resources?: {
+      memory?: {
+        reservationMb?: number;
+        limitMb?: number;
+      };
+      cpu?: {
+        reservation?: number;
+        limit?: number;
+      };
+    };
     ports: {
       app: number;
       agent: number;
