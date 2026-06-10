@@ -20,6 +20,7 @@ export type TemplateManifest = {
       target: string;
       strategy: 'clone' | 'copy-template';
       defaultBranch?: string;
+      preserve?: string[];
     };
   };
   image?: string;
@@ -28,6 +29,7 @@ export type TemplateManifest = {
     appPort: number;
     agentPort: number;
     startupCommands?: string;
+    restoreCommand?: string;
     appCommand?: string;
   };
   resources?: {

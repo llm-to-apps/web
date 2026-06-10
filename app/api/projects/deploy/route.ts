@@ -148,6 +148,12 @@ async function deployProject(request: NextRequest) {
         : {}),
       GIT_REPO_URL: projectRepository.authenticatedCloneUrl,
       GIT_BRANCH: 'main',
+      ...(manifest?.git.mount.preserve?.length
+        ? { GIT_PRESERVE_PATHS: manifest.git.mount.preserve.join(':') }
+        : {}),
+      ...(manifest?.runtime.restoreCommand
+        ? { APP_RESTORE_COMMAND: manifest.runtime.restoreCommand }
+        : {}),
       AGENT_TOOLS_TOKEN: agentToolsToken,
       APP_MCP_TOKEN: appMcpToken
     },
