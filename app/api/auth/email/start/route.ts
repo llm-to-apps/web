@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { isValidEmail, normalizeEmail, passwordlessHash } from '@/lib/auth';
+import { createAuthHash, isValidEmail, normalizeEmail } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
 type StartEmailAuthRequest = {
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     update: {},
     create: {
       email,
-      passwordHash: passwordlessHash()
+      authHash: createAuthHash()
     }
   });
 

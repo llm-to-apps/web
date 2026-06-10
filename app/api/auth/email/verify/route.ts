@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import {
   createSession,
+  createAuthHash,
   isDevelopmentEmailCodeEnabled,
   isValidEmail,
-  normalizeEmail,
-  passwordlessHash
+  normalizeEmail
 } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     update: {},
     create: {
       email,
-      passwordHash: passwordlessHash()
+      authHash: createAuthHash()
     },
     select: {
       id: true,

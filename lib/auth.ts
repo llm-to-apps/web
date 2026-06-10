@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes } from 'node:crypto';
 
 import { prisma } from './db';
 
@@ -20,29 +20,12 @@ export function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-export function hashPassword(password: string) {
-  const salt = randomBytes(16).toString('base64url');
-  const hash = scryptSync(password, salt, 64).toString('base64url');
-  return `scrypt$${salt}$${hash}`;
-}
-
-export function passwordlessHash() {
-  return `passwordless$${randomBytes(24).toString('base64url')}`;
+export function createAuthHash() {
+  return `email-code$${randomBytes(24).toString('base64url')}`;
 }
 
 export function isDevelopmentEmailCodeEnabled() {
   return process.env.AUTH_ACCEPT_ANY_EMAIL_CODE === 'true' || process.env.NODE_ENV !== 'production';
-}
-
-export function verifyPassword(password: string, storedHash: string) {
-  const [scheme, salt, hash] = storedHash.split('$');
-  if (scheme !== 'scrypt' || !salt || !hash) {
-    return false;
-  }
-
-  const expected = Buffer.from(hash, 'base64url');
-  const actual = scryptSync(password, salt, expected.length);
-  return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
 
 export async function createSession(user: CurrentUser) {
