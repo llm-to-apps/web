@@ -177,9 +177,19 @@ export async function POST(request: NextRequest, context: AgentChatContext) {
     streamUrl
   });
 
-  const agentResponse = await fetch(
-    streamUrl,
-    {
+  const agentFetchStartedAt = Date.now();
+  const agentFetchHeartbeat = setInterval(() => {
+    console.info('[agent-chat] waiting for agent stream response', {
+      requestId,
+      projectId: project.id,
+      elapsedMs: Date.now() - agentFetchStartedAt
+    });
+  }, 10_000);
+
+  let agentResponse: Response;
+
+  try {
+    agentResponse = await fetch(streamUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -236,11 +246,23 @@ ${mode === 'dev' ? devModeRules() : useModeRules()}
           toolsUrl: mode === 'dev' ? toolsUrl : undefined,
           agentToolsToken: mode === 'dev' ? project.agentToolsToken : undefined,
           appMcpUrl: mode === 'use' ? appMcpUrl : undefined,
-          appMcpToken: mode === 'use' ? project.appMcpToken : undefined
+          appMcpToken: mode === 'use' ? project.appMcpToken : undefined,
+          requestId
         }
       })
-    }
-  );
+    });
+  } catch (error) {
+    clearInterval(agentFetchHeartbeat);
+    console.error('[agent-chat] agent request failed before response', {
+      requestId,
+      projectId: project.id,
+      durationMs: Date.now() - agentFetchStartedAt,
+      message: error instanceof Error ? error.message : 'Unknown fetch error'
+    });
+    throw error;
+  } finally {
+    clearInterval(agentFetchHeartbeat);
+  }
 
   console.info('[agent-chat] agent stream response', {
     requestId,
@@ -368,16 +390,99 @@ function createAgentChatStream(
   let assistantContent = '';
   let assistantError = '';
   let tokenUsage: TokenUsage = {};
+  let firstChunkAt: number | null = null;
+  let firstTextAt: number | null = null;
+  let lastEventAt = Date.now();
+  let progressEvents = 0;
+  let textChars = 0;
+  let toolCalls = 0;
+  let toolResults = 0;
 
   return new ReadableStream<Uint8Array>({
     async start(controller) {
+      const streamStartedAt = Date.now();
+      const heartbeat = setInterval(() => {
+        console.info('[agent-chat] stream heartbeat', {
+          requestId,
+          projectId: context.projectId,
+          elapsedMs: Date.now() - streamStartedAt,
+          sinceLastEventMs: Date.now() - lastEventAt,
+          progressEvents,
+          textChars,
+          toolCalls,
+          toolResults
+        });
+      }, 15_000);
+
       const writeEvent = (event: AgentStreamEvent) => {
+        lastEventAt = Date.now();
+
         if (event.type === 'text') {
           assistantContent += event.text;
+          textChars += event.text.length;
+
+          if (!firstTextAt) {
+            firstTextAt = Date.now();
+            console.info('[agent-chat] first assistant text', {
+              requestId,
+              projectId: context.projectId,
+              elapsedMs: firstTextAt - streamStartedAt
+            });
+          } else if (textChars > 0 && textChars % 2000 < event.text.length) {
+            console.info('[agent-chat] assistant text progress', {
+              requestId,
+              projectId: context.projectId,
+              textChars
+            });
+          }
+        }
+
+        if (event.type === 'progress') {
+          progressEvents++;
+          if (event.message.startsWith('Running ')) {
+            toolCalls++;
+          }
+          if (event.message.startsWith('Finished ')) {
+            toolResults++;
+          }
+
+          console.info('[agent-chat] progress event', {
+            requestId,
+            projectId: context.projectId,
+            message: truncateText(event.message.replace(/\s+/g, ' '), 260),
+            progressEvents,
+            toolCalls,
+            toolResults
+          });
         }
 
         if (event.type === 'error') {
           assistantError += assistantError ? `\n${event.message}` : event.message;
+          console.error('[agent-chat] stream event error', {
+            requestId,
+            projectId: context.projectId,
+            message: event.message
+          });
+        }
+
+        if (event.type === 'usage') {
+          console.info('[agent-chat] usage event', {
+            requestId,
+            projectId: context.projectId,
+            usage: event.usage
+          });
+        }
+
+        if (event.type === 'done') {
+          console.info('[agent-chat] done event', {
+            requestId,
+            projectId: context.projectId,
+            elapsedMs: Date.now() - streamStartedAt,
+            progressEvents,
+            textChars,
+            toolCalls,
+            toolResults
+          });
         }
 
         controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
@@ -398,6 +503,16 @@ function createAgentChatStream(
             break;
           }
 
+          if (!firstChunkAt) {
+            firstChunkAt = Date.now();
+            lastEventAt = firstChunkAt;
+            console.info('[agent-chat] first agent stream chunk', {
+              requestId,
+              projectId: context.projectId,
+              elapsedMs: firstChunkAt - streamStartedAt
+            });
+          }
+
           buffer += decoder.decode(value, { stream: true });
           buffer = flushSseBuffer(buffer, writeEvent, (usage) => {
             tokenUsage = mergeTokenUsage(tokenUsage, usage);
@@ -415,7 +530,12 @@ function createAgentChatStream(
 
         console.info('[agent-chat] stream completed', {
           requestId,
-          projectId: context.projectId
+          projectId: context.projectId,
+          elapsedMs: Date.now() - streamStartedAt,
+          progressEvents,
+          textChars,
+          toolCalls,
+          toolResults
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Agent stream failed';
@@ -433,6 +553,7 @@ function createAgentChatStream(
           assistantContent || assistantError
         );
         await persistAgentUsage(context, tokenUsage, assistantMessageId);
+        clearInterval(heartbeat);
         controller.close();
         reader.releaseLock();
       }
