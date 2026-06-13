@@ -1,5 +1,12 @@
 import { randomBytes } from 'node:crypto';
 
+import {
+  forgejoAdminPassword,
+  forgejoAdminUser,
+  forgejoGitUrl,
+  forgejoUrl
+} from './env';
+
 type ForgejoRepository = {
   clone_url?: string;
   default_branch?: string;
@@ -18,12 +25,10 @@ export type ProjectRepository = {
   user: string;
 };
 
-const forgejoUrl = trimTrailingSlash(
-  process.env.FORGEJO_URL || 'http://127.0.0.1:13002'
-);
-const forgejoGitUrl = trimTrailingSlash(process.env.FORGEJO_GIT_URL || forgejoUrl);
-const forgejoAdminUser = process.env.FORGEJO_ADMIN_USER || 'root';
-const forgejoAdminPassword = process.env.FORGEJO_ADMIN_PASSWORD || 'admin1234';
+const forgejoBaseUrl = forgejoUrl();
+const forgejoGitBaseUrl = forgejoGitUrl();
+const forgejoRootUser = forgejoAdminUser();
+const forgejoRootPassword = forgejoAdminPassword();
 
 export async function createProjectRepository(
   projectId: string
@@ -36,8 +41,8 @@ export async function createProjectRepository(
   const repository = await ensureRepository(user, password, name);
   const token = await createRepositoryToken(user, projectId);
   const cloneUrl = rewriteBaseUrl(
-    repository.clone_url || `${forgejoUrl}/${user}/${name}.git`,
-    forgejoGitUrl
+    repository.clone_url || `${forgejoBaseUrl}/${user}/${name}.git`,
+    forgejoGitBaseUrl
   );
 
   return {
@@ -50,7 +55,7 @@ export async function createProjectRepository(
 }
 
 export async function deleteProjectRepository(owner: string, name: string, user?: string) {
-  const userToDelete = user || (owner !== forgejoAdminUser ? owner : null);
+  const userToDelete = user || (owner !== forgejoRootUser ? owner : null);
   const response = await forgejoFetch(
     `/api/v1/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`,
     {
@@ -161,7 +166,7 @@ async function createRepositoryToken(username: string, projectId: string) {
     {
       method: 'POST',
       body: JSON.stringify({
-        name: `project-${projectId}-${Date.now()}`,
+        name: `app-${projectId}-${Date.now()}`,
         scopes: ['write:repository']
       })
     }
@@ -182,7 +187,7 @@ async function createRepositoryToken(username: string, projectId: string) {
 }
 
 function projectUserName(projectId: string) {
-  return `project-${projectId}`;
+  return `app-${projectId}`;
 }
 
 function randomPassword() {
@@ -190,12 +195,12 @@ function randomPassword() {
 }
 
 async function forgejoFetch(path: string, init: RequestInit = {}) {
-  return fetch(`${forgejoUrl}${path}`, {
+  return fetch(`${forgejoBaseUrl}${path}`, {
     ...init,
     headers: {
       ...init.headers,
       Authorization: `Basic ${Buffer.from(
-        `${forgejoAdminUser}:${forgejoAdminPassword}`
+        `${forgejoRootUser}:${forgejoRootPassword}`
       ).toString('base64')}`,
       'Content-Type': 'application/json'
     }
@@ -208,7 +213,7 @@ async function forgejoUserFetch(
   path: string,
   init: RequestInit = {}
 ) {
-  return fetch(`${forgejoUrl}${path}`, {
+  return fetch(`${forgejoBaseUrl}${path}`, {
     ...init,
     headers: {
       ...init.headers,

@@ -3,6 +3,10 @@ export type ProjectResources = {
     db: string;
     user: string;
   };
+  oauth?: {
+    clientId: string;
+    redirectUri: string;
+  };
   git?: {
     owner: string;
     name: string;

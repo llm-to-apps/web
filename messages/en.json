@@ -1,0 +1,201 @@
+{
+  "appShell": {
+    "beta": "Beta",
+    "tagline": "Your own agentic operating system.",
+    "intro": "Describe how you live or work. Apps, databases, dashboards, and workflows are built around you.",
+    "runtimeLabel": "Runtime",
+    "runtimeText": "Live apps with databases, dashboards, and agent control",
+    "sourceLabel": "Source",
+    "sourceText": "Your process, turned into working software",
+    "thesisLabel": "Thesis",
+    "thesisText": "The end of one-size-fits-all SaaS"
+  },
+  "language": {
+    "label": "Interface language",
+    "en": "English",
+    "de": "Deutsch",
+    "ru": "Русский"
+  },
+  "pages": {
+    "signInTitle": "Sign in",
+    "signInDescription": "Enter your email and start building software around your life or company.",
+    "storeTitle": "Store",
+    "storeDescription": "Install new templates into your workspace."
+  },
+  "settings": {
+    "title": "Settings",
+    "description": "Manage your account preferences.",
+    "profileTitle": "Profile",
+    "profileDescription": "Update the basics used to personalize agent responses.",
+    "languageTitle": "Language",
+    "languageDescription": "Choose the interface language for this browser.",
+    "saveChanges": "Save changes",
+    "saving": "Saving..."
+  },
+  "profile": {
+    "nameLabel": "Your name",
+    "namePlaceholder": "Alexander",
+    "aiExperienceLabel": "Experience working with AI",
+    "vibeCodingExperienceLabel": "Vibe-coding experience",
+    "experienceNone": "No",
+    "experienceBeginner": "Beginner",
+    "experienceAdvanced": "Advanced"
+  },
+  "welcome": {
+    "title": "Welcome",
+    "description": "Tell us a little about you so the agent can adapt its tone and assumptions.",
+    "continue": "Continue",
+    "saving": "Saving...",
+    "nameRequired": "Name is required"
+  },
+  "auth": {
+    "emailTitle": "Sign in with email",
+    "codeTitle": "Enter your code",
+    "emailDescription": "Use one email for new and existing accounts.",
+    "codeSent": "Code sent to {email}.",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you@example.com",
+    "codeLabel": "Code",
+    "codePlaceholder": "123456",
+    "working": "Working",
+    "continue": "Continue",
+    "signIn": "Sign in",
+    "authenticationFailed": "Authentication failed"
+  },
+  "tabs": {
+    "ariaLabel": "Application sections",
+    "apps": "Apps",
+    "store": "Store"
+  },
+  "store": {
+    "comingSoon": "Developing by AI",
+    "install": "Install",
+    "installing": "Installing",
+    "installFailed": "Install failed",
+    "queued": "Queued {url}",
+    "emptyResponse": "Install failed with empty response ({status})"
+  },
+  "desktop": {
+    "installedAriaLabel": "Installed applications",
+    "installing": "Installing",
+    "deleteAria": "Delete {name}",
+    "emptyTitle": "No apps installed",
+    "emptyDescription": "Install 100+ apps from the Store to add them to your desktop.",
+    "openStore": "Open Store",
+    "deleteTitle": "Delete {name}?",
+    "deleteDescription": "This permanently removes the application service and all attached resources.",
+    "deleteBody": "We will delete the databases, Git repository, source code, and all application data for {domain}.",
+    "confirmDatabase": "I understand the databases will be deleted.",
+    "confirmCode": "I understand the code and Git repository will be deleted.",
+    "confirmData": "I understand all application data will be permanently lost.",
+    "cancel": "Cancel",
+    "deleteAction": "Delete application",
+    "deleteFailed": "Delete failed"
+  },
+  "userAgent": {
+    "welcome": "I can help you think across your apps and route app-specific work to the right project agent.",
+    "placeholder": "Ask about your apps or what to build next..."
+  },
+  "project": {
+    "appsBack": "Apps",
+    "settingsAria": "Project settings",
+    "open": "Open",
+    "iframeTitle": "{name} application",
+    "applicationStatus": "Application is {status}",
+    "previewPending": "The preview will load when the service is ready.",
+    "usageTotal": "Total: {count}",
+    "usageInput": "Input: {count}",
+    "usageOutput": "Output: {count}"
+  },
+  "chat": {
+    "welcome": "I am attached to {name}. Ask me what you want to change or inspect.",
+    "started": "Agent started",
+    "done": "Done.",
+    "requestFailed": "Agent request failed",
+    "working": "Agent is working.",
+    "modeSwitcherLabel": "Agent mode",
+    "useMode": "Use",
+    "devMode": "Dev",
+    "useModeLabel": "Use mode is active. Click to enable Dev mode.",
+    "devModeLabel": "Dev mode is active. Click to return to Use mode.",
+    "messageAria": "Message agent",
+    "usePlaceholder": "Ask the agent to use the app...",
+    "devPlaceholder": "Ask the agent to inspect or change code...",
+    "sendAria": "Send message",
+    "optionsAria": "Chat options",
+    "clearAria": "Clear chat history",
+    "clearFailed": "Failed to clear chat history",
+    "usageBreakdown": "{input} in / {output} out"
+  },
+  "mcp": {
+    "buttonLabel": "Connect MCP",
+    "title": "Connect MCP to ChatGPT",
+    "description": "Use this app MCP endpoint in a custom ChatGPT MCP app.",
+    "publicUrlNote": "ChatGPT must be able to reach this app from a public URL before it can connect to the MCP server.",
+    "serverUrl": "MCP server URL",
+    "bearerToken": "Bearer token",
+    "hide": "Hide",
+    "show": "Show",
+    "tokenUnavailable": "Token is not available",
+    "steps": [
+      "Open ChatGPT workspace settings and enable Developer mode.",
+      "Create a custom MCP app.",
+      "Paste the MCP server URL and configure Bearer token auth.",
+      "Test the app and enable it in ChatGPT."
+    ],
+    "instructions": "OpenAI MCP app instructions"
+  },
+  "logout": {
+    "signOut": "Sign out"
+  },
+  "templates": {
+    "money": {
+      "name": "Money",
+      "description": "Personal finance dashboard with own database."
+    },
+    "kanban": {
+      "name": "Kanban",
+      "description": "Visual task board for projects, cards, priorities, and workflows."
+    },
+    "personalCrm": {
+      "name": "Personal CRM",
+      "description": "Lightweight contact manager with notes, follow-ups, and relationship history."
+    },
+    "habitTracker": {
+      "name": "Habit Tracker",
+      "description": "Daily habit tracking with streaks, goals, and progress insights."
+    },
+    "pomodoro": {
+      "name": "Pomodoro",
+      "description": "Focus timer with sessions, breaks, tasks, and productivity stats."
+    },
+    "notes": {
+      "name": "Notes",
+      "description": "Personal knowledge base with tags, search, and linked notes."
+    },
+    "mealPlanner": {
+      "name": "Meal Planner",
+      "description": "Weekly meals, recipes, ingredients, and grocery planning."
+    },
+    "workoutTracker": {
+      "name": "Workout Tracker",
+      "description": "Exercise plans, sets, progress history, and personal records."
+    },
+    "subscriptionTracker": {
+      "name": "Subscription Tracker",
+      "description": "Track recurring payments, renewal dates, and monthly spending."
+    },
+    "jobSearchCrm": {
+      "name": "Job Search CRM",
+      "description": "Manage vacancies, companies, interviews, offers, and follow-ups."
+    },
+    "moodJournal": {
+      "name": "Mood Journal",
+      "description": "Track mood, notes, triggers, habits, and emotional patterns."
+    },
+    "bookingCalendar": {
+      "name": "Booking Calendar",
+      "description": "Calendly-style scheduling app where people can book available time slots."
+    }
+  }
+}

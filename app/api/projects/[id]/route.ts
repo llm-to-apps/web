@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { getDeployQueue } from '@/lib/deploy-queue';
 import { prisma } from '@/lib/db';
+import { managerUrl as readManagerUrl } from '@/lib/env';
+import { projectMemberWhere } from '@/lib/project-members';
 import { parseProjectResources } from '@/lib/project-resources';
 
 type ProjectRouteContext = {
@@ -23,7 +25,7 @@ export async function GET(_request: NextRequest, context: ProjectRouteContext) {
   const project = await prisma.project.findFirst({
     where: {
       id,
-      userId: user.id,
+      members: projectMemberWhere(user.id),
       deletedAt: null,
       status: {
         notIn: ['deleting', 'deleted']
@@ -33,6 +35,7 @@ export async function GET(_request: NextRequest, context: ProjectRouteContext) {
       id: true,
       templateId: true,
       templateName: true,
+      slug: true,
       domain: true,
       url: true,
       status: true,
@@ -67,7 +70,7 @@ export async function DELETE(_request: NextRequest, context: ProjectRouteContext
   const project = await prisma.project.findFirst({
     where: {
       id,
-      userId: user.id,
+      members: projectMemberWhere(user.id, 'admin'),
       deletedAt: null,
       status: {
         notIn: ['deleting', 'deleted']
@@ -111,7 +114,7 @@ export async function DELETE(_request: NextRequest, context: ProjectRouteContext
     await deleteJob.remove().catch(() => null);
   }
 
-  const managerUrl = process.env.MANAGER_URL || 'http://manager:8080';
+  const managerUrl = readManagerUrl();
   const resources = parseProjectResources(project.resources);
   await deployQueue.add(
     'delete-project',

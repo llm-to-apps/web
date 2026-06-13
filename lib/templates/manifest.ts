@@ -47,9 +47,42 @@ export type TemplateManifest = {
       required: boolean;
       database: string;
     };
+    oauth?: {
+      required: boolean;
+    };
   };
   env: {
     template: Record<string, string>;
+  };
+};
+
+export type TemplateEnvContext = {
+  app?: {
+    projectId: string;
+    publicUrl: string;
+  };
+  services?: {
+    mysql?: {
+      database: string;
+      user: string;
+      password: string;
+    };
+    oauth?: {
+      clientId: string;
+      clientSecret: string;
+      redirectUri: string;
+      issuerUrl: string;
+      authorizeUrl: string;
+      tokenUrl: string;
+      userinfoUrl: string;
+      internalTokenUrl: string;
+      internalUserinfoUrl: string;
+      internalProjectUserTokenIntrospectionUrl: string;
+      projectUserTokenIntrospectionUrl: string;
+      projectServiceApiToken: string;
+      projectServiceApiBaseUri: string;
+      requestHost: string;
+    };
   };
 };
 
@@ -101,4 +134,42 @@ function formatManifestErrors(errors: ErrorObject[]) {
       return `${path}: ${error.message ?? 'invalid value'}`;
     })
     .join('\n');
+}
+
+export function renderTemplateEnv(
+  manifest: TemplateManifest,
+  context: TemplateEnvContext
+) {
+  return Object.fromEntries(
+    Object.entries(manifest.env.template).map(([key, value]) => [
+      key,
+      renderTemplateValue(value, context)
+    ])
+  );
+}
+
+function renderTemplateValue(value: string, context: TemplateEnvContext) {
+  return value.replace(/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g, (_match, path) => {
+    const resolvedValue = readPath(context, String(path));
+
+    if (typeof resolvedValue !== 'string') {
+      throw new Error(`Template env value references unknown path: ${path}`);
+    }
+
+    return resolvedValue;
+  });
+}
+
+function readPath(input: unknown, path: string) {
+  return path.split('.').reduce<unknown>((currentValue, key) => {
+    if (
+      currentValue &&
+      typeof currentValue === 'object' &&
+      key in currentValue
+    ) {
+      return (currentValue as Record<string, unknown>)[key];
+    }
+
+    return undefined;
+  }, input);
 }

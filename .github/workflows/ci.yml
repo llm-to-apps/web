@@ -13,7 +13,7 @@ permissions:
   packages: write
 
 env:
-  IMAGE_NAME: ghcr.io/llm-to-apps/web
+  IMAGE_NAME: ghcr.io/os7/web
 
 jobs:
   test:
@@ -36,7 +36,7 @@ jobs:
       - name: Generate Prisma client
         run: npm run prisma:generate
         env:
-          DATABASE_URL: mysql://root:password@localhost:3306/llagents_platform
+          DATABASE_URL: mysql://root:password@localhost:3306/os7_platform
 
       - name: Typecheck
         run: npm run typecheck
@@ -44,10 +44,13 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          DATABASE_URL: mysql://root:password@localhost:3306/llagents_platform
+          DATABASE_URL: mysql://root:password@localhost:3306/os7_platform
           AUTH_SECRET: ci-auth-secret
-          MANAGER_URL: http://localhost:8080
-          APP_ROOT_DOMAIN: localhost
+          MANAGER_URL: http://manager
+          PLATFORM_BASE_URL: http://os7.localhost
+          PLATFORM_DOMAIN: localhost
+          PROJECT_PUBLIC_SCHEME: http
+          OAUTH_INTERNAL_BASE_URL: http://localhost:3000
           REDIS_URL: redis://localhost:6379
 
   docker:

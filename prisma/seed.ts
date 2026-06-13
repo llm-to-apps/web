@@ -1,4 +1,7 @@
-const { execFileSync } = require('node:child_process') as typeof import('node:child_process');
+const { readFileSync } = require('node:fs') as typeof import('node:fs');
+const { join } = require('node:path') as typeof import('node:path');
+const { PrismaClient } = require('@prisma/client') as typeof import('@prisma/client');
+import type { Prisma } from '@prisma/client';
 
 type AppTemplateSeed = {
   id: string;
@@ -13,23 +16,32 @@ type AppTemplateSeed = {
   appPort?: number;
   agentPort?: number;
   sortOrder: number;
+  manifestUrl?: string;
+  manifest?: Prisma.InputJsonValue;
 };
 
+type UsagePriceSeed = {
+  id: string;
+  meterType: string;
+  provider?: string | null;
+  model?: string | null;
+  unit: string;
+  inputCredits?: string | null;
+  outputCredits?: string | null;
+  unitCredits?: string | null;
+  inputCostUsd?: string | null;
+  outputCostUsd?: string | null;
+  unitCostUsd?: string | null;
+  effectiveFrom: Date;
+  effectiveTo?: Date | null;
+  metadata?: Prisma.InputJsonValue | null;
+};
+
+const prisma = new PrismaClient();
+
 const appTemplates: AppTemplateSeed[] = [
-  {
-    id: 'money',
-    slug: 'money',
-    name: 'Money',
-    description: 'Personal finance dashboard with own database.',
-    icon: 'money',
-    status: 'available',
-    repository: 'money-template',
-    git: 'git@github.com:llm-to-apps/money-template.git',
-    image: 'ghcr.io/llm-to-apps/money-template:sha-aee8dcd',
-    appPort: 3001,
-    agentPort: 7070,
-    sortOrder: 10
-  },
+  templateFromManifest('../../templates/money/manifest.json'),
+  templateFromManifest('../../templates/money/manifest.dev.json'),
   {
     id: 'kanban',
     slug: 'kanban',
@@ -131,82 +143,183 @@ const appTemplates: AppTemplateSeed[] = [
   }
 ];
 
-const columns = [
-  'id',
-  'slug',
-  'name',
-  'description',
-  'icon',
-  'status',
-  'repository',
-  'git',
-  'image',
-  'appPort',
-  'agentPort',
-  'sortOrder',
-  'createdAt',
-  'updatedAt'
+const usagePrices: UsagePriceSeed[] = [
+  {
+    id: 'price_openai_gpt_5_mini_llm_v1',
+    meterType: 'llm_tokens',
+    provider: 'openai',
+    model: 'openai/gpt-5-mini',
+    unit: 'million_tokens',
+    inputCredits: '2500',
+    outputCredits: '20000',
+    inputCostUsd: '0.25000000',
+    outputCostUsd: '2.00000000',
+    effectiveFrom: new Date('2026-06-12T00:00:00.000Z'),
+    metadata: {
+      note: 'MVP price in credits; cost baseline mirrors docs/billing-pricing.md.'
+    }
+  },
+  {
+    id: 'price_openai_gpt_5_llm_v1',
+    meterType: 'llm_tokens',
+    provider: 'openai',
+    model: 'openai/gpt-5',
+    unit: 'million_tokens',
+    inputCredits: '12500',
+    outputCredits: '100000',
+    inputCostUsd: '1.25000000',
+    outputCostUsd: '10.00000000',
+    effectiveFrom: new Date('2026-06-12T00:00:00.000Z'),
+    metadata: {
+      note: 'MVP price in credits; cost baseline mirrors docs/billing-pricing.md.'
+    }
+  },
+  {
+    id: 'price_internal_s2s_email_send_v1',
+    meterType: 's2s_email_send',
+    provider: 'internal',
+    model: null,
+    unit: 'request',
+    unitCredits: '100',
+    unitCostUsd: '0.00100000',
+    effectiveFrom: new Date('2026-06-12T00:00:00.000Z'),
+    metadata: {
+      note: 'Placeholder MVP S2S email price. Charged after successful send when email API is implemented.'
+    }
+  }
 ];
 
-const values = appTemplates
-  .map((template) =>
-    [
-      template.id,
-      template.slug,
-      template.name,
-      template.description,
-      template.icon,
-      template.status,
-      template.repository ?? null,
-      template.git ?? null,
-      template.image ?? null,
-      template.appPort ?? null,
-      template.agentPort ?? null,
-      template.sortOrder,
-      { raw: 'now()' },
-      { raw: 'now()' }
-    ]
-      .map(sqlValue)
-      .join(', ')
-  )
-  .map((row) => `(${row})`)
-  .join(',\n');
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
 
-const assignments = columns
-  .filter((column) => !['id', 'createdAt', 'updatedAt'].includes(column))
-  .map((column) => `"${column}" = EXCLUDED."${column}"`)
-  .concat('"updatedAt" = now()')
-  .join(',\n');
+async function main() {
+  await seedAppTemplates();
+  await seedUsagePrices();
+}
 
-const sql = `
-INSERT INTO "app_templates" (${columns.map((column) => `"${column}"`).join(', ')})
-VALUES
-${values}
-ON CONFLICT ("id") DO UPDATE SET
-${assignments};
-`;
-
-execFileSync(
-  process.execPath,
-  ['./node_modules/prisma/build/index.js', 'db', 'execute', '--schema', 'prisma/schema.prisma', '--stdin'],
-  {
-    input: sql,
-    stdio: ['pipe', 'inherit', 'inherit']
+async function seedAppTemplates() {
+  for (const template of appTemplates) {
+    await prisma.appTemplate.upsert({
+      where: {
+        id: template.id
+      },
+      update: {
+        agentPort: template.agentPort ?? null,
+        appPort: template.appPort ?? null,
+        description: template.description,
+        git: template.git ?? null,
+        icon: template.icon,
+        image: template.image ?? null,
+        manifest: template.manifest ?? undefined,
+        manifestUrl: template.manifestUrl ?? null,
+        name: template.name,
+        repository: template.repository ?? null,
+        slug: template.slug,
+        sortOrder: template.sortOrder,
+        status: template.status
+      },
+      create: {
+        agentPort: template.agentPort ?? null,
+        appPort: template.appPort ?? null,
+        description: template.description,
+        git: template.git ?? null,
+        icon: template.icon,
+        id: template.id,
+        image: template.image ?? null,
+        manifest: template.manifest ?? undefined,
+        manifestUrl: template.manifestUrl ?? null,
+        name: template.name,
+        repository: template.repository ?? null,
+        slug: template.slug,
+        sortOrder: template.sortOrder,
+        status: template.status
+      }
+    });
   }
-);
+}
 
-function sqlValue(value: string | number | { raw: string } | null) {
-  if (value === null) {
-    return 'NULL';
+async function seedUsagePrices() {
+  for (const price of usagePrices) {
+    await prisma.usagePrice.upsert({
+      where: {
+        id: price.id
+      },
+      update: {
+        effectiveFrom: price.effectiveFrom,
+        effectiveTo: price.effectiveTo ?? null,
+        inputCostUsd: price.inputCostUsd ?? null,
+        inputCredits: price.inputCredits ?? null,
+        metadata: price.metadata ?? undefined,
+        meterType: price.meterType,
+        model: price.model ?? null,
+        outputCostUsd: price.outputCostUsd ?? null,
+        outputCredits: price.outputCredits ?? null,
+        provider: price.provider ?? null,
+        unit: price.unit,
+        unitCostUsd: price.unitCostUsd ?? null,
+        unitCredits: price.unitCredits ?? null
+      },
+      create: {
+        effectiveFrom: price.effectiveFrom,
+        effectiveTo: price.effectiveTo ?? null,
+        id: price.id,
+        inputCostUsd: price.inputCostUsd ?? null,
+        inputCredits: price.inputCredits ?? null,
+        metadata: price.metadata ?? undefined,
+        meterType: price.meterType,
+        model: price.model ?? null,
+        outputCostUsd: price.outputCostUsd ?? null,
+        outputCredits: price.outputCredits ?? null,
+        provider: price.provider ?? null,
+        unit: price.unit,
+        unitCostUsd: price.unitCostUsd ?? null,
+        unitCredits: price.unitCredits ?? null
+      }
+    });
   }
+}
 
-  if (typeof value === 'object') {
-    return value.raw;
-  }
+function templateFromManifest(relativePath: string): AppTemplateSeed {
+  const manifestPath = join(__dirname, relativePath);
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
+    id: string;
+    slug: string;
+    name: string;
+    description: string;
+    icon: string;
+    status: 'available' | 'coming_soon';
+    sortOrder?: number;
+    source: {
+      repository: string;
+      remote: string;
+    };
+    image?: string;
+    runtime: {
+      appPort: number;
+      agentPort: number;
+    };
+  };
 
-  if (typeof value === 'number') {
-    return String(value);
-  }
-
-  return `'${value.replace(/'/g, "''")}'`;
+  return {
+    id: manifest.id,
+    slug: manifest.slug,
+    name: manifest.name,
+    description: manifest.description,
+    icon: manifest.icon,
+    status: manifest.status,
+    repository: manifest.source.repository,
+    git: manifest.source.remote,
+    image: manifest.image,
+    appPort: manifest.runtime.appPort,
+    agentPort: manifest.runtime.agentPort,
+    sortOrder: manifest.sortOrder ?? 0,
+    manifestUrl: relativePath,
+    manifest: manifest as Prisma.InputJsonValue
+  };
 }

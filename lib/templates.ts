@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomInt } from 'node:crypto';
 
 export type TemplateId = string;
 
@@ -28,7 +28,7 @@ export function isInstallableTemplate(template: Template): template is Installab
   );
 }
 
-export function cleanSubdomain(value: string) {
+export function cleanSlug(value: string) {
   return value
     .trim()
     .toLowerCase()
@@ -39,20 +39,19 @@ export function cleanSubdomain(value: string) {
 }
 
 export function createProjectId() {
-  return randomBytes(6).toString('hex');
+  const timestamp = Date.now().toString(36).padStart(9, '0');
+  const randomSuffix = randomInt(36 ** 2).toString(36).padStart(2, '0');
+
+  return `${timestamp}${randomSuffix}`;
 }
 
 export function createAgentToolsToken() {
   return randomBytes(32).toString('base64url');
 }
 
-export function createAppMcpToken() {
-  return randomBytes(32).toString('base64url');
-}
-
 export function createProjectDatabaseNames(projectId: string) {
-  const dbName = `project_${projectId}`;
-  const dbUser = `project_${projectId}`;
+  const dbName = `app_${projectId}`;
+  const dbUser = `app_${projectId}`;
 
   return {
     dbName,

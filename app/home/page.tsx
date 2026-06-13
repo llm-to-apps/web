@@ -1,46 +1,190 @@
-import { redirect } from 'next/navigation';
-
 import { AppDesktop } from '../ui/app-desktop';
 import { AppShell } from '../ui/app-shell';
-import { AppTabs } from '../ui/app-tabs';
-import { getCurrentUser } from '@/lib/auth';
+import { UserAgentChat } from '../ui/user-agent-chat';
+import { requireOnboardedUser } from '@/lib/onboarding';
 import { prisma } from '@/lib/db';
+import { projectMemberWhere } from '@/lib/project-members';
 
 export default async function HomePage() {
-  const user = await getCurrentUser();
+  const user = await requireOnboardedUser();
 
-  if (!user) {
-    redirect('/');
-  }
-
+  const deletedProjectVisibleAfter = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
   const projects = await prisma.project.findMany({
     where: {
-      userId: user.id,
-      deletedAt: null,
-      status: {
-        notIn: ['deleting', 'deleted']
-      }
+      members: projectMemberWhere(user.id),
+      OR: [
+        {
+          deletedAt: null,
+          status: {
+            notIn: ['deleting', 'deleted']
+          }
+        },
+        {
+          deletedAt: {
+            gte: deletedProjectVisibleAfter
+          },
+          status: 'deleted'
+        }
+      ]
     },
     orderBy: { createdAt: 'desc' },
     select: {
       id: true,
       templateId: true,
       templateName: true,
+      slug: true,
       domain: true,
       url: true,
       status: true,
+      deletedAt: true,
       deployError: true
     }
   });
+  const userAgentMessages = await prisma.userAgentChatMessage.findMany({
+    where: {
+      userId: user.id
+    },
+    orderBy: {
+      createdAt: 'desc'
+    },
+    take: 50,
+    select: {
+      id: true,
+      role: true,
+      content: true
+    }
+  });
+  const orderedUserAgentMessages = userAgentMessages
+    .reverse()
+    .filter((message) => message.role === 'assistant' || message.role === 'user');
+  const activeUserAgentRun = await prisma.agentRun.findFirst({
+    where: {
+      scope: 'user_agent',
+      status: {
+        in: ['queued', 'running']
+      },
+      userId: user.id
+    },
+    orderBy: {
+      createdAt: 'desc'
+    },
+    select: {
+      id: true
+    }
+  });
+  const userAgentAssistantMessageIds = orderedUserAgentMessages
+    .filter((message) => message.role === 'assistant')
+    .map((message) => message.id);
+  const userAgentUsages =
+    userAgentAssistantMessageIds.length > 0
+      ? await prisma.agentUsage.findMany({
+          where: {
+            assistantMessageId: {
+              in: userAgentAssistantMessageIds
+            },
+            projectId: null,
+            userId: user.id
+          },
+          select: {
+            assistantMessageId: true,
+            requestId: true
+          }
+        })
+      : [];
+  const userAgentRequestIds = userAgentUsages.map((usage) => usage.requestId);
+  const userAgentLedgerEntries =
+    userAgentRequestIds.length > 0
+      ? await prisma.creditLedgerEntry.findMany({
+          where: {
+            actorUserId: user.id,
+            meterType: 'llm_tokens',
+            sourceId: {
+              in: userAgentRequestIds
+            },
+            sourceType: 'agent_run'
+          },
+          select: {
+            credits: true,
+            sourceId: true
+          }
+        })
+      : [];
+  const userAgentCreditsByRequestId = new Map(
+    userAgentLedgerEntries.map((entry) => [entry.sourceId, formatCreditsUsed(entry.credits)])
+  );
+  const userAgentUsageByAssistantMessageId = new Map(
+    userAgentUsages
+      .filter((usage) => usage.assistantMessageId)
+      .map((usage) => [
+        usage.assistantMessageId,
+        {
+          creditsUsed: userAgentCreditsByRequestId.get(usage.requestId) ?? 0
+        }
+      ])
+  );
+  const initialUserAgentMessages = orderedUserAgentMessages.map((message) => ({
+    id: message.id,
+    role: message.role as 'assistant' | 'user',
+    content: message.content,
+    usage:
+      message.role === 'assistant'
+        ? userAgentUsageByAssistantMessageId.get(message.id) ?? null
+        : null
+  }));
+  const projectUsageSummaries =
+    projects.length > 0
+      ? await prisma.creditLedgerEntry.groupBy({
+          by: ['projectId'],
+          where: {
+            actorUserId: user.id,
+            projectId: {
+              in: projects.map((project) => project.id)
+            },
+            sourceType: 'agent_run'
+          },
+          _sum: {
+            credits: true
+          }
+        })
+      : [];
+  const usageByProjectId = new Map(
+    projectUsageSummaries.map((usage) => [
+      usage.projectId,
+      formatCreditsUsed(usage._sum.credits)
+    ])
+  );
+  const projectsWithUsage = projects.map((project) => ({
+    ...project,
+    deletedAt: project.deletedAt?.toISOString() ?? null,
+    usage: formatInitialUsage(usageByProjectId.get(project.id))
+  }));
 
   return (
-    <AppShell
-      user={user}
-      title="Applications"
-      description="Open installed apps or install new templates from the store."
-    >
-      <AppTabs active="apps" />
-      <AppDesktop initialProjects={projects} />
+    <AppShell user={user}>
+      <div className="home-workspace">
+        <UserAgentChat
+          activeRunId={activeUserAgentRun?.id ?? null}
+          initialMessages={initialUserAgentMessages}
+        />
+        <AppDesktop initialProjects={projectsWithUsage} />
+      </div>
     </AppShell>
   );
+}
+
+function formatInitialUsage(
+  usage: number | null | undefined
+) {
+  if (!usage || usage <= 0) {
+    return null;
+  }
+
+  return {
+    creditsUsed: usage
+  };
+}
+
+function formatCreditsUsed(value: unknown) {
+  const numericValue = Number(value ?? 0);
+  return Math.ceil(Math.abs(Math.min(numericValue, 0)));
 }

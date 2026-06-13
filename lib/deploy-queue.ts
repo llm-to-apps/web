@@ -1,4 +1,5 @@
 import { Queue } from 'bullmq';
+import { redisUrl } from './env';
 import { type ProjectResources } from './project-resources';
 
 export type DeployProjectJob = {
@@ -8,6 +9,7 @@ export type DeployProjectJob = {
     id: string;
     git: string;
     image: string | null;
+    serviceName?: string;
     services: {
       mysql?: {
         db: string;
@@ -55,10 +57,10 @@ export type ProjectDeploymentJobName =
   | 'check-project-ready'
   | 'delete-project';
 
-export const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+export const deployRedisUrl = redisUrl();
 
 export function redisConnectionOptions() {
-  const url = new URL(redisUrl);
+  const url = new URL(deployRedisUrl);
 
   return {
     host: url.hostname,

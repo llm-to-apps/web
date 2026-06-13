@@ -8,45 +8,95 @@ datasource db {
 }
 
 model User {
-  id                String             @id @default(cuid())
-  email             String             @unique
-  name              String?
-  authHash          String             @map("passwordHash") @db.VarChar(255)
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  sessions          Session[]
-  projects          Project[]
-  agentChatMessages AgentChatMessage[]
+  id                        String                    @id @default(cuid())
+  email                     String                    @unique
+  name                      String?
+  onboarded                 Boolean                   @default(false)
+  aiExperienceLevel         UserExperienceLevel?
+  vibeCodingExperienceLevel UserExperienceLevel?
+  onboardingGoal            String?                   @db.Text
+  authHash                  String                    @map("passwordHash") @db.VarChar(255)
+  createdAt                 DateTime                  @default(now())
+  updatedAt                 DateTime                  @updatedAt
+  sessions                  Session[]
+  authTokens                AuthToken[]
+  projects                  Project[]
+  projectMemberships        ProjectMember[]
+  oauthAuthorizationCodes   OAuthAuthorizationCode[]
+  oauthAccessTokens         OAuthAccessToken[]
+  agentRuns                 AgentRun[]
+  projectAgentChatMessages  ProjectAgentChatMessage[]
+  userAgentChatMessages     UserAgentChatMessage[]
+  ownedBillingAccounts      BillingAccount[]
+  creditLedgerEntries       CreditLedgerEntry[]
 
   @@map("users")
 }
 
+enum UserExperienceLevel {
+  none
+  beginner
+  advanced
+
+  @@map("user_experience_level")
+}
+
 model Project {
-  id              String   @id
+  id              String    @id
   userId          String
   templateId      String
   templateName    String
-  git             String   @db.VarChar(1024)
-  domain          String   @db.VarChar(255)
-  url             String   @db.VarChar(255)
-  status          String   @default("deploying") @db.VarChar(32)
+  git             String    @db.VarChar(1024)
+  slug            String    @unique @db.VarChar(64)
+  domain          String    @db.VarChar(255)
+  url             String    @db.VarChar(255)
+  status          String    @default("deploying") @db.VarChar(32)
   appPort         Int
   agentPort       Int
-  agentToolsToken String?  @db.VarChar(128)
-  appMcpToken     String?  @db.VarChar(128)
-  managerJobId    String?  @db.VarChar(128)
-  deployError     String?  @db.Text
+  agentToolsToken String?   @db.VarChar(128)
+  managerJobId    String?   @db.VarChar(128)
+  deployError     String?   @db.Text
   resources       Json?
   deletedAt       DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  agentChatMessages AgentChatMessage[]
+  user                     User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  members                  ProjectMember[]
+  oauthClient              OAuthClient?
+  agentRuns                AgentRun[]
+  projectAgentChatMessages ProjectAgentChatMessage[]
+  authTokens               AuthToken[]
+  creditLedgerEntries      CreditLedgerEntry[]
 
   @@index([domain])
   @@index([userId, deletedAt, createdAt])
   @@map("projects")
+}
+
+enum ProjectMemberRole {
+  admin
+  editor
+  viewer
+
+  @@map("project_member_role")
+}
+
+model ProjectMember {
+  id        String            @id @default(cuid())
+  projectId String
+  userId    String
+  role      ProjectMemberRole
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId, role])
+  @@index([projectId, role])
+  @@map("project_members")
 }
 
 model AppTemplate {
@@ -71,11 +121,69 @@ model AppTemplate {
   @@map("app_templates")
 }
 
-model AgentChatMessage {
+model OAuthClient {
+  id                    String    @id @default(cuid())
+  projectId             String    @unique
+  name                  String    @db.VarChar(128)
+  clientId              String    @unique @db.VarChar(128)
+  clientSecretHash      String    @db.VarChar(255)
+  clientSecretEncrypted String    @db.Text
+  redirectUri           String    @db.VarChar(1024)
+  revokedAt             DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  project            Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  authorizationCodes OAuthAuthorizationCode[]
+  accessTokens       OAuthAccessToken[]
+
+  @@index([projectId, revokedAt])
+  @@map("oauth_clients")
+}
+
+model OAuthAuthorizationCode {
+  id          String    @id @default(cuid())
+  codeHash    String    @unique @db.VarChar(255)
+  clientId    String
+  userId      String
+  redirectUri String    @db.VarChar(1024)
+  scope       String?   @db.VarChar(512)
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  client OAuthClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, expiresAt])
+  @@index([userId, createdAt])
+  @@map("oauth_authorization_codes")
+}
+
+model OAuthAccessToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique @db.VarChar(255)
+  clientId  String
+  userId    String
+  scope     String?   @db.VarChar(512)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  client OAuthClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, expiresAt])
+  @@index([userId, createdAt])
+  @@map("oauth_access_tokens")
+}
+
+model ProjectAgentChatMessage {
   id        String   @id @default(cuid())
   userId    String
   projectId String
   role      String   @db.VarChar(16)
+  source    String   @default("user") @db.VarChar(32)
   mode      String   @db.VarChar(16)
   content   String   @db.Text
   createdAt DateTime @default(now())
@@ -84,14 +192,69 @@ model AgentChatMessage {
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([userId, projectId, createdAt])
-  @@map("agent_chat_messages")
+  @@map("project_agent_chat_messages")
+}
+
+model UserAgentChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  role      String   @db.VarChar(16)
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("user_agent_chat_messages")
+}
+
+model AgentRun {
+  id              String    @id @default(cuid())
+  requestId       String    @unique @db.VarChar(128)
+  userId          String
+  projectId       String?
+  scope           String    @db.VarChar(32)
+  mode            String    @default("use") @db.VarChar(16)
+  status          String    @default("queued") @db.VarChar(32)
+  inputMessageId  String?   @db.VarChar(255)
+  outputMessageId String?   @db.VarChar(255)
+  model           String?   @db.VarChar(128)
+  payload         Json
+  error           String?   @db.Text
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project?        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  events  AgentRunEvent[]
+
+  @@index([userId, scope, projectId, status, createdAt])
+  @@index([status, createdAt])
+  @@map("agent_runs")
+}
+
+model AgentRunEvent {
+  id        String   @id @default(cuid())
+  runId     String
+  seq       Int
+  type      String   @db.VarChar(32)
+  payload   Json
+  createdAt DateTime @default(now())
+
+  run AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, seq])
+  @@index([runId, seq])
+  @@map("agent_run_events")
 }
 
 model AgentUsage {
   id                 String   @id @default(cuid())
   requestId          String   @unique @db.VarChar(128)
   userId             String
-  projectId          String
+  projectId          String?
   userMessageId      String?  @db.VarChar(255)
   assistantMessageId String?  @db.VarChar(255)
   mode               String   @db.VarChar(16)
@@ -106,6 +269,67 @@ model AgentUsage {
   @@map("agent_usage")
 }
 
+model BillingAccount {
+  id            String   @id @default(cuid())
+  ownerUserId   String
+  creditBalance Decimal  @default(0) @db.Decimal(18, 0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  owner         User                @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  ledgerEntries CreditLedgerEntry[]
+
+  @@unique([ownerUserId])
+  @@map("billing_accounts")
+}
+
+model UsagePrice {
+  id            String    @id @default(cuid())
+  meterType     String    @db.VarChar(64)
+  provider      String?   @db.VarChar(64)
+  model         String?   @db.VarChar(128)
+  unit          String    @db.VarChar(64)
+  inputCredits  Decimal?  @db.Decimal(18, 0)
+  outputCredits Decimal?  @db.Decimal(18, 0)
+  unitCredits   Decimal?  @db.Decimal(18, 0)
+  inputCostUsd  Decimal?  @db.Decimal(18, 8)
+  outputCostUsd Decimal?  @db.Decimal(18, 8)
+  unitCostUsd   Decimal?  @db.Decimal(18, 8)
+  effectiveFrom DateTime  @default(now())
+  effectiveTo   DateTime?
+  metadata      Json?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([meterType, provider, model, effectiveTo])
+  @@map("usage_prices")
+}
+
+model CreditLedgerEntry {
+  id          String   @id @default(cuid())
+  accountId   String
+  actorUserId String?
+  projectId   String?
+  sourceType  String   @db.VarChar(64)
+  sourceId    String   @db.VarChar(128)
+  meterType   String   @db.VarChar(64)
+  credits     Decimal  @db.Decimal(18, 0)
+  costUsd     Decimal? @db.Decimal(18, 8)
+  description String   @db.VarChar(255)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  account   BillingAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  actorUser User?          @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  project   Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@unique([sourceType, sourceId, meterType])
+  @@index([accountId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([projectId, createdAt])
+  @@map("credit_ledger_entries")
+}
+
 model Session {
   id        String   @id @default(cuid())
   tokenHash String   @unique @db.VarChar(128)
@@ -118,4 +342,29 @@ model Session {
   @@index([userId])
   @@index([expiresAt])
   @@map("sessions")
+}
+
+model AuthToken {
+  id             String    @id @default(cuid())
+  subjectType    String    @db.VarChar(32)
+  userId         String?
+  projectId      String?
+  scope          String    @db.VarChar(64)
+  name           String    @db.VarChar(128)
+  tokenHash      String    @unique @db.VarChar(128)
+  encryptedToken String?   @db.Text
+  tokenLast4     String    @db.VarChar(8)
+  expiresAt      DateTime?
+  lastUsedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  user    User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([subjectType, scope, revokedAt])
+  @@index([userId, scope, revokedAt, createdAt])
+  @@index([projectId, scope, revokedAt])
+  @@index([projectId, userId, scope, revokedAt])
+  @@map("auth_tokens")
 }

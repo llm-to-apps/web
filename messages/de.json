@@ -1,0 +1,201 @@
+{
+  "appShell": {
+    "beta": "Beta",
+    "tagline": "Dein eigenes agentisches Betriebssystem.",
+    "intro": "Beschreibe, wie du lebst oder arbeitest. Apps, Datenbanken, Dashboards und Workflows werden um dich herum gebaut.",
+    "runtimeLabel": "Runtime",
+    "runtimeText": "Live-Apps mit Datenbanken, Dashboards und Agentensteuerung",
+    "sourceLabel": "Quelle",
+    "sourceText": "Dein Prozess wird zu funktionierender Software",
+    "thesisLabel": "These",
+    "thesisText": "Das Ende von SaaS nach Einheitsmuster"
+  },
+  "language": {
+    "label": "Sprache der Oberfläche",
+    "en": "English",
+    "de": "Deutsch",
+    "ru": "Русский"
+  },
+  "pages": {
+    "signInTitle": "Anmelden",
+    "signInDescription": "Gib deine E-Mail ein und baue Software rund um dein Leben oder dein Unternehmen.",
+    "storeTitle": "Vorlagen",
+    "storeDescription": "Installiere neue Vorlagen in deinen Workspace."
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "description": "Verwalte deine Kontoeinstellungen.",
+    "profileTitle": "Profil",
+    "profileDescription": "Aktualisiere die Grundlagen, damit der Agent Antworten besser personalisieren kann.",
+    "languageTitle": "Sprache",
+    "languageDescription": "Wähle die Sprache der Oberfläche für diesen Browser.",
+    "saveChanges": "Änderungen speichern",
+    "saving": "Speichert..."
+  },
+  "profile": {
+    "nameLabel": "Dein Name",
+    "namePlaceholder": "Alexander",
+    "aiExperienceLabel": "Erfahrung mit KI",
+    "vibeCodingExperienceLabel": "Vibe-Coding-Erfahrung",
+    "experienceNone": "Nein",
+    "experienceBeginner": "Anfänger",
+    "experienceAdvanced": "Fortgeschritten"
+  },
+  "welcome": {
+    "title": "Welcome",
+    "description": "Erzähl uns kurz von dir, damit der Agent Ton und Annahmen anpassen kann.",
+    "continue": "Weiter",
+    "saving": "Speichert...",
+    "nameRequired": "Name ist erforderlich"
+  },
+  "auth": {
+    "emailTitle": "Mit E-Mail anmelden",
+    "codeTitle": "Code eingeben",
+    "emailDescription": "Nutze eine E-Mail für neue und bestehende Konten.",
+    "codeSent": "Code gesendet an {email}.",
+    "emailLabel": "E-Mail",
+    "emailPlaceholder": "du@example.com",
+    "codeLabel": "Code",
+    "codePlaceholder": "123456",
+    "working": "Wird ausgeführt",
+    "continue": "Weiter",
+    "signIn": "Anmelden",
+    "authenticationFailed": "Authentifizierung fehlgeschlagen"
+  },
+  "tabs": {
+    "ariaLabel": "Anwendungsbereiche",
+    "apps": "Apps",
+    "store": "Vorlagen"
+  },
+  "store": {
+    "comingSoon": "Wird von KI entwickelt",
+    "install": "Installieren",
+    "installing": "Installiert",
+    "installFailed": "Installation fehlgeschlagen",
+    "queued": "In Warteschlange: {url}",
+    "emptyResponse": "Installation fehlgeschlagen: leere Antwort ({status})"
+  },
+  "desktop": {
+    "installedAriaLabel": "Installierte Anwendungen",
+    "installing": "Installiert",
+    "deleteAria": "{name} löschen",
+    "emptyTitle": "Keine Apps installiert",
+    "emptyDescription": "Installiere 100+ Apps aus den Vorlagen und füge sie deinem Desktop hinzu.",
+    "openStore": "Vorlagen öffnen",
+    "deleteTitle": "{name} löschen?",
+    "deleteDescription": "Dadurch werden der Anwendungsdienst und alle verbundenen Ressourcen dauerhaft entfernt.",
+    "deleteBody": "Wir löschen Datenbanken, Git-Repository, Quellcode und alle Anwendungsdaten für {domain}.",
+    "confirmDatabase": "Ich verstehe, dass die Datenbanken gelöscht werden.",
+    "confirmCode": "Ich verstehe, dass Code und Git-Repository gelöscht werden.",
+    "confirmData": "Ich verstehe, dass alle Anwendungsdaten dauerhaft verloren gehen.",
+    "cancel": "Abbrechen",
+    "deleteAction": "Anwendung löschen",
+    "deleteFailed": "Löschen fehlgeschlagen"
+  },
+  "userAgent": {
+    "welcome": "Ich helfe dir, über alle Apps hinweg zu denken und App-Aufgaben an den passenden Project Agent weiterzugeben.",
+    "placeholder": "Frag nach deinen Apps oder was du als Nächstes bauen solltest..."
+  },
+  "project": {
+    "appsBack": "Apps",
+    "settingsAria": "Projekteinstellungen",
+    "open": "Öffnen",
+    "iframeTitle": "{name} Anwendung",
+    "applicationStatus": "Anwendung ist {status}",
+    "previewPending": "Die Vorschau lädt, sobald der Dienst bereit ist.",
+    "usageTotal": "Gesamt: {count}",
+    "usageInput": "Eingabe: {count}",
+    "usageOutput": "Ausgabe: {count}"
+  },
+  "chat": {
+    "welcome": "Ich bin mit {name} verbunden. Frag mich, was du ändern oder prüfen möchtest.",
+    "started": "Agent gestartet",
+    "done": "Fertig.",
+    "requestFailed": "Agent-Anfrage fehlgeschlagen",
+    "working": "Agent arbeitet.",
+    "modeSwitcherLabel": "Agentenmodus",
+    "useMode": "Use",
+    "devMode": "Dev",
+    "useModeLabel": "Use-Modus ist aktiv. Klicken, um Dev-Modus zu aktivieren.",
+    "devModeLabel": "Dev-Modus ist aktiv. Klicken, um zum Use-Modus zurückzukehren.",
+    "messageAria": "Nachricht an Agent",
+    "usePlaceholder": "Bitte den Agenten, die App zu benutzen...",
+    "devPlaceholder": "Bitte den Agenten, Code zu prüfen oder zu ändern...",
+    "sendAria": "Nachricht senden",
+    "optionsAria": "Chat-Optionen",
+    "clearAria": "Chatverlauf löschen",
+    "clearFailed": "Chatverlauf konnte nicht gelöscht werden",
+    "usageBreakdown": "{input} rein / {output} raus"
+  },
+  "mcp": {
+    "buttonLabel": "MCP verbinden",
+    "title": "MCP mit ChatGPT verbinden",
+    "description": "Nutze diesen App-MCP-Endpunkt in einer eigenen ChatGPT-MCP-App.",
+    "publicUrlNote": "ChatGPT muss diese App über eine öffentliche URL erreichen können, bevor es sich mit dem MCP-Server verbinden kann.",
+    "serverUrl": "MCP-Server-URL",
+    "bearerToken": "Bearer Token",
+    "hide": "Verbergen",
+    "show": "Anzeigen",
+    "tokenUnavailable": "Token ist nicht verfügbar",
+    "steps": [
+      "Öffne die ChatGPT-Workspace-Einstellungen und aktiviere den Developer Mode.",
+      "Erstelle eine eigene MCP-App.",
+      "Füge die MCP-Server-URL ein und konfiguriere Bearer-Token-Auth.",
+      "Teste die App und aktiviere sie in ChatGPT."
+    ],
+    "instructions": "OpenAI MCP-App-Anleitung"
+  },
+  "logout": {
+    "signOut": "Abmelden"
+  },
+  "templates": {
+    "money": {
+      "name": "Finanzen",
+      "description": "Persönliches Finanz-Dashboard mit eigener Datenbank."
+    },
+    "kanban": {
+      "name": "Kanban",
+      "description": "Visuelles Taskboard für Projekte, Karten, Prioritäten und Workflows."
+    },
+    "personalCrm": {
+      "name": "Persönliches CRM",
+      "description": "Leichte Kontaktverwaltung mit Notizen, Follow-ups und Beziehungshistorie."
+    },
+    "habitTracker": {
+      "name": "Gewohnheiten",
+      "description": "Tägliches Habit-Tracking mit Serien, Zielen und Fortschrittsanalysen."
+    },
+    "pomodoro": {
+      "name": "Pomodoro",
+      "description": "Fokus-Timer mit Sessions, Pausen, Aufgaben und Produktivitätsstatistiken."
+    },
+    "notes": {
+      "name": "Notizen",
+      "description": "Persönliche Wissensbasis mit Tags, Suche und verknüpften Notizen."
+    },
+    "mealPlanner": {
+      "name": "Essensplaner",
+      "description": "Wochenmahlzeiten, Rezepte, Zutaten und Einkaufsplanung."
+    },
+    "workoutTracker": {
+      "name": "Training",
+      "description": "Trainingspläne, Sätze, Fortschrittshistorie und persönliche Rekorde."
+    },
+    "subscriptionTracker": {
+      "name": "Abos",
+      "description": "Wiederkehrende Zahlungen, Verlängerungen und monatliche Ausgaben verfolgen."
+    },
+    "jobSearchCrm": {
+      "name": "Jobsuche CRM",
+      "description": "Verwalte Stellen, Unternehmen, Interviews, Angebote und Follow-ups."
+    },
+    "moodJournal": {
+      "name": "Stimmungstagebuch",
+      "description": "Stimmung, Notizen, Auslöser, Gewohnheiten und emotionale Muster verfolgen."
+    },
+    "bookingCalendar": {
+      "name": "Buchungskalender",
+      "description": "Calendly-ähnliche Terminplanung, bei der Personen freie Slots buchen."
+    }
+  }
+}

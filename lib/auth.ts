@@ -1,15 +1,21 @@
 import { cookies } from 'next/headers';
 import { createHmac, randomBytes } from 'node:crypto';
+import type { UserExperienceLevel } from '@prisma/client';
 
 import { prisma } from './db';
+import { authSecret, envFlag, isProductionEnv } from './env';
 
-const sessionCookie = 'llagents_session';
+const sessionCookie = 'os7_session';
 const sessionTtlSeconds = 60 * 60 * 24 * 30;
 
 export type CurrentUser = {
   id: string;
   email: string;
   name: string | null;
+  onboarded: boolean;
+  aiExperienceLevel: UserExperienceLevel | null;
+  vibeCodingExperienceLevel: UserExperienceLevel | null;
+  onboardingGoal: string | null;
 };
 
 export function normalizeEmail(email: string) {
@@ -25,7 +31,7 @@ export function createAuthHash() {
 }
 
 export function isDevelopmentEmailCodeEnabled() {
-  return process.env.AUTH_ACCEPT_ANY_EMAIL_CODE === 'true' || process.env.NODE_ENV !== 'production';
+  return envFlag('AUTH_ACCEPT_ANY_EMAIL_CODE') || !isProductionEnv();
 }
 
 export async function createSession(user: CurrentUser) {
@@ -44,7 +50,7 @@ export async function createSession(user: CurrentUser) {
   cookieStore.set(sessionCookie, token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProductionEnv(),
     maxAge: sessionTtlSeconds,
     path: '/'
   });
@@ -82,7 +88,11 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
         select: {
           id: true,
           email: true,
-          name: true
+          name: true,
+          onboarded: true,
+          aiExperienceLevel: true,
+          vibeCodingExperienceLevel: true,
+          onboardingGoal: true
         }
       }
     }
@@ -102,12 +112,4 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
 function hashToken(value: string) {
   return createHmac('sha256', authSecret()).update(value).digest('base64url');
-}
-
-function authSecret() {
-  const secret = process.env.AUTH_SECRET;
-  if (!secret && process.env.NODE_ENV === 'production') {
-    throw new Error('AUTH_SECRET is required in production');
-  }
-  return secret || 'local-development-auth-secret';
 }

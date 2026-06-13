@@ -4,8 +4,8 @@ import { addTemplateCommand } from './templates/add';
 const program = new Command();
 
 program
-  .name('llm-to-apps')
-  .description('LLM to Apps platform CLI')
+  .name('os7')
+  .description('OS7 platform CLI')
   .version('0.1.0');
 
 const templates = program

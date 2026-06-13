@@ -1,16 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getCurrentUser } from '@/lib/auth';
+import { ensureAuthToken } from '@/lib/auth-tokens';
 import { getDeployQueue } from '@/lib/deploy-queue';
 import { prisma } from '@/lib/db';
 import { createProjectRepository } from '@/lib/forgejo';
-import { type ProjectResources } from '@/lib/project-resources';
-import { createAvailableSubdomain } from '@/lib/subdomains';
-import { parseTemplateManifest } from '@/lib/templates/manifest';
 import {
-  cleanSubdomain,
+  managerUrl as readManagerUrl,
+  platformDomain as readPlatformDomain,
+  projectPublicScheme
+} from '@/lib/env';
+import { ensureProjectOAuthClient, oauthUrls } from '@/lib/oauth';
+import { type ProjectResources } from '@/lib/project-resources';
+import { createAvailableProjectSlug } from '@/lib/project-slugs';
+import {
+  parseTemplateManifest,
+  renderTemplateEnv
+} from '@/lib/templates/manifest';
+import {
+  cleanSlug,
   createAgentToolsToken,
-  createAppMcpToken,
   createProjectCredentials,
   createProjectId,
   isInstallableTemplate
@@ -18,7 +27,7 @@ import {
 
 type DeployRequest = {
   templateId?: string;
-  subdomain?: string;
+  slug?: string;
 };
 
 export async function POST(request: NextRequest) {
@@ -52,8 +61,9 @@ async function deployProject(request: NextRequest) {
   const template = await prisma.appTemplate.findUnique({
     where: { id: templateId }
   });
-  const rootDomain = process.env.APP_ROOT_DOMAIN || 'llmagents.com';
-  const managerUrl = process.env.MANAGER_URL || 'http://manager:8080';
+  const platformDomain = readPlatformDomain();
+  const managerUrl = readManagerUrl();
+  const publicScheme = projectPublicScheme();
 
   if (!template || !isInstallableTemplate(template)) {
     return NextResponse.json(
@@ -63,25 +73,25 @@ async function deployProject(request: NextRequest) {
   }
 
   const id = createProjectId();
-  const subdomain = body.subdomain
-    ? cleanSubdomain(body.subdomain)
-    : await createAvailableSubdomain({
+  const requestedSlug = body.slug ? cleanSlug(body.slug) : null;
+  const slug = requestedSlug
+    ? requestedSlug
+    : await createAvailableProjectSlug({
         db: prisma,
         fallbackId: id,
-        prefix: template.id,
-        rootDomain
+        prefix: template.id
       });
 
-  if (!subdomain) {
+  if (!slug) {
     return NextResponse.json(
-      { ok: false, message: 'A valid subdomain is required' },
+      { ok: false, message: 'A valid slug is required' },
       { status: 400 }
     );
   }
 
   const existingProject = await prisma.project.findFirst({
     where: {
-      domain: `${subdomain}.${rootDomain}`,
+      slug,
       deletedAt: null,
       status: {
         notIn: ['deleting', 'deleted']
@@ -91,18 +101,18 @@ async function deployProject(request: NextRequest) {
 
   if (existingProject) {
     return NextResponse.json(
-      { ok: false, message: 'This subdomain is already deployed' },
+      { ok: false, message: 'This slug is already deployed' },
       { status: 409 }
     );
   }
 
   const agentToolsToken = createAgentToolsToken();
-  const appMcpToken = createAppMcpToken();
-  const domain = `${subdomain}.${rootDomain}`;
+  const domain = `${slug}.${platformDomain}`;
   const manifest = template.manifest
     ? parseTemplateManifest(template.manifest)
     : null;
   const needsMysql = manifest?.services.mysql?.required ?? false;
+  const needsOauth = manifest?.services.oauth?.required ?? false;
   const projectRepository = await createProjectRepository(id);
   const credentials = needsMysql ? createProjectCredentials(id) : null;
   const resourceState: ProjectResources = {
@@ -113,7 +123,7 @@ async function deployProject(request: NextRequest) {
       user: projectRepository.user
     },
     swarm: {
-      serviceName: `project-${id}`
+      serviceName: `app-${id}`
     }
   };
 
@@ -124,10 +134,110 @@ async function deployProject(request: NextRequest) {
     };
   }
 
+  const project = await prisma.project.create({
+    data: {
+      id,
+      userId: user.id,
+      templateId: template.id,
+      templateName: template.name,
+      git: projectRepository.authenticatedCloneUrl,
+      slug,
+      domain,
+      url: `${publicScheme}://${domain}`,
+      status: 'queued',
+      appPort: template.appPort,
+      agentPort: template.agentPort,
+      agentToolsToken,
+      resources: resourceState,
+      members: {
+        create: {
+          role: 'admin',
+          userId: user.id
+        }
+      }
+    }
+  });
+
+  const oauthClient = needsOauth
+    ? await ensureProjectOAuthClient({
+        domain,
+        name: `${template.name} (${project.id})`,
+        projectId: project.id
+      })
+    : null;
+
+  if (oauthClient) {
+    resourceState.oauth = {
+      clientId: oauthClient.clientId,
+      redirectUri: oauthClient.redirectUri
+    };
+
+    await prisma.project.update({
+      where: {
+        id: project.id
+      },
+      data: {
+        resources: resourceState
+      }
+    });
+  }
+
+  const urls = oauthUrls();
+  const projectServiceToken = await ensureAuthToken({
+    name: `${template.name} service API`,
+    projectId: project.id,
+    scope: 'project:service',
+    subjectType: 'project'
+  });
+  const internalApiBaseUrl = urls.internalToken.replace(/\/oauth\/token$/, '');
+  const projectServiceApiBaseUri = `${internalApiBaseUrl}/api/s2s/projects/${project.id}`;
+  const templateEnv = manifest
+    ? renderTemplateEnv(manifest, {
+        app: {
+          projectId: project.id,
+          publicUrl: `${publicScheme}://${domain}`
+        },
+        services: {
+          ...(credentials
+            ? {
+                mysql: {
+                  database: credentials.dbName,
+                  user: credentials.dbUser,
+                  password: credentials.dbPassword
+                }
+              }
+            : {}),
+          ...(oauthClient
+            ? {
+                oauth: {
+                  clientId: oauthClient.clientId,
+                  clientSecret: oauthClient.clientSecret,
+                  redirectUri: oauthClient.redirectUri,
+                  issuerUrl: urls.issuer,
+                  authorizeUrl: urls.authorize,
+                  tokenUrl: urls.token,
+                  userinfoUrl: urls.userinfo,
+                  internalTokenUrl: urls.internalToken,
+                  internalUserinfoUrl: urls.internalUserinfo,
+                  internalProjectUserTokenIntrospectionUrl:
+                    urls.internalProjectUserTokenIntrospection,
+                  projectUserTokenIntrospectionUrl:
+                    urls.projectUserTokenIntrospection,
+                  projectServiceApiToken: projectServiceToken.token,
+                  projectServiceApiBaseUri,
+                  requestHost: urls.requestHost
+                }
+              }
+            : {})
+        }
+      })
+    : {};
+
   const managerPayload = {
     id,
     git: projectRepository.authenticatedCloneUrl,
     image: template.image,
+    serviceName: resourceState.swarm?.serviceName,
     services: credentials
       ? {
           mysql: {
@@ -139,8 +249,12 @@ async function deployProject(request: NextRequest) {
       : {},
     env: {
       TEMPLATE_ID: template.id,
+      PROJECT_ID: project.id,
+      PROJECT_SERVICE_API_TOKEN: projectServiceToken.token,
+      PROJECT_SERVICE_API_BASE_URI: projectServiceApiBaseUri,
       USER_ID: user.id,
       USER_EMAIL: user.email,
+      ...templateEnv,
       ...(credentials
         ? {
             MYSQL_HOST: 'mysql',
@@ -159,8 +273,7 @@ async function deployProject(request: NextRequest) {
       ...(manifest?.runtime.restoreCommand
         ? { APP_RESTORE_COMMAND: manifest.runtime.restoreCommand }
         : {}),
-      AGENT_TOOLS_TOKEN: agentToolsToken,
-      APP_MCP_TOKEN: appMcpToken
+      AGENT_TOOLS_TOKEN: agentToolsToken
     },
     domain,
     resources: manifest?.resources,
@@ -169,24 +282,6 @@ async function deployProject(request: NextRequest) {
       agent: template.agentPort
     }
   };
-
-  const project = await prisma.project.create({
-    data: {
-      id,
-      userId: user.id,
-      templateId: template.id,
-      templateName: template.name,
-      git: projectRepository.authenticatedCloneUrl,
-      domain,
-      url: `http://${domain}`,
-      status: 'queued',
-      appPort: template.appPort,
-      agentPort: template.agentPort,
-      agentToolsToken,
-      appMcpToken,
-      resources: resourceState
-    }
-  });
 
   const deployQueue = getDeployQueue();
   const job = await deployQueue.add(

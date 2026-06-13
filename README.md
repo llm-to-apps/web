@@ -1,4 +1,4 @@
-# LLAgents Web
+# OS7 Web
 
 Next.js app for user registration and template deployment.
 
@@ -28,20 +28,26 @@ npm install
 ## Environment
 
 ```text
-MANAGER_URL=http://manager:8080
-AGENT_URL=http://agent:4111
-APP_ROOT_DOMAIN=llmagents.com
-DATABASE_URL=postgresql://llagents:password@postgres:5432/llagents_platform
+MANAGER_URL=http://manager
+AGENT_URL=http://agent
+PLATFORM_BASE_URL=https://os7.dev
+PLATFORM_DOMAIN=os7.dev
+OAUTH_INTERNAL_BASE_URL=http://web
+PROJECT_PUBLIC_SCHEME=https
+DATABASE_URL=postgresql://os7:password@postgres:5432/os7_platform
 AUTH_SECRET=change-me
 REDIS_URL=redis://localhost:6379
-AGENT_MEMORY_DEBUG=false
+REDIS_PUBSUB_URL=redis://localhost:6379
 ```
 
-Set `AGENT_MEMORY_DEBUG=true` to show Mastra Memory scope in the agent chat
-progress message while debugging.
+`AGENT_URL` must point to the private Mastra agent service. The agent service
+is trusted by the web backend and should not be exposed as a public API.
+
+`REDIS_URL` is used by BullMQ queues. `REDIS_PUBSUB_URL` is used by the
+agent run realtime/SSE bridge and can point to a separate Redis instance.
 
 ## First Template
 
 ```text
-Money -> git@github.com:llm-to-apps/money-template.git
+Money -> git@github.com:os7/money-template.git
 ```

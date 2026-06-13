@@ -1,0 +1,201 @@
+{
+  "appShell": {
+    "beta": "Beta",
+    "tagline": "Твоя собственная агентная операционная система.",
+    "intro": "Опиши, как ты живешь или работаешь. Приложения, базы данных, дашборды и процессы будут собраны вокруг тебя.",
+    "runtimeLabel": "Runtime",
+    "runtimeText": "Живые приложения с базами данных, дашбордами и управлением через агента",
+    "sourceLabel": "Источник",
+    "sourceText": "Твой процесс, превращенный в рабочий софт",
+    "thesisLabel": "Тезис",
+    "thesisText": "Конец универсального SaaS"
+  },
+  "language": {
+    "label": "Язык интерфейса",
+    "en": "English",
+    "de": "Deutsch",
+    "ru": "Русский"
+  },
+  "pages": {
+    "signInTitle": "Войти",
+    "signInDescription": "Введи email и начни собирать софт вокруг своей жизни или компании.",
+    "storeTitle": "Магазин",
+    "storeDescription": "Устанавливай новые шаблоны в свой workspace."
+  },
+  "settings": {
+    "title": "Настройки",
+    "description": "Управляй настройками аккаунта.",
+    "profileTitle": "Профиль",
+    "profileDescription": "Обнови базовые данные, чтобы агент лучше подстраивал ответы.",
+    "languageTitle": "Язык",
+    "languageDescription": "Выбери язык интерфейса для этого браузера.",
+    "saveChanges": "Сохранить",
+    "saving": "Сохраняю..."
+  },
+  "profile": {
+    "nameLabel": "Ваше имя",
+    "namePlaceholder": "Alexander",
+    "aiExperienceLabel": "Опыт работы с ИИ",
+    "vibeCodingExperienceLabel": "Опыт вайб-кодинга",
+    "experienceNone": "Нет",
+    "experienceBeginner": "Начальный",
+    "experienceAdvanced": "Продвинутый"
+  },
+  "welcome": {
+    "title": "Welcome",
+    "description": "Расскажи немного о себе, чтобы агент мог подстроить тон и предположения.",
+    "continue": "Продолжить",
+    "saving": "Сохраняю...",
+    "nameRequired": "Имя обязательно"
+  },
+  "auth": {
+    "emailTitle": "Войти по email",
+    "codeTitle": "Введи код",
+    "emailDescription": "Один email для нового или существующего аккаунта.",
+    "codeSent": "Код отправлен на {email}.",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you@example.com",
+    "codeLabel": "Код",
+    "codePlaceholder": "123456",
+    "working": "Работаю",
+    "continue": "Продолжить",
+    "signIn": "Войти",
+    "authenticationFailed": "Не удалось войти"
+  },
+  "tabs": {
+    "ariaLabel": "Разделы приложений",
+    "apps": "Приложения",
+    "store": "Магазин"
+  },
+  "store": {
+    "comingSoon": "Разрабатывается ИИ",
+    "install": "Установить",
+    "installing": "Устанавливаю",
+    "installFailed": "Не удалось установить",
+    "queued": "В очереди {url}",
+    "emptyResponse": "Установка вернула пустой ответ ({status})"
+  },
+  "desktop": {
+    "installedAriaLabel": "Установленные приложения",
+    "installing": "Устанавливаю",
+    "deleteAria": "Удалить {name}",
+    "emptyTitle": "Приложения не установлены",
+    "emptyDescription": "Установи 100+ приложений из магазина и добавь их на рабочий стол.",
+    "openStore": "Открыть магазин",
+    "deleteTitle": "Удалить {name}?",
+    "deleteDescription": "Это навсегда удалит сервис приложения и все связанные ресурсы.",
+    "deleteBody": "Мы удалим базы данных, Git-репозиторий, исходный код и все данные приложения для {domain}.",
+    "confirmDatabase": "Я понимаю, что базы данных будут удалены.",
+    "confirmCode": "Я понимаю, что код и Git-репозиторий будут удалены.",
+    "confirmData": "Я понимаю, что все данные приложения будут потеряны навсегда.",
+    "cancel": "Отмена",
+    "deleteAction": "Удалить приложение",
+    "deleteFailed": "Не удалось удалить"
+  },
+  "userAgent": {
+    "welcome": "Помогу думать поверх всех приложений и направлять задачи к нужному project agent.",
+    "placeholder": "Спроси про приложения или что собрать дальше..."
+  },
+  "project": {
+    "appsBack": "Приложения",
+    "settingsAria": "Настройки проекта",
+    "open": "Открыть",
+    "iframeTitle": "Приложение {name}",
+    "applicationStatus": "Приложение: {status}",
+    "previewPending": "Превью загрузится, когда сервис будет готов.",
+    "usageTotal": "Всего: {count}",
+    "usageInput": "Вход: {count}",
+    "usageOutput": "Выход: {count}"
+  },
+  "chat": {
+    "welcome": "Я подключен к {name}. Спроси, что нужно изменить или проверить.",
+    "started": "Агент запущен",
+    "done": "Готово.",
+    "requestFailed": "Запрос к агенту не удался",
+    "working": "Агент работает.",
+    "modeSwitcherLabel": "Режим агента",
+    "useMode": "Use",
+    "devMode": "Dev",
+    "useModeLabel": "Активен Use mode. Нажми, чтобы включить Dev mode.",
+    "devModeLabel": "Активен Dev mode. Нажми, чтобы вернуться в Use mode.",
+    "messageAria": "Сообщение агенту",
+    "usePlaceholder": "Попроси агента использовать приложение...",
+    "devPlaceholder": "Попроси агента проверить или изменить код...",
+    "sendAria": "Отправить сообщение",
+    "optionsAria": "Настройки чата",
+    "clearAria": "Очистить историю чата",
+    "clearFailed": "Не удалось очистить историю чата",
+    "usageBreakdown": "{input} вход / {output} выход"
+  },
+  "mcp": {
+    "buttonLabel": "Подключить MCP",
+    "title": "Подключить MCP к ChatGPT",
+    "description": "Используй MCP endpoint этого приложения в кастомном ChatGPT MCP app.",
+    "publicUrlNote": "ChatGPT должен видеть это приложение по публичному URL, прежде чем подключиться к MCP server.",
+    "serverUrl": "MCP server URL",
+    "bearerToken": "Bearer token",
+    "hide": "Скрыть",
+    "show": "Показать",
+    "tokenUnavailable": "Токен недоступен",
+    "steps": [
+      "Открой настройки workspace в ChatGPT и включи Developer mode.",
+      "Создай custom MCP app.",
+      "Вставь MCP server URL и настрой Bearer token auth.",
+      "Протестируй app и включи его в ChatGPT."
+    ],
+    "instructions": "Инструкция OpenAI по MCP apps"
+  },
+  "logout": {
+    "signOut": "Выйти"
+  },
+  "templates": {
+    "money": {
+      "name": "Финансы",
+      "description": "Персональный финансовый дашборд с собственной базой данных."
+    },
+    "kanban": {
+      "name": "Kanban",
+      "description": "Визуальная доска задач для проектов, карточек, приоритетов и процессов."
+    },
+    "personalCrm": {
+      "name": "Личный CRM",
+      "description": "Легкий менеджер контактов с заметками, follow-up и историей отношений."
+    },
+    "habitTracker": {
+      "name": "Привычки",
+      "description": "Трекер ежедневных привычек со streaks, целями и прогрессом."
+    },
+    "pomodoro": {
+      "name": "Pomodoro",
+      "description": "Фокус-таймер с сессиями, перерывами, задачами и статистикой продуктивности."
+    },
+    "notes": {
+      "name": "Заметки",
+      "description": "Личная база знаний с тегами, поиском и связанными заметками."
+    },
+    "mealPlanner": {
+      "name": "Питание",
+      "description": "Планирование еды на неделю, рецепты, ингредиенты и список покупок."
+    },
+    "workoutTracker": {
+      "name": "Тренировки",
+      "description": "Планы упражнений, подходы, история прогресса и личные рекорды."
+    },
+    "subscriptionTracker": {
+      "name": "Подписки",
+      "description": "Отслеживание регулярных платежей, продлений и месячных расходов."
+    },
+    "jobSearchCrm": {
+      "name": "Поиск работы",
+      "description": "Управление вакансиями, компаниями, интервью, офферами и follow-up."
+    },
+    "moodJournal": {
+      "name": "Настроение",
+      "description": "Трекер настроения, заметок, триггеров, привычек и эмоциональных паттернов."
+    },
+    "bookingCalendar": {
+      "name": "Календарь бронирований",
+      "description": "Приложение как Calendly, где люди могут бронировать свободное время."
+    }
+  }
+}

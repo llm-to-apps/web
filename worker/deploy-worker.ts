@@ -1,7 +1,6 @@
 import http from 'node:http';
 import https from 'node:https';
 import { Worker, type Job } from 'bullmq';
-import { loadEnvConfig } from '@next/env';
 
 import {
   deployQueueName,
@@ -12,9 +11,9 @@ import {
   type DeployProjectJob
 } from '../lib/deploy-queue';
 import { prisma } from '../lib/db';
+import { appReadyBaseUrl, envNumber } from '../lib/env';
 import { deleteProjectRepository } from '../lib/forgejo';
-
-loadEnvConfig(process.cwd());
+import { startAgentRunWorker } from './agent-run-worker';
 
 type ProjectServiceStatus = {
   ok: true;
@@ -31,17 +30,22 @@ type ProjectServiceStatus = {
   }>;
 };
 
-const serviceReadyTimeoutMs = Number(process.env.DEPLOY_READY_TIMEOUT_MS || 120_000);
-const serviceReadyPollMs = Number(process.env.DEPLOY_READY_POLL_MS || 2_000);
-const appReadyBaseUrl = process.env.APP_READY_BASE_URL || 'http://traefik';
-const appReadyTimeoutMs = Number(process.env.DEPLOY_APP_READY_TIMEOUT_MS || 900_000);
-const appReadyRequestTimeoutMs = Number(
-  process.env.DEPLOY_APP_READY_REQUEST_TIMEOUT_MS || 2_000
+const serviceReadyTimeoutMs = envNumber('DEPLOY_READY_TIMEOUT_MS', 120_000);
+const serviceReadyPollMs = envNumber('DEPLOY_READY_POLL_MS', 2_000);
+const appReadyUrl = appReadyBaseUrl();
+const appReadyTimeoutMs = envNumber('DEPLOY_APP_READY_TIMEOUT_MS', 900_000);
+const appReadyRequestTimeoutMs = envNumber(
+  'DEPLOY_APP_READY_REQUEST_TIMEOUT_MS',
+  2_000
 );
-const appReadyRetryDelayMs = Number(process.env.DEPLOY_APP_READY_RETRY_DELAY_MS || 2_000);
-const appReadyAttempts = Number(
-  process.env.DEPLOY_APP_READY_ATTEMPTS ||
-    Math.ceil(appReadyTimeoutMs / appReadyRetryDelayMs) + 5
+const appReadyRetryDelayMs = envNumber('DEPLOY_APP_READY_RETRY_DELAY_MS', 2_000);
+const appReadyAttempts = envNumber(
+  'DEPLOY_APP_READY_ATTEMPTS',
+  Math.ceil(appReadyTimeoutMs / appReadyRetryDelayMs) + 5
+);
+const gracefulShutdownTimeoutMs = envNumber(
+  'WORKER_GRACEFUL_SHUTDOWN_TIMEOUT_MS',
+  10 * 60_000
 );
 
 const worker = new Worker(
@@ -63,9 +67,18 @@ const worker = new Worker(
   },
   {
     connection: redisConnectionOptions(),
-    concurrency: Number(process.env.DEPLOY_WORKER_CONCURRENCY || 2)
+    concurrency: envNumber('DEPLOY_WORKER_CONCURRENCY', 2)
   }
 );
+const agentRunWorker = startAgentRunWorker();
+
+worker.on('active', (job) => {
+  console.log(`${job.name} job ${job.id} started`, {
+    projectId: job.data.projectId,
+    attempt: job.attemptsMade + 1,
+    maxAttempts: job.opts.attempts ?? 1
+  });
+});
 
 worker.on('completed', (job, result) => {
   if (isTimedOutResult(result)) {
@@ -124,8 +137,13 @@ async function shutdown(signal: NodeJS.Signals) {
   }
 
   isShuttingDown = true;
-  console.log(`deploy worker received ${signal}, shutting down`);
-  await worker.close(true);
+  console.log(`deploy worker received ${signal}, shutting down gracefully`, {
+    timeoutMs: gracefulShutdownTimeoutMs
+  });
+  await Promise.all([
+    closeWorkerGracefully('deploy worker', worker),
+    closeWorkerGracefully('agent run worker', agentRunWorker)
+  ]);
   await prisma.$disconnect();
 }
 
@@ -139,8 +157,50 @@ process.on('SIGTERM', () => {
 
 console.log(`deploy worker started on queue ${deployQueueName}`);
 
+async function closeWorkerGracefully(name: string, workerToClose: Worker) {
+  const startedAt = Date.now();
+  const closeGracefully = workerToClose.close(false);
+  closeGracefully.catch((error) => {
+    console.error(`${name} graceful shutdown failed`, error);
+  });
+  const timeout = new Promise<'timeout'>((resolve) => {
+    setTimeout(() => resolve('timeout'), gracefulShutdownTimeoutMs).unref();
+  });
+
+  const result = await Promise.race([
+    closeGracefully.then(() => 'closed' as const).catch(() => 'failed' as const),
+    timeout
+  ]);
+
+  if (result === 'closed') {
+    console.log(`${name} closed gracefully`, {
+      elapsedMs: Date.now() - startedAt
+    });
+    return;
+  }
+
+  if (result === 'failed') {
+    console.error(`${name} graceful shutdown failed`, {
+      elapsedMs: Date.now() - startedAt
+    });
+    return;
+  }
+
+  console.warn(`${name} graceful shutdown timed out; process will exit`, {
+    elapsedMs: Date.now() - startedAt,
+    timeoutMs: gracefulShutdownTimeoutMs
+  });
+}
+
 async function deployProject(job: Job<DeployProjectJob>) {
   const { projectId, managerUrl, managerPayload } = job.data;
+  console.log(`deploy-project job ${job.id} validating project`, {
+    projectId,
+    domain: managerPayload.domain,
+    serviceName: managerPayload.serviceName,
+    image: managerPayload.image
+  });
+
   const project = await prisma.project.findFirst({
     where: {
       id: projectId,
@@ -166,7 +226,17 @@ async function deployProject(job: Job<DeployProjectJob>) {
       deployError: null
     }
   });
+  console.log(`deploy-project job ${job.id} marked project as deploying`, {
+    projectId
+  });
 
+  console.log(`deploy-project job ${job.id} requesting manager deployment`, {
+    projectId,
+    managerUrl,
+    serviceName: managerPayload.serviceName,
+    image: managerPayload.image,
+    domain: managerPayload.domain
+  });
   const response = await fetch(`${managerUrl}/swarm/projects`, {
     method: 'POST',
     headers: {
@@ -181,8 +251,21 @@ async function deployProject(job: Job<DeployProjectJob>) {
       `Manager deployment request failed with ${response.status}: ${JSON.stringify(result)}`
     );
   }
+  console.log(`deploy-project job ${job.id} manager accepted deployment`, {
+    projectId,
+    status: response.status,
+    result
+  });
 
+  console.log(`deploy-project job ${job.id} waiting for swarm service readiness`, {
+    projectId,
+    timeoutMs: serviceReadyTimeoutMs,
+    pollMs: serviceReadyPollMs
+  });
   await waitForProjectServiceReady(managerUrl, projectId);
+  console.log(`deploy-project job ${job.id} swarm service is running`, {
+    projectId
+  });
 
   await prisma.project.update({
     where: { id: projectId },
@@ -190,6 +273,9 @@ async function deployProject(job: Job<DeployProjectJob>) {
       status: 'starting',
       deployError: null
     }
+  });
+  console.log(`deploy-project job ${job.id} marked project as starting`, {
+    projectId
   });
 
   await getDeployQueue().add(
@@ -208,12 +294,27 @@ async function deployProject(job: Job<DeployProjectJob>) {
       }
     }
   );
+  console.log(`deploy-project job ${job.id} enqueued app readiness check`, {
+    projectId,
+    domain: managerPayload.domain,
+    readyJobId: `ready-${projectId}`,
+    attempts: appReadyAttempts,
+    retryDelayMs: appReadyRetryDelayMs
+  });
 
   return result;
 }
 
 async function checkProjectReady(job: Job<CheckProjectReadyJob>) {
   const { projectId, domain, readinessStartedAt } = job.data;
+  console.log(`check-project-ready job ${job.id} probing app`, {
+    projectId,
+    domain,
+    attempt: job.attemptsMade + 1,
+    maxAttempts: job.opts.attempts ?? 1,
+    appReadyUrl
+  });
+
   const project = await prisma.project.findFirst({
     where: {
       id: projectId,
@@ -260,6 +361,11 @@ async function checkProjectReady(job: Job<CheckProjectReadyJob>) {
   }
 
   const response = await fetchProjectApp(domain);
+  console.log(`check-project-ready job ${job.id} app responded`, {
+    projectId,
+    domain,
+    status: response.status
+  });
 
   await prisma.project.update({
     where: { id: projectId },
@@ -282,6 +388,13 @@ async function checkProjectReady(job: Job<CheckProjectReadyJob>) {
 
 async function deleteProject(job: Job<DeleteProjectJob>) {
   const { projectId, managerUrl, resources } = job.data;
+  console.log(`delete-project job ${job.id} validating project`, {
+    projectId,
+    serviceName: resources.swarm?.serviceName,
+    hasMysql: Boolean(resources.mysql),
+    hasGit: Boolean(resources.git)
+  });
+
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     select: { id: true, deletedAt: true }
@@ -309,6 +422,11 @@ async function deleteProject(job: Job<DeleteProjectJob>) {
       : undefined
   };
 
+  console.log(`delete-project job ${job.id} requesting manager deletion`, {
+    projectId,
+    managerUrl,
+    serviceName: managerPayload.serviceName
+  });
   const response = await fetch(
     `${managerUrl}/swarm/projects/${encodeURIComponent(projectId)}`,
     {
@@ -328,7 +446,16 @@ async function deleteProject(job: Job<DeleteProjectJob>) {
       )}`
     );
   }
+  console.log(`delete-project job ${job.id} manager deleted project resources`, {
+    projectId,
+    result: managerResult
+  });
 
+  console.log(`delete-project job ${job.id} deleting Forgejo repository/user`, {
+    projectId,
+    owner: resources.git?.owner,
+    name: resources.git?.name
+  });
   const gitResult = resources.git
     ? await deleteProjectRepository(
         resources.git.owner,
@@ -346,6 +473,9 @@ async function deleteProject(job: Job<DeleteProjectJob>) {
       managerJobId: String(job.id ?? '')
     }
   });
+  console.log(`delete-project job ${job.id} marked project as deleted`, {
+    projectId
+  });
 
   return {
     ok: true,
@@ -357,8 +487,10 @@ async function deleteProject(job: Job<DeleteProjectJob>) {
 async function waitForProjectServiceReady(managerUrl: string, projectId: string) {
   const startedAt = Date.now();
   let lastStatus: ProjectServiceStatus | null = null;
+  let pollCount = 0;
 
   while (Date.now() - startedAt < serviceReadyTimeoutMs) {
+    pollCount += 1;
     const response = await fetch(
       `${managerUrl}/swarm/projects/${encodeURIComponent(projectId)}`
     );
@@ -373,6 +505,15 @@ async function waitForProjectServiceReady(managerUrl: string, projectId: string)
     }
 
     lastStatus = status;
+    console.log('swarm service readiness poll', {
+      projectId,
+      poll: pollCount,
+      elapsedMs: Date.now() - startedAt,
+      ready: status.ready,
+      serviceName: status.serviceName,
+      replicas: `${status.runningReplicas}/${status.desiredReplicas}`,
+      tasks: summarizeServiceTasks(status)
+    });
 
     if (status.ready) {
       return status;
@@ -389,7 +530,7 @@ async function waitForProjectServiceReady(managerUrl: string, projectId: string)
 }
 
 async function fetchProjectApp(domain: string) {
-  const url = appReadyBaseUrl.replace(/\/$/, '') || 'http://traefik';
+  const url = appReadyUrl;
 
   try {
     const response = await requestProjectApp(url, domain);
@@ -401,6 +542,11 @@ async function fetchProjectApp(domain: string) {
     throw new Error(`HTTP ${response.status}`);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown app readiness error';
+    console.warn('project app readiness probe failed', {
+      domain,
+      appReadyUrl: url,
+      message
+    });
     throw new Error(`Project app ${domain} is not ready via ${url}: ${message}`);
   }
 }
@@ -455,6 +601,17 @@ function isTimedOutResult(result: unknown): result is { timedOut: true; elapsedM
 
   const record = result as { elapsedMs?: unknown; timedOut?: unknown };
   return record.timedOut === true && typeof record.elapsedMs === 'number';
+}
+
+function summarizeServiceTasks(status: ProjectServiceStatus) {
+  return (
+    status.tasks?.map((task) => ({
+      state: task.state,
+      desiredState: task.desiredState,
+      message: task.message,
+      error: task.error
+    })) ?? []
+  );
 }
 
 function sleep(ms: number) {

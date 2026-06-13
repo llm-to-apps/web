@@ -50,7 +50,11 @@ export async function POST(request: NextRequest) {
     select: {
       id: true,
       email: true,
-      name: true
+      name: true,
+      onboarded: true,
+      aiExperienceLevel: true,
+      vibeCodingExperienceLevel: true,
+      onboardingGoal: true
     }
   });
 

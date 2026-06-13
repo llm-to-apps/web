@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const SOURCE_URL =
   'https://www.eff.org/files/2016/07/18/eff_large_wordlist.txt';
-const OUTPUT_PATH = '../data/subdomain-words.json';
+const OUTPUT_PATH = '../data/slug-words.json';
 const MAX_WORDS = 10_000;
 const MIN_LENGTH = 4;
 const MAX_LENGTH = 12;

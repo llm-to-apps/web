@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { projectMemberWhere } from '@/lib/project-members';
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -15,7 +16,7 @@ export async function GET() {
 
   const projects = await prisma.project.findMany({
     where: {
-      userId: user.id,
+      members: projectMemberWhere(user.id),
       deletedAt: null,
       status: {
         notIn: ['deleting', 'deleted']
@@ -26,6 +27,7 @@ export async function GET() {
       id: true,
       templateId: true,
       templateName: true,
+      slug: true,
       domain: true,
       url: true,
       status: true,

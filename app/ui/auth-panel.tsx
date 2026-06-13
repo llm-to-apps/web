@@ -1,7 +1,11 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
-import { AtSign, KeyRound, Loader2, LogIn, Mail } from 'lucide-react';
+import { AtSign, KeyRound, LogIn, Mail } from 'lucide-react';
+import { Button } from './button';
+import { FormField } from './form-field';
+import { useI18n } from './i18n-provider';
+import { LanguageSwitcher } from './language-switcher';
 
 type AuthStep = 'email' | 'code';
 
@@ -14,7 +18,12 @@ type AuthResult =
       message: string;
     };
 
-export function AuthPanel() {
+type AuthPanelProps = {
+  redirectTo?: string;
+};
+
+export function AuthPanel({ redirectTo = '/home' }: AuthPanelProps) {
+  const { format, t } = useI18n();
   const [step, setStep] = useState<AuthStep>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -45,7 +54,7 @@ export function AuthPanel() {
       if (!response.ok || !data.ok) {
         setResult({
           ok: false,
-          message: 'message' in data ? data.message : 'Authentication failed'
+          message: 'message' in data ? data.message : t.auth.authenticationFailed
         });
         return;
       }
@@ -58,11 +67,11 @@ export function AuthPanel() {
         return;
       }
 
-      window.location.assign('/home');
+      window.location.assign(redirectTo);
     } catch (error) {
       setResult({
         ok: false,
-        message: error instanceof Error ? error.message : 'Authentication failed'
+        message: error instanceof Error ? error.message : t.auth.authenticationFailed
       });
     } finally {
       setIsSubmitting(false);
@@ -70,69 +79,63 @@ export function AuthPanel() {
   }
 
   return (
-    <form className="form auth-form" onSubmit={onSubmit}>
+    <div className="auth-panel-stack">
+      <form className="form auth-form" onSubmit={onSubmit}>
       <div className="auth-title">
         <div className="auth-title-icon">
           {step === 'email' ? <Mail size={18} /> : <KeyRound size={18} />}
         </div>
         <div>
-          <h3>{step === 'email' ? 'Sign in with email' : 'Enter your code'}</h3>
+          <h3>{step === 'email' ? t.auth.emailTitle : t.auth.codeTitle}</h3>
           <p>
             {step === 'email'
-              ? 'Use one email for new and existing accounts.'
-              : `Code sent to ${email}. Any code works in development.`}
+              ? t.auth.emailDescription
+              : format(t.auth.codeSent, { email })}
           </p>
         </div>
       </div>
 
       {step === 'email' ? (
-        <div className="field">
-          <label htmlFor="email">Email</label>
-          <div className="input-wrap">
-            <AtSign size={18} />
-            <input
-              id="email"
-              name="email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="you@example.com"
-              required
-            />
-          </div>
-        </div>
+        <FormField
+          icon={<AtSign size={18} />}
+          id="email"
+          label={t.auth.emailLabel}
+          name="email"
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder={t.auth.emailPlaceholder}
+          required
+          type="email"
+          value={email}
+        />
       ) : null}
 
       {step === 'code' ? (
-        <div className="field">
-          <label htmlFor="code">Code</label>
-          <div className="input-wrap">
-            <KeyRound size={18} />
-            <input
-              autoFocus
-              id="code"
-              name="code"
-              value={code}
-              onChange={(event) => setCode(event.target.value)}
-              placeholder="123456"
-              required
-            />
-          </div>
-        </div>
+        <FormField
+          autoFocus
+          icon={<KeyRound size={18} />}
+          id="code"
+          label={t.auth.codeLabel}
+          name="code"
+          onChange={(event) => setCode(event.target.value)}
+          placeholder={t.auth.codePlaceholder}
+          required
+          value={code}
+        />
       ) : null}
 
-      <button className="deploy-button" type="submit" disabled={isSubmitting}>
-        {isSubmitting ? (
-          <Loader2 size={18} />
-        ) : step === 'email' ? (
-          <Mail size={18} />
-        ) : (
-          <LogIn size={18} />
-        )}
-        {isSubmitting ? 'Working' : step === 'email' ? 'Continue' : 'Sign in'}
-      </button>
+      <Button
+        className="min-h-11"
+        loading={isSubmitting}
+        loadingLabel={t.auth.working}
+        type="submit"
+      >
+        {step === 'email' ? <Mail size={18} /> : <LogIn size={18} />}
+        {step === 'email' ? t.auth.continue : t.auth.signIn}
+      </Button>
 
       {result?.ok === false ? <div className="result error">{result.message}</div> : null}
-    </form>
+      </form>
+      {step === 'email' ? <LanguageSwitcher variant="segmented" /> : null}
+    </div>
   );
 }

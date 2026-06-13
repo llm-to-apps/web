@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Loader2 } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { Button } from './button';
+import { useI18n } from './i18n-provider';
 
 type InstallResult =
   | {
@@ -23,6 +25,7 @@ type InstallButtonProps = {
 };
 
 export function InstallButton({ templateId }: InstallButtonProps) {
+  const { format, t } = useI18n();
   const router = useRouter();
   const [isInstalling, setIsInstalling] = useState(false);
   const [result, setResult] = useState<InstallResult | null>(null);
@@ -39,12 +42,14 @@ export function InstallButton({ templateId }: InstallButtonProps) {
         },
         body: JSON.stringify({ templateId })
       });
-      const data = await readInstallResult(response);
+      const data = await readInstallResult(response, (status) =>
+        format(t.store.emptyResponse, { status })
+      );
 
       if (!response.ok || !data.ok) {
         setResult({
           ok: false,
-          message: 'message' in data ? data.message : 'Install failed'
+          message: 'message' in data ? data.message : t.store.installFailed
         });
         return;
       }
@@ -55,7 +60,7 @@ export function InstallButton({ templateId }: InstallButtonProps) {
     } catch (error) {
       setResult({
         ok: false,
-        message: error instanceof Error ? error.message : 'Install failed'
+        message: error instanceof Error ? error.message : t.store.installFailed
       });
     } finally {
       setIsInstalling(false);
@@ -64,26 +69,34 @@ export function InstallButton({ templateId }: InstallButtonProps) {
 
   return (
     <div className="install-control">
-      <button className="install-button" type="button" onClick={install} disabled={isInstalling}>
-        {isInstalling ? <Loader2 size={17} /> : <Download size={17} />}
-        {isInstalling ? 'Installing' : 'Install'}
-      </button>
+      <Button
+        className="min-h-11"
+        loading={isInstalling}
+        loadingLabel={t.store.installing}
+        onClick={install}
+      >
+        <Download size={17} />
+        {t.store.install}
+      </Button>
       {result ? (
         <div className={`inline-result ${result.ok ? 'success' : 'error'}`}>
-          {result.ok ? `Queued ${result.url}` : result.message}
+          {result.ok ? format(t.store.queued, { url: result.url }) : result.message}
         </div>
       ) : null}
     </div>
   );
 }
 
-async function readInstallResult(response: Response): Promise<InstallResult> {
+async function readInstallResult(
+  response: Response,
+  formatEmptyResponse: (status: number) => string
+): Promise<InstallResult> {
   const text = await response.text();
 
   if (!text) {
     return {
       ok: false,
-      message: `Install failed with empty response (${response.status})`
+      message: formatEmptyResponse(response.status)
     };
   }
 
@@ -92,7 +105,7 @@ async function readInstallResult(response: Response): Promise<InstallResult> {
   } catch {
     return {
       ok: false,
-      message: text.slice(0, 200) || `Install failed (${response.status})`
+      message: text.slice(0, 200) || formatEmptyResponse(response.status)
     };
   }
 }

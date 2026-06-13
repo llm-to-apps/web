@@ -1,9 +1,13 @@
 import { AuthPanel } from './auth-panel';
 
-export function SignedOutContent() {
+type SignedOutContentProps = {
+  redirectTo?: string;
+};
+
+export function SignedOutContent({ redirectTo }: SignedOutContentProps) {
   return (
     <div className="auth-grid auth-grid-single">
-      <AuthPanel />
+      <AuthPanel redirectTo={redirectTo} />
     </div>
   );
 }
