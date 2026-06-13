@@ -202,16 +202,22 @@ async function main() {
 }
 
 async function seedAppTemplates() {
+  const includeDevTemplates = process.env.NODE_ENV !== 'production';
   const appTemplates = [
     await templateFromManifestUrl(`${moneyTemplateManifestBaseUrl}/manifest.json`),
+    ...(includeDevTemplates
+      ? [await templateFromManifestUrl(`${moneyTemplateManifestBaseUrl}/manifest.dev.json`)]
+      : []),
     ...staticAppTemplates
   ];
 
-  await prisma.appTemplate.deleteMany({
-    where: {
-      id: 'money-dev'
-    }
-  });
+  if (!includeDevTemplates) {
+    await prisma.appTemplate.deleteMany({
+      where: {
+        id: 'money-dev'
+      }
+    });
+  }
 
   for (const template of appTemplates) {
     await prisma.appTemplate.upsert({
