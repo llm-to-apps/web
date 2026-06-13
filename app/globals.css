@@ -54,6 +54,10 @@
     @apply inline-flex items-center gap-3;
   }
 
+  .brand a {
+    @apply block;
+  }
+
   .brand img {
     @apply block h-auto w-24;
     filter: brightness(0) invert(1);
@@ -105,6 +109,10 @@
 
   .app-header-brand {
     @apply inline-flex min-w-0 shrink-0 items-center gap-3;
+  }
+
+  .app-header-brand a {
+    @apply block;
   }
 
   .app-header-brand img {

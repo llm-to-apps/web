@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { CurrentUser } from '@/lib/auth';
 import Image from 'next/image';
 import { prisma } from '@/lib/db';
+import { siteUrl } from '@/lib/env';
 import { getRequestDictionary } from '@/lib/i18n/server';
 import { AccountMenu } from './account-menu';
 import { HeaderNav } from './header-nav';
@@ -20,6 +21,7 @@ export async function AppShell({
   children
 }: AppShellProps) {
   const t = await getRequestDictionary();
+  const siteHref = siteUrl();
 
   if (user) {
     const creditUsageSummary = await prisma.creditLedgerEntry.aggregate({
@@ -38,13 +40,15 @@ export async function AppShell({
         <header className="app-header">
           <div className="app-header-inner">
             <div className="app-header-brand">
-              <Image
-                src="/brand/os7-logo.svg"
-                alt="OS7"
-                width={72}
-                height={38}
-                priority
-              />
+              <a href={siteHref} aria-label="OS7">
+                <Image
+                  src="/brand/os7-logo.svg"
+                  alt="OS7"
+                  width={72}
+                  height={38}
+                  priority
+                />
+              </a>
               <span className="app-header-beta">Beta</span>
             </div>
             <HeaderNav />
@@ -82,13 +86,15 @@ export async function AppShell({
       <aside className="sidebar">
         <div>
           <div className="brand">
-            <Image
-              src="/brand/os7-logo.svg"
-              alt="OS7"
-              width={96}
-              height={50}
-              priority
-            />
+            <a href={siteHref} aria-label="OS7">
+              <Image
+                src="/brand/os7-logo.svg"
+                alt="OS7"
+                width={96}
+                height={50}
+                priority
+              />
+            </a>
             <span className="brand-beta">{t.appShell.beta}</span>
           </div>
           <h1>{t.appShell.tagline}</h1>

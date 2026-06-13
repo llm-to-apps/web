@@ -86,6 +86,10 @@ export function platformBaseUrl() {
   return requiredTrimmedUrlEnv('PLATFORM_BASE_URL');
 }
 
+export function siteUrl() {
+  return optionalTrimmedUrlEnv('SITE_URL') ?? 'https://www.os7.dev';
+}
+
 export function platformDomain() {
   return requiredEnv('PLATFORM_DOMAIN');
 }
