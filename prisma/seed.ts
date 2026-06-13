@@ -1,5 +1,3 @@
-const { readFileSync } = require('node:fs') as typeof import('node:fs');
-const { join } = require('node:path') as typeof import('node:path');
 const { PrismaClient } = require('@prisma/client') as typeof import('@prisma/client');
 import type { Prisma } from '@prisma/client';
 
@@ -38,10 +36,10 @@ type UsagePriceSeed = {
 };
 
 const prisma = new PrismaClient();
+const moneyTemplateManifestCommit = 'a5046f1893be547c944d3d079eb2f31e59703312';
+const moneyTemplateManifestBaseUrl = `https://cdn.jsdelivr.net/gh/llm-to-apps/money-template@${moneyTemplateManifestCommit}`;
 
-const appTemplates: AppTemplateSeed[] = [
-  templateFromManifest('./templates/money/manifest.json'),
-  templateFromManifest('./templates/money/manifest.dev.json'),
+const staticAppTemplates: AppTemplateSeed[] = [
   {
     id: 'kanban',
     slug: 'kanban',
@@ -204,6 +202,12 @@ async function main() {
 }
 
 async function seedAppTemplates() {
+  const appTemplates = [
+    await templateFromManifestUrl(`${moneyTemplateManifestBaseUrl}/manifest.json`),
+    await templateFromManifestUrl(`${moneyTemplateManifestBaseUrl}/manifest.dev.json`),
+    ...staticAppTemplates
+  ];
+
   for (const template of appTemplates) {
     await prisma.appTemplate.upsert({
       where: {
@@ -285,9 +289,14 @@ async function seedUsagePrices() {
   }
 }
 
-function templateFromManifest(relativePath: string): AppTemplateSeed {
-  const manifestPath = join(__dirname, relativePath);
-  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
+async function templateFromManifestUrl(url: string): Promise<AppTemplateSeed> {
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch template manifest ${url}: ${response.status}`);
+  }
+
+  const manifest = (await response.json()) as {
     id: string;
     slug: string;
     name: string;
@@ -319,7 +328,7 @@ function templateFromManifest(relativePath: string): AppTemplateSeed {
     appPort: manifest.runtime.appPort,
     agentPort: manifest.runtime.agentPort,
     sortOrder: manifest.sortOrder ?? 0,
-    manifestUrl: relativePath,
+    manifestUrl: url,
     manifest: manifest as Prisma.InputJsonValue
   };
 }
