@@ -79,7 +79,7 @@ export function resendApiKey() {
 }
 
 export function emailFrom() {
-  return optionalEnv('EMAIL_FROM') ?? 'onboarding@resend.dev';
+  return optionalEnv('EMAIL_FROM') ?? 'login@os7.dev';
 }
 
 export function agentRuntimeUrl() {
