@@ -13,7 +13,7 @@ permissions:
   packages: write
 
 env:
-  IMAGE_NAME: ghcr.io/os7/web
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/web
 
 jobs:
   test:
@@ -36,7 +36,7 @@ jobs:
       - name: Generate Prisma client
         run: npm run prisma:generate
         env:
-          DATABASE_URL: mysql://root:password@localhost:3306/os7_platform
+          DATABASE_URL: postgresql://os7:password@localhost:5432/os7_platform
 
       - name: Typecheck
         run: npm run typecheck
@@ -44,14 +44,22 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          DATABASE_URL: mysql://root:password@localhost:3306/os7_platform
+          DATABASE_URL: postgresql://os7:password@localhost:5432/os7_platform
           AUTH_SECRET: ci-auth-secret
+          APP_READY_BASE_URL: http://traefik
+          FORGEJO_ADMIN_PASSWORD: ci-forgejo-password
+          FORGEJO_ADMIN_USER: root
+          FORGEJO_GIT_URL: http://forgejo
+          FORGEJO_URL: http://forgejo
           MANAGER_URL: http://manager
           PLATFORM_BASE_URL: http://os7.localhost
           PLATFORM_DOMAIN: localhost
+          PROJECT_DEV_AGENT_MODEL: openai/gpt-5
           PROJECT_PUBLIC_SCHEME: http
+          PROJECT_USE_AGENT_MODEL: x-ai/grok-4.3
           OAUTH_INTERNAL_BASE_URL: http://localhost:3000
           REDIS_URL: redis://localhost:6379
+          USER_AGENT_MODEL: openai/gpt-5
 
   docker:
     name: Docker
