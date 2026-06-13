@@ -40,8 +40,8 @@ type UsagePriceSeed = {
 const prisma = new PrismaClient();
 
 const appTemplates: AppTemplateSeed[] = [
-  templateFromManifest('../../templates/money/manifest.json'),
-  templateFromManifest('../../templates/money/manifest.dev.json'),
+  templateFromManifest('./templates/money/manifest.json'),
+  templateFromManifest('./templates/money/manifest.dev.json'),
   {
     id: 'kanban',
     slug: 'kanban',
