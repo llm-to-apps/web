@@ -26,7 +26,7 @@ export type ProjectRepository = {
 };
 
 const forgejoBaseUrl = forgejoUrl();
-const forgejoGitBaseUrl = forgejoGitUrl();
+const forgejoGitBaseUrl = normalizeForgejoGitBaseUrl(forgejoGitUrl());
 const forgejoRootUser = forgejoAdminUser();
 const forgejoRootPassword = forgejoAdminPassword();
 
@@ -238,6 +238,16 @@ function rewriteBaseUrl(url: string, baseUrl: string) {
 
   parsed.protocol = base.protocol;
   parsed.host = base.host;
+
+  return parsed.toString();
+}
+
+function normalizeForgejoGitBaseUrl(url: string) {
+  const parsed = new URL(url);
+
+  if (parsed.hostname === 'forgejo' && parsed.port === '8081') {
+    parsed.port = '';
+  }
 
   return parsed.toString();
 }
