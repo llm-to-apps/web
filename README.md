@@ -49,5 +49,5 @@ agent run realtime/SSE bridge and can point to a separate Redis instance.
 ## First Template
 
 ```text
-Money -> git@github.com:os7/money-template.git
+Money -> git@github.com:llm-to-apps/money-template.git
 ```
