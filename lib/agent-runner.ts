@@ -728,6 +728,7 @@ function devModeRules() {
 - After Prisma schema changes, run npm run prisma:generate and npm run typecheck, restart the app process, then inspect app status or logs.
 - Do not intentionally edit generated framework files such as next-env.d.ts.
 - Do not add UI or code fallbacks to hide missing required database tables or columns.
+- For routine CRUD UI, preserve local screen state with client state, optimistic updates, or focused JSON refetches. Do not use full route refreshes, periodic whole-view polling, or browser reloads as the default mutation UX.
 - Stop when the request is satisfied.`;
 }
 

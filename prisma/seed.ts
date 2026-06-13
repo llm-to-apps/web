@@ -36,7 +36,7 @@ type UsagePriceSeed = {
 };
 
 const prisma = new PrismaClient();
-const moneyTemplateManifestCommit = 'a5046f1893be547c944d3d079eb2f31e59703312';
+const moneyTemplateManifestCommit = '7f83412a2422ccc0db759d418765120fa3323840';
 const moneyTemplateManifestBaseUrl = `https://cdn.jsdelivr.net/gh/llm-to-apps/money-template@${moneyTemplateManifestCommit}`;
 
 const staticAppTemplates: AppTemplateSeed[] = [
