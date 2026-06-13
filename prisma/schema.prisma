@@ -15,7 +15,6 @@ model User {
   aiExperienceLevel         UserExperienceLevel?
   vibeCodingExperienceLevel UserExperienceLevel?
   onboardingGoal            String?                   @db.Text
-  authHash                  String                    @map("passwordHash") @db.VarChar(255)
   createdAt                 DateTime                  @default(now())
   updatedAt                 DateTime                  @updatedAt
   sessions                  Session[]

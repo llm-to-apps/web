@@ -26,10 +26,6 @@ export function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-export function createAuthHash() {
-  return `email-code$${randomBytes(24).toString('base64url')}`;
-}
-
 export function isDevelopmentEmailCodeEnabled() {
   return envFlag('AUTH_ACCEPT_ANY_EMAIL_CODE') || !isProductionEnv();
 }

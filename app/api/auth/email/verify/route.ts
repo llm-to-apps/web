@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import {
   createSession,
-  createAuthHash,
   isDevelopmentEmailCodeEnabled,
   isValidEmail,
   normalizeEmail
 } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { verifyEmailLoginCode } from '@/lib/email-login-codes';
 
 type VerifyEmailAuthRequest = {
   code?: string;
@@ -33,10 +33,22 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!isDevelopmentEmailCodeEnabled()) {
+  let isValidEmailCode = false;
+
+  try {
+    isValidEmailCode = await verifyEmailLoginCode(email, code);
+  } catch (error) {
+    console.error('[Auth] Failed to verify email login code', { email, error });
     return NextResponse.json(
-      { ok: false, message: 'Email code delivery is not configured yet' },
-      { status: 501 }
+      { ok: false, message: 'Failed to verify email code' },
+      { status: 503 }
+    );
+  }
+
+  if (!isValidEmailCode && !isDevelopmentEmailCodeEnabled()) {
+    return NextResponse.json(
+      { ok: false, message: 'Invalid or expired code' },
+      { status: 400 }
     );
   }
 
@@ -44,8 +56,7 @@ export async function POST(request: NextRequest) {
     where: { email },
     update: {},
     create: {
-      email,
-      authHash: createAuthHash()
+      email
     },
     select: {
       id: true,

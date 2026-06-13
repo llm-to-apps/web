@@ -74,6 +74,14 @@ export function userAgentModel() {
   return optionalEnv('USER_AGENT_MODEL') ?? projectDevAgentModel();
 }
 
+export function resendApiKey() {
+  return optionalEnv('RESEND_API_KEY');
+}
+
+export function emailFrom() {
+  return optionalEnv('EMAIL_FROM') ?? 'onboarding@resend.dev';
+}
+
 export function agentRuntimeUrl() {
   return optionalTrimmedUrlEnv('AGENT_URL');
 }
