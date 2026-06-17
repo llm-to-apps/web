@@ -43,6 +43,7 @@ export async function GET(_request: NextRequest, context: ProjectStatusContext) 
     select: {
       id: true,
       status: true,
+      devUrl: true,
       url: true
     }
   });
@@ -55,7 +56,7 @@ export async function GET(_request: NextRequest, context: ProjectStatusContext) 
   }
 
   const prodUrl = project.url.replace(/\/$/, '');
-  const devUrl = createDevUrl(prodUrl);
+  const devUrl = (project.devUrl ?? createDevUrl(prodUrl)).replace(/\/$/, '');
   const [prodReady, devReady] = await Promise.all([
     isRuntimeReady(prodUrl),
     isRuntimeReady(devUrl)
@@ -107,7 +108,6 @@ async function isRuntimeReady(baseUrl: string) {
 
 function createDevUrl(appUrl: string) {
   const url = new URL(appUrl);
-  url.protocol = 'http:';
   url.port = '8080';
   url.pathname = '/';
   url.search = '';

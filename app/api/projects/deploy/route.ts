@@ -108,6 +108,8 @@ async function deployProject(request: NextRequest) {
 
   const agentToolsToken = createAgentToolsToken();
   const domain = `${slug}.${platformDomain}`;
+  const devSlug = createDevSlug(slug);
+  const devDomain = `${devSlug}.${platformDomain}`;
   const manifest = template.manifest
     ? parseTemplateManifest(template.manifest)
     : null;
@@ -143,7 +145,9 @@ async function deployProject(request: NextRequest) {
       git: projectRepository.authenticatedCloneUrl,
       slug,
       domain,
+      devDomain,
       url: `${publicScheme}://${domain}`,
+      devUrl: `${publicScheme}://${devDomain}`,
       status: 'queued',
       appPort: template.appPort,
       agentPort: template.agentPort,
@@ -279,6 +283,7 @@ async function deployProject(request: NextRequest) {
       AGENT_TOOLS_TOKEN: agentToolsToken
     },
     domain,
+    devDomain,
     resources: manifest?.resources,
     ports: {
       app: template.appPort,
@@ -316,4 +321,14 @@ function errorMessage(error: unknown) {
   }
 
   return 'Deploy failed';
+}
+
+function createDevSlug(slug: string) {
+  const reversed = slug.split('').reverse().join('');
+
+  if (reversed === slug) {
+    return `dev-${slug}`;
+  }
+
+  return reversed;
 }

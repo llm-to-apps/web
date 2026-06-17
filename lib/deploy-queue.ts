@@ -19,6 +19,7 @@ export type DeployProjectJob = {
     };
     env: Record<string, string>;
     domain: string;
+    devDomain?: string;
     resources?: {
       memory?: {
         reservationMb?: number;
@@ -32,6 +33,7 @@ export type DeployProjectJob = {
     ports: {
       app: number;
       agent: number;
+      dev?: number;
     };
   };
 };

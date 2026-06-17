@@ -48,7 +48,9 @@ model Project {
   git             String    @db.VarChar(1024)
   slug            String    @unique @db.VarChar(64)
   domain          String    @db.VarChar(255)
+  devDomain       String?   @unique @db.VarChar(255)
   url             String    @db.VarChar(255)
+  devUrl          String?   @db.VarChar(255)
   status          String    @default("deploying") @db.VarChar(32)
   appPort         Int
   agentPort       Int
@@ -69,6 +71,7 @@ model Project {
   creditLedgerEntries      CreditLedgerEntry[]
 
   @@index([domain])
+  @@index([devDomain])
   @@index([userId, deletedAt, createdAt])
   @@map("projects")
 }

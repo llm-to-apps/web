@@ -53,6 +53,8 @@ export async function GET(request: NextRequest, context: ProjectWorkspaceContext
       templateName: true,
       slug: true,
       domain: true,
+      devDomain: true,
+      devUrl: true,
       url: true,
       status: true,
       deployError: true
@@ -160,7 +162,7 @@ export async function GET(request: NextRequest, context: ProjectWorkspaceContext
     }
   });
   const appUrl = project.url.replace(/\/$/, '');
-  const devUrl = createDevUrl(appUrl);
+  const devUrl = (project.devUrl ?? createDevUrl(appUrl)).replace(/\/$/, '');
   const activeAppUrl = mode === 'dev' ? devUrl : appUrl;
 
   return NextResponse.json({
@@ -182,6 +184,7 @@ export async function GET(request: NextRequest, context: ProjectWorkspaceContext
       deployError: project.deployError,
       devUrl,
       domain: project.domain,
+      devDomain: project.devDomain,
       id: project.id,
       name: project.templateName,
       status: project.status,
@@ -193,7 +196,6 @@ export async function GET(request: NextRequest, context: ProjectWorkspaceContext
 
 function createDevUrl(appUrl: string) {
   const url = new URL(appUrl);
-  url.protocol = 'http:';
   url.port = '8080';
   url.pathname = '/';
   url.search = '';
