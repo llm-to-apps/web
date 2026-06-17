@@ -273,6 +273,12 @@ async function deployProject(request: NextRequest) {
       ...(manifest?.runtime.restoreCommand
         ? { APP_RESTORE_COMMAND: manifest.runtime.restoreCommand }
         : {}),
+      ...(manifest?.runtime.startupCommands
+        ? { APP_STARTUP_COMMANDS: manifest.runtime.startupCommands }
+        : {}),
+      ...(manifest?.runtime.appCommand
+        ? { APP_COMMAND: manifest.runtime.appCommand }
+        : {}),
       AGENT_TOOLS_TOKEN: agentToolsToken
     },
     domain,
