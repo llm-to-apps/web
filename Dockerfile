@@ -62,9 +62,11 @@ RUN npm ci --omit=dev
 RUN npm run prisma:generate
 
 COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/cli ./cli
 COPY --from=builder /app/lib ./lib
 COPY --from=builder /app/dist-worker ./dist-worker
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/src ./src
 COPY --from=builder /app/next.config.ts ./next.config.ts
 
 EXPOSE 80

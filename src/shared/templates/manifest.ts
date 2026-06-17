@@ -16,6 +16,13 @@ export type TemplateManifest = {
     remote: string
     path?: string
   }
+  updates?: {
+    github?: {
+      repository: string
+      ref: string
+      path: string
+    }
+  }
   git: {
     mount: {
       target: string
