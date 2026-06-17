@@ -1,5 +1,6 @@
 const toolDisplayNames: Record<string, string> = {
   askAppAgent: 'Ask app',
+  buildProjectApp: 'Build app',
   callAppMcpTool: 'Call app tool',
   getPersonalUsageSummary: 'Get usage summary',
   getProjectAppLogs: 'Get app logs',
@@ -12,11 +13,13 @@ const toolDisplayNames: Record<string, string> = {
   patchProjectFiles: 'Patch project files',
   readProjectFile: 'Read project file',
   replaceTextInFile: 'Replace text in file',
-  restartProjectApp: 'Restart app',
+  restartProjectProdServer: 'Restart prod',
   runProjectCommand: 'Run project command',
   runtimeStatus: 'Check runtime status',
   saveProjectChanges: 'Save project changes',
   searchProjectFiles: 'Search project files',
+  startProjectDevServer: 'Start dev',
+  stopProjectDevServer: 'Stop dev',
   writeProjectFile: 'Write project file'
 };
 

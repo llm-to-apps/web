@@ -16,11 +16,7 @@ export async function GET() {
 
   const projects = await prisma.project.findMany({
     where: {
-      members: projectMemberWhere(user.id),
-      deletedAt: null,
-      status: {
-        notIn: ['deleting', 'deleted']
-      }
+      members: projectMemberWhere(user.id)
     },
     orderBy: { createdAt: 'desc' },
     select: {
@@ -31,6 +27,7 @@ export async function GET() {
       domain: true,
       url: true,
       status: true,
+      deletedAt: true,
       deployError: true
     }
   });

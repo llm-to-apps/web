@@ -2,8 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import type { ComponentProps } from 'react';
-import { Alert, Center, Grid, GridCol, Paper, Skeleton, Stack, Text, Title } from '@mantine/core';
-import { useParams } from 'next/navigation';
+import {
+  Alert,
+  Center,
+  Grid,
+  GridCol,
+  Loader,
+  Paper,
+  Skeleton,
+  Stack,
+  Text,
+  Title
+} from '@mantine/core';
+import { useParams, useSearchParams } from 'next/navigation';
 import { formatMessage } from '../../../lib/i18n/dictionaries';
 import { useI18n } from '../../_components/i18n-provider';
 import { ProjectAgentPanel } from './project-agent-panel';
@@ -15,6 +26,7 @@ type ProjectWorkspace = {
   messages: ComponentProps<typeof ProjectAgentPanel>['initialMessages'];
   project: ComponentProps<typeof ProjectAgentPanel>['project'] & {
     deployError: string | null;
+    devUrl: string;
   };
   usageSummary: ComponentProps<typeof ProjectAgentPanel>['usageSummary'];
 };
@@ -28,18 +40,44 @@ type ProjectWorkspaceResponse =
       message: string;
     };
 
+type ProjectStatusResponse =
+  | {
+      ok: true;
+      dev: {
+        ready: boolean;
+        url: string;
+      };
+      prod: {
+        ready: boolean;
+        url: string;
+      };
+      project: {
+        id: string;
+        status: string;
+      };
+    }
+  | {
+      ok: false;
+      message?: string;
+    };
+
 export default function ProjectPage() {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const { t } = useI18n();
   const [data, setData] = useState<ProjectWorkspace | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [devReadyUrl, setDevReadyUrl] = useState<string | null>(null);
+  const [devError, setDevError] = useState<string | null>(null);
+  const mode = searchParams.get('mode') === 'dev' ? 'dev' : 'use';
+  const previewUrl = mode === 'dev' ? devReadyUrl : data?.project.appUrl;
 
   useEffect(() => {
     let isCurrent = true;
 
     async function loadProject() {
       const response = await fetch(
-        `/api/projects/${encodeURIComponent(params.id)}/workspace`,
+        `/api/projects/${encodeURIComponent(params.id)}/workspace?mode=${mode}`,
         {
           cache: 'no-store'
         }
@@ -75,7 +113,112 @@ export default function ProjectPage() {
     return () => {
       isCurrent = false;
     };
-  }, [params.id]);
+  }, [mode, params.id]);
+
+  useEffect(() => {
+    setDevReadyUrl(null);
+    setDevError(null);
+
+    if (mode !== 'dev' || data?.project.status !== 'ready') {
+      return undefined;
+    }
+
+    let isCurrent = true;
+    let pollTimeoutId: ReturnType<typeof setTimeout> | null = null;
+    let keepAliveIntervalId: ReturnType<typeof setInterval> | null = null;
+
+    async function startDevServer() {
+      const response = await fetch(
+        `/api/projects/${encodeURIComponent(params.id)}/dev-start`,
+        {
+          cache: 'no-store',
+          method: 'POST'
+        }
+      );
+      const payload = (await response.json().catch(() => null)) as
+        | { ok: true }
+        | { ok: false; message?: string }
+        | null;
+
+      if (!isCurrent) {
+        return false;
+      }
+
+      if (!response.ok || !payload?.ok) {
+        setDevError(
+          payload && 'message' in payload
+            ? payload.message || 'Development server did not start'
+            : `Development server did not start (${response.status})`
+        );
+        return false;
+      }
+
+      return true;
+    }
+
+    async function checkDevServer() {
+      try {
+        const response = await fetch(
+          `/api/projects/${encodeURIComponent(params.id)}/status`,
+          {
+            cache: 'no-store'
+          }
+        );
+        const payload = (await response.json().catch(() => null)) as
+          | ProjectStatusResponse
+          | null;
+
+        if (!isCurrent) {
+          return;
+        }
+
+        if (!response.ok || !payload || !payload.ok) {
+          setDevError(
+            payload && 'message' in payload
+              ? payload.message || 'Development preview is unavailable'
+              : `Development preview is unavailable (${response.status})`
+          );
+          return;
+        }
+
+        if (payload.dev.ready) {
+          setDevReadyUrl(payload.dev.url);
+          return;
+        }
+
+        pollTimeoutId = setTimeout(checkDevServer, 1200);
+      } catch {
+        if (isCurrent) {
+          pollTimeoutId = setTimeout(checkDevServer, 1200);
+        }
+      }
+    }
+
+    async function startAndWait() {
+      const started = await startDevServer();
+
+      if (!started) {
+        return;
+      }
+
+      keepAliveIntervalId = setInterval(() => {
+        void startDevServer();
+      }, 30_000);
+      await checkDevServer();
+    }
+
+    void startAndWait();
+
+    return () => {
+      isCurrent = false;
+      if (pollTimeoutId) {
+        clearTimeout(pollTimeoutId);
+      }
+      if (keepAliveIntervalId) {
+        clearInterval(keepAliveIntervalId);
+      }
+    };
+  }, [data?.project.status, mode, params.id]);
 
   if (error) {
     return (
@@ -118,16 +261,31 @@ export default function ProjectPage() {
               style={{ overflow: 'hidden' }}
               withBorder
             >
-              <iframe
-                src={data.project.appUrl}
-                style={{
-                  border: 0,
-                  display: 'block',
-                  height: '100%',
-                  width: '100%'
-                }}
-                title={formatMessage(t.project.iframeTitle, { name: data.project.name })}
-              />
+              {devError ? (
+                <Center h="100%" p="md">
+                  <Alert color="red">{devError}</Alert>
+                </Center>
+              ) : previewUrl ? (
+                <iframe
+                  src={previewUrl}
+                  style={{
+                    border: 0,
+                    display: 'block',
+                    height: '100%',
+                    width: '100%'
+                  }}
+                  title={formatMessage(t.project.iframeTitle, { name: data.project.name })}
+                />
+              ) : (
+                <Center h="100%" p="md">
+                  <Stack align="center" gap="sm">
+                    <Loader size="sm" />
+                    <Text c="dimmed" size="sm">
+                      Starting development preview...
+                    </Text>
+                  </Stack>
+                </Center>
+              )}
             </Paper>
           ) : (
             <Paper flex={1} withBorder>

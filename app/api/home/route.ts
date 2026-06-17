@@ -22,24 +22,9 @@ export async function GET() {
     );
   }
 
-  const deletedProjectVisibleAfter = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
   const projects = await prisma.project.findMany({
     where: {
-      members: projectMemberWhere(user.id),
-      OR: [
-        {
-          deletedAt: null,
-          status: {
-            notIn: ['deleting', 'deleted']
-          }
-        },
-        {
-          deletedAt: {
-            gte: deletedProjectVisibleAfter
-          },
-          status: 'deleted'
-        }
-      ]
+      members: projectMemberWhere(user.id)
     },
     orderBy: { createdAt: 'desc' },
     select: {

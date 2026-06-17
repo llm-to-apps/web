@@ -133,15 +133,16 @@
           "minimum": 1,
           "maximum": 65535
         },
+        "devPort": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
         "startupCommands": {
           "type": "string",
           "minLength": 1
         },
         "restoreCommand": {
-          "type": "string",
-          "minLength": 1
-        },
-        "appCommand": {
           "type": "string",
           "minLength": 1
         }

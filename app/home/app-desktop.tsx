@@ -37,27 +37,27 @@ type AppDesktopProps = {
   initialProjects: DesktopProject[];
 };
 
-const installingStatuses = new Set(['queued', 'deploying', 'starting']);
+const pollingStatuses = new Set(['queued', 'deploying', 'starting', 'deleting']);
 const busyStatuses = new Set(['queued', 'deploying', 'starting', 'deleting']);
 
 export function AppDesktop({ initialProjects }: AppDesktopProps) {
   const { locale, t } = useI18n();
   const [projects, setProjects] = useState(initialProjects);
-  const installingProjectIds = useMemo(
+  const pollingProjectIds = useMemo(
     () =>
       projects
-        .filter((project) => installingStatuses.has(project.status))
+        .filter((project) => pollingStatuses.has(project.status))
         .map((project) => project.id),
     [projects]
   );
-  const installingProjectIdsKey = installingProjectIds.join('|');
+  const pollingProjectIdsKey = pollingProjectIds.join('|');
 
   useEffect(() => {
     setProjects(initialProjects);
   }, [initialProjects]);
 
   useEffect(() => {
-    const projectIds = installingProjectIdsKey.split('|').filter(Boolean);
+    const projectIds = pollingProjectIdsKey.split('|').filter(Boolean);
 
     if (projectIds.length === 0) {
       return;
@@ -65,7 +65,7 @@ export function AppDesktop({ initialProjects }: AppDesktopProps) {
 
     let isCurrent = true;
 
-    async function refreshInstallingProjects() {
+    async function refreshPendingProjects() {
       try {
         const results = await Promise.all(
           projectIds.map(async (projectId) => {
@@ -100,14 +100,14 @@ export function AppDesktop({ initialProjects }: AppDesktopProps) {
       }
     }
 
-    const interval = window.setInterval(refreshInstallingProjects, 2_000);
-    void refreshInstallingProjects();
+    const interval = window.setInterval(refreshPendingProjects, 2_000);
+    void refreshPendingProjects();
 
     return () => {
       isCurrent = false;
       window.clearInterval(interval);
     };
-  }, [installingProjectIdsKey]);
+  }, [pollingProjectIdsKey]);
 
   return (
     <Stack>
@@ -116,6 +116,7 @@ export function AppDesktop({ initialProjects }: AppDesktopProps) {
           {projects.map((project) => {
             const isBusy = busyStatuses.has(project.status);
             const isDeleted = project.status === 'deleted' || Boolean(project.deletedAt);
+            const isDisabled = isBusy || isDeleted;
             const usageSummary = formatProjectUsageSummary(project.usage, locale);
             const appTileContent = (
               <Stack align="center" gap="xs">
@@ -123,7 +124,7 @@ export function AppDesktop({ initialProjects }: AppDesktopProps) {
                   <AppIcon templateId={project.templateId} size="large" />
                   {isBusy ? (
                     <Center bg="rgba(255, 255, 255, 0.72)" bottom={0} left={0} pos="absolute" right={0} top={0}>
-                      <Loader aria-label={t.desktop.installing} size="sm" />
+                      <Loader aria-label={t.desktop.installing} size="xs" type="dots" />
                     </Center>
                   ) : null}
                 </Box>
@@ -136,11 +137,11 @@ export function AppDesktop({ initialProjects }: AppDesktopProps) {
             return (
               <AppTileCard
                 href={
-                  isBusy || isDeleted
+                  isDisabled
                     ? null
                     : `/apps/${encodeURIComponent(project.slug)}`
                 }
-                isDeleted={isDeleted}
+                isDisabled={isDisabled}
                 key={project.id}
                 usageSummary={usageSummary}
               >
@@ -173,12 +174,12 @@ export function AppDesktop({ initialProjects }: AppDesktopProps) {
 function AppTileCard({
   children,
   href,
-  isDeleted,
+  isDisabled,
   usageSummary
 }: {
   children: React.ReactNode;
   href: string | null;
-  isDeleted: boolean;
+  isDisabled: boolean;
   usageSummary: {
     title: string;
     total: string;
@@ -199,14 +200,14 @@ function AppTileCard({
 
   if (href) {
     return (
-      <Card component={Link} href={href} opacity={isDeleted ? 0.55 : 1} ref={ref}>
+      <Card component={Link} href={href} opacity={isDisabled ? 0.55 : 1} ref={ref}>
         {content}
       </Card>
     );
   }
 
   return (
-    <Card opacity={isDeleted ? 0.55 : 1} ref={ref}>
+    <Card opacity={isDisabled ? 0.55 : 1} ref={ref}>
       {content}
     </Card>
   );

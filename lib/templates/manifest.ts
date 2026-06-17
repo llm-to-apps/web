@@ -28,9 +28,9 @@ export type TemplateManifest = {
     workdir: string;
     appPort: number;
     agentPort: number;
+    devPort?: number;
     startupCommands?: string;
     restoreCommand?: string;
-    appCommand?: string;
   };
   resources?: {
     memory?: {

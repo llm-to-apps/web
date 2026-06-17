@@ -13,7 +13,7 @@ type ProjectWorkspaceContext = {
   params: Promise<{ id: string }> | { id: string };
 };
 
-export async function GET(_request: NextRequest, context: ProjectWorkspaceContext) {
+export async function GET(request: NextRequest, context: ProjectWorkspaceContext) {
   const user = await getCurrentUser();
 
   if (!user) {
@@ -31,6 +31,7 @@ export async function GET(_request: NextRequest, context: ProjectWorkspaceContex
   }
 
   const { id } = await context.params;
+  const mode = request.nextUrl.searchParams.get('mode') === 'dev' ? 'dev' : 'use';
   const project = await prisma.project.findFirst({
     where: {
       OR: [
@@ -67,7 +68,7 @@ export async function GET(_request: NextRequest, context: ProjectWorkspaceContex
 
   const chatMessages = await prisma.projectAgentChatMessage.findMany({
     where: {
-      mode: 'use',
+      mode,
       projectId: project.id,
       userId: user.id
     },
@@ -86,7 +87,7 @@ export async function GET(_request: NextRequest, context: ProjectWorkspaceContex
   const activeProjectAgentRun = await prisma.agentRun.findFirst({
     where: {
       projectId: project.id,
-      mode: 'use',
+      mode,
       scope: 'project_agent',
       status: {
         in: ['queued', 'running']
@@ -159,11 +160,13 @@ export async function GET(_request: NextRequest, context: ProjectWorkspaceContex
     }
   });
   const appUrl = project.url.replace(/\/$/, '');
+  const devUrl = createDevUrl(appUrl);
+  const activeAppUrl = mode === 'dev' ? devUrl : appUrl;
 
   return NextResponse.json({
     ok: true,
     activeRunId: activeProjectAgentRun?.id ?? null,
-    appOrigin: new URL(appUrl).origin,
+    appOrigin: new URL(activeAppUrl).origin,
     messages: orderedChatMessages.map((message) => ({
       id: message.id,
       role: message.role === 'user' ? 'user' : 'assistant',
@@ -177,6 +180,7 @@ export async function GET(_request: NextRequest, context: ProjectWorkspaceContex
     project: {
       appUrl: project.url,
       deployError: project.deployError,
+      devUrl,
       domain: project.domain,
       id: project.id,
       name: project.templateName,
@@ -185,4 +189,14 @@ export async function GET(_request: NextRequest, context: ProjectWorkspaceContex
     },
     usageSummary: formatUsageSummary(formatCreditsUsed(creditUsageSummary._sum.credits))
   });
+}
+
+function createDevUrl(appUrl: string) {
+  const url = new URL(appUrl);
+  url.port = '8080';
+  url.pathname = '/';
+  url.search = '';
+  url.hash = '';
+
+  return url.toString().replace(/\/$/, '');
 }

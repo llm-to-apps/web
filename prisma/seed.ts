@@ -1,4 +1,6 @@
 const { PrismaClient } = require('@prisma/client') as typeof import('@prisma/client');
+const fs = require('node:fs') as typeof import('node:fs');
+const path = require('node:path') as typeof import('node:path');
 import type { Prisma } from '@prisma/client';
 
 type AppTemplateSeed = {
@@ -204,13 +206,24 @@ async function main() {
 
 async function seedAppTemplates() {
   const includeDevTemplates = process.env.NODE_ENV !== 'production';
+  const moneyTemplates = includeDevTemplates
+    ? [
+        templateFromLocalManifest('../templates/money/manifest.json', {
+          image: 'os7-money-template:local',
+          manifestUrl: 'local:../templates/money/manifest.json'
+        }),
+        templateFromLocalManifest('../templates/money/manifest.dev.json', {
+          image: 'os7-money:dev',
+          manifestUrl: 'local:../templates/money/manifest.dev.json'
+        })
+      ]
+    : [
+        await templateFromManifestUrl(`${moneyTemplateManifestBaseUrl}/manifest.json`, {
+          image: moneyTemplateImage
+        })
+      ];
   const appTemplates = [
-    await templateFromManifestUrl(`${moneyTemplateManifestBaseUrl}/manifest.json`, {
-      image: moneyTemplateImage
-    }),
-    ...(includeDevTemplates
-      ? [await templateFromManifestUrl(`${moneyTemplateManifestBaseUrl}/manifest.dev.json`)]
-      : []),
+    ...moneyTemplates,
     ...staticAppTemplates
   ];
 
@@ -313,25 +326,44 @@ async function templateFromManifestUrl(
     throw new Error(`Failed to fetch template manifest ${url}: ${response.status}`);
   }
 
-  const manifest = (await response.json()) as {
-    id: string;
-    slug: string;
-    name: string;
-    description: string;
-    icon: string;
-    status: 'available' | 'coming_soon';
-    sortOrder?: number;
-    source: {
-      repository: string;
-      remote: string;
-    };
-    image?: string;
-    runtime: {
-      appPort: number;
-      agentPort: number;
-    };
-  };
+  const manifest = (await response.json()) as MoneyTemplateManifest;
+  return templateFromManifest(manifest, url, overrides);
+}
 
+function templateFromLocalManifest(
+  relativePath: string,
+  overrides: { image?: string; manifestUrl: string }
+): AppTemplateSeed {
+  const manifestPath = path.resolve(process.cwd(), relativePath);
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as MoneyTemplateManifest;
+
+  return templateFromManifest(manifest, overrides.manifestUrl, overrides);
+}
+
+type MoneyTemplateManifest = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  icon: string;
+  status: 'available' | 'coming_soon';
+  sortOrder?: number;
+  source: {
+    repository: string;
+    remote: string;
+  };
+  image?: string;
+  runtime: {
+    appPort: number;
+    agentPort: number;
+  };
+};
+
+function templateFromManifest(
+  manifest: MoneyTemplateManifest,
+  manifestUrl: string,
+  overrides: { image?: string } = {}
+): AppTemplateSeed {
   const image = overrides.image ?? manifest.image;
 
   return {
@@ -347,7 +379,7 @@ async function templateFromManifestUrl(
     appPort: manifest.runtime.appPort,
     agentPort: manifest.runtime.agentPort,
     sortOrder: manifest.sortOrder ?? 0,
-    manifestUrl: url,
+    manifestUrl,
     manifest: {
       ...manifest,
       ...(image ? { image } : {})

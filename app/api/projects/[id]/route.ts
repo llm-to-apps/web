@@ -25,11 +25,7 @@ export async function GET(_request: NextRequest, context: ProjectRouteContext) {
   const project = await prisma.project.findFirst({
     where: {
       id,
-      members: projectMemberWhere(user.id),
-      deletedAt: null,
-      status: {
-        notIn: ['deleting', 'deleted']
-      }
+      members: projectMemberWhere(user.id)
     },
     select: {
       id: true,
@@ -39,6 +35,7 @@ export async function GET(_request: NextRequest, context: ProjectRouteContext) {
       domain: true,
       url: true,
       status: true,
+      deletedAt: true,
       deployError: true
     }
   });

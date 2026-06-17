@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ActionIcon, Box, Group, Paper, Stack, Text } from '@mantine/core';
 import { ArrowLeft } from 'lucide-react';
 import { useI18n } from '../../_components/i18n-provider';
@@ -44,13 +45,30 @@ export function ProjectAgentPanel({
   usageSummary = null
 }: ProjectAgentPanelProps) {
   const { t } = useI18n();
-  const [mode, setMode] = useState<AgentMode>('use');
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const mode = useMemo<AgentMode>(
+    () => (searchParams.get('mode') === 'dev' ? 'dev' : 'use'),
+    [searchParams]
+  );
   const [isSending, setIsSending] = useState(false);
   const chatRef = useRef<ProjectAgentChatHandle | null>(null);
 
   const handleSendingChange = useCallback((nextIsSending: boolean) => {
     setIsSending(nextIsSending);
   }, []);
+
+  const handleModeChange = useCallback(
+    (nextMode: AgentMode) => {
+      const nextParams = new URLSearchParams(searchParams.toString());
+      nextParams.set('mode', nextMode);
+      router.replace(`${pathname}?${nextParams.toString()}`, {
+        scroll: false
+      });
+    },
+    [pathname, router, searchParams]
+  );
 
   return (
     <Paper h="100%" mih={0} p="md" style={{ overflow: 'hidden' }} w="100%" withBorder>
@@ -100,7 +118,7 @@ export function ProjectAgentPanel({
         activeRunId={activeRunId}
         initialMessages={initialMessages}
         mode={mode}
-        onModeChange={setMode}
+        onModeChange={handleModeChange}
         onSendingChange={handleSendingChange}
         project={project}
         ref={chatRef}

@@ -276,16 +276,14 @@ async function deployProject(request: NextRequest) {
       ...(manifest?.runtime.startupCommands
         ? { APP_STARTUP_COMMANDS: manifest.runtime.startupCommands }
         : {}),
-      ...(manifest?.runtime.appCommand
-        ? { APP_COMMAND: manifest.runtime.appCommand }
-        : {}),
       AGENT_TOOLS_TOKEN: agentToolsToken
     },
     domain,
     resources: manifest?.resources,
     ports: {
       app: template.appPort,
-      agent: template.agentPort
+      agent: template.agentPort,
+      dev: manifest?.runtime.devPort ?? 8080
     }
   };
 
