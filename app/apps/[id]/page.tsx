@@ -1,239 +1,150 @@
-import { notFound } from 'next/navigation';
-import { ExternalLink } from 'lucide-react';
+'use client';
 
-import { requireOnboardedUser } from '@/lib/onboarding';
-import { prisma } from '@/lib/db';
-import { formatMessage } from '@/lib/i18n/dictionaries';
-import { getRequestDictionary } from '@/lib/i18n/server';
-import { projectMemberWhere } from '@/lib/project-members';
-import { ProjectAgentPanel } from '../../ui/project-agent-panel';
-import { ProjectOAuthBridge } from '../../ui/project-oauth-bridge';
+import { useEffect, useState } from 'react';
+import type { ComponentProps } from 'react';
+import { Alert, Center, Grid, GridCol, Paper, Skeleton, Stack, Text, Title } from '@mantine/core';
+import { useParams } from 'next/navigation';
+import { formatMessage } from '../../../lib/i18n/dictionaries';
+import { useI18n } from '../../_components/i18n-provider';
+import { ProjectAgentPanel } from './project-agent-panel';
+import { ProjectOAuthBridge } from './project-oauth-bridge';
 
-type ProjectPageProps = {
-  params: Promise<{ id: string }> | { id: string };
+type ProjectWorkspace = {
+  activeRunId: string | null;
+  appOrigin: string;
+  messages: ComponentProps<typeof ProjectAgentPanel>['initialMessages'];
+  project: ComponentProps<typeof ProjectAgentPanel>['project'] & {
+    deployError: string | null;
+  };
+  usageSummary: ComponentProps<typeof ProjectAgentPanel>['usageSummary'];
 };
 
-export default async function ProjectPage({ params }: ProjectPageProps) {
-  const { id } = await params;
-  const user = await requireOnboardedUser();
-  const t = await getRequestDictionary();
-  const project = await prisma.project.findFirst({
-    where: {
-      OR: [
-        {
-          id
-        },
-        {
-          slug: id
-        }
-      ],
-      members: projectMemberWhere(user.id),
-      deletedAt: null,
-      status: {
-        notIn: ['deleting', 'deleted']
-      }
-    },
-    select: {
-      id: true,
-      templateName: true,
-      slug: true,
-      domain: true,
-      url: true,
-      status: true,
-      deployError: true
-    }
-  });
+type ProjectWorkspaceResponse =
+  | ({
+      ok: true;
+    } & ProjectWorkspace)
+  | {
+      ok: false;
+      message: string;
+    };
 
-  if (!project) {
-    notFound();
+export default function ProjectPage() {
+  const params = useParams<{ id: string }>();
+  const { t } = useI18n();
+  const [data, setData] = useState<ProjectWorkspace | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    async function loadProject() {
+      const response = await fetch(
+        `/api/projects/${encodeURIComponent(params.id)}/workspace`,
+        {
+          cache: 'no-store'
+        }
+      );
+      const payload = (await response.json().catch(() => null)) as
+        | ProjectWorkspaceResponse
+        | null;
+
+      if (!isCurrent) {
+        return;
+      }
+
+      if (!response.ok || !payload || !payload.ok) {
+        setError(
+          payload && 'message' in payload
+            ? payload.message
+            : `Failed to load application (${response.status})`
+        );
+        return;
+      }
+
+      setData({
+        activeRunId: payload.activeRunId,
+        appOrigin: payload.appOrigin,
+        messages: payload.messages,
+        project: payload.project,
+        usageSummary: payload.usageSummary
+      });
+    }
+
+    void loadProject();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [params.id]);
+
+  if (error) {
+    return (
+      <Center h="100vh" p="md">
+        <Alert color="red">{error}</Alert>
+      </Center>
+    );
   }
 
-  const chatMessages = await prisma.projectAgentChatMessage.findMany({
-    where: {
-      mode: 'use',
-      projectId: project.id,
-      userId: user.id
-    },
-    orderBy: {
-      createdAt: 'desc'
-    },
-    take: 100,
-    select: {
-      id: true,
-      role: true,
-      source: true,
-      content: true
-    }
-  });
-  const orderedChatMessages = chatMessages.reverse();
-  const activeProjectAgentRun = await prisma.agentRun.findFirst({
-    where: {
-      projectId: project.id,
-      mode: 'use',
-      scope: 'project_agent',
-      status: {
-        in: ['queued', 'running']
-      },
-      userId: user.id
-    },
-    orderBy: {
-      createdAt: 'desc'
-    },
-    select: {
-      id: true
-    }
-  });
-  const chatMessageIds = orderedChatMessages.map((message) => message.id);
-  const agentUsages =
-    chatMessageIds.length > 0
-      ? await prisma.agentUsage.findMany({
-          where: {
-            assistantMessageId: {
-              in: chatMessageIds
-            },
-            projectId: project.id,
-            userId: user.id
-          },
-          select: {
-            assistantMessageId: true,
-            requestId: true
-          }
-        })
-      : [];
-  const requestIds = agentUsages.map((usage) => usage.requestId);
-  const ledgerEntries =
-    requestIds.length > 0
-      ? await prisma.creditLedgerEntry.findMany({
-          where: {
-            actorUserId: user.id,
-            meterType: 'llm_tokens',
-            sourceId: {
-              in: requestIds
-            },
-            sourceType: 'agent_run'
-          },
-          select: {
-            credits: true,
-            sourceId: true
-          }
-        })
-      : [];
-  const creditsByRequestId = new Map(
-    ledgerEntries.map((entry) => [entry.sourceId, formatCreditsUsed(entry.credits)])
-  );
-  const usageByAssistantMessageId = new Map(
-    agentUsages
-      .filter((usage) => usage.assistantMessageId)
-      .map((usage) => [
-        usage.assistantMessageId,
-        {
-          creditsUsed: creditsByRequestId.get(usage.requestId) ?? 0
-        }
-      ])
-  );
-  const creditUsageSummary = await prisma.creditLedgerEntry.aggregate({
-    where: {
-      actorUserId: user.id,
-      projectId: project.id,
-      sourceType: 'agent_run'
-    },
-    _sum: {
-      credits: true
-    }
-  });
-  const usageSummary = formatUsageSummary(formatCreditsUsed(creditUsageSummary._sum.credits));
-  const appUrl = project.url.replace(/\/$/, '');
-  const appOrigin = new URL(appUrl).origin;
+  if (!data) {
+    return (
+      <Grid h="100vh" p="md" styles={{ inner: { height: '100%' } }}>
+        <GridCol display="flex" h={{ base: 'auto', lg: '100%' }} span={{ base: 12, lg: 4 }}>
+          <Skeleton flex={1} radius="md" />
+        </GridCol>
+        <GridCol display="flex" h={{ base: 'auto', lg: '100%' }} span={{ base: 12, lg: 8 }}>
+          <Skeleton flex={1} radius="md" />
+        </GridCol>
+      </Grid>
+    );
+  }
 
   return (
-    <main className="project-workspace">
-      <ProjectOAuthBridge appOrigin={appOrigin} projectId={project.id} />
-      <ProjectAgentPanel
-        activeRunId={activeProjectAgentRun?.id ?? null}
-        appUrl={appUrl}
-        project={{
-          id: project.id,
-          name: project.templateName,
-          status: project.status,
-          domain: project.domain,
-          toolsUrl: `${appUrl}/agent-tools`
-        }}
-        usageSummary={usageSummary}
-        initialMessages={orderedChatMessages.map((message) => ({
-          id: message.id,
-          role: message.role === 'user' ? 'user' : 'assistant',
-          source: message.source,
-          content: message.content,
-          usage:
-            message.role === 'assistant'
-              ? formatInitialUsage(usageByAssistantMessageId.get(message.id))
-              : null
-        }))}
-      />
+    <Grid h="100vh" p="md" styles={{ inner: { height: '100%' } }}>
+      <ProjectOAuthBridge appOrigin={data.appOrigin} projectId={data.project.id} />
+      <GridCol display="flex" h={{ base: 'auto', lg: '100%' }} span={{ base: 12, lg: 4 }}>
+        <ProjectAgentPanel
+          activeRunId={data.activeRunId}
+          initialMessages={data.messages}
+          project={data.project}
+          usageSummary={data.usageSummary}
+        />
+      </GridCol>
 
-      <section className="app-preview-column">
-        <div className="app-preview-bar">
-          <a className="app-preview-domain-link" href={project.url} target="_blank" rel="noreferrer">
-            <strong>{project.domain}</strong>
-            <ExternalLink className="app-preview-domain-icon" size={16} />
-          </a>
-        </div>
-
-        {project.status === 'ready' ? (
-          <iframe
-            className="app-frame"
-            src={appUrl}
-            title={formatMessage(t.project.iframeTitle, { name: project.templateName })}
-          />
-        ) : (
-          <div className="app-frame-placeholder">
-            <h2>{formatMessage(t.project.applicationStatus, { status: project.status })}</h2>
-            <p>{project.deployError || t.project.previewPending}</p>
-          </div>
-        )}
-      </section>
-    </main>
+      <GridCol display="flex" h={{ base: 'auto', lg: '100%' }} span={{ base: 12, lg: 8 }}>
+        <Stack flex={1} gap="sm" h="100%" mih={0} w="100%">
+          {data.project.status === 'ready' ? (
+            <Paper
+              flex={1}
+              style={{ overflow: 'hidden' }}
+              withBorder
+            >
+              <iframe
+                src={data.project.appUrl}
+                style={{
+                  border: 0,
+                  display: 'block',
+                  height: '100%',
+                  width: '100%'
+                }}
+                title={formatMessage(t.project.iframeTitle, { name: data.project.name })}
+              />
+            </Paper>
+          ) : (
+            <Paper flex={1} withBorder>
+              <Center h="100%">
+                <Stack align="center">
+                  <Title order={2}>
+                    {formatMessage(t.project.applicationStatus, {
+                      status: data.project.status
+                    })}
+                  </Title>
+                  <Text c="dimmed">{data.project.deployError || t.project.previewPending}</Text>
+                </Stack>
+              </Center>
+            </Paper>
+          )}
+        </Stack>
+      </GridCol>
+    </Grid>
   );
-}
-
-function formatInitialUsage(
-  usage:
-    | {
-        creditsUsed: number;
-      }
-    | null
-    | undefined
-) {
-  if (!usage || usage.creditsUsed <= 0) {
-    return null;
-  }
-
-  return {
-    creditsUsed: usage.creditsUsed
-  };
-}
-
-function formatUsageSummary(creditsUsed: number) {
-  if (creditsUsed <= 0) {
-    return null;
-  }
-
-  const formattedCredits = formatCredits(creditsUsed);
-
-  return {
-    title: `${formattedCredits} credits used`,
-    total: `${formattedCredits} ₵`
-  };
-}
-
-function formatCreditsUsed(value: unknown) {
-  const numericValue = Number(value ?? 0);
-  return Math.ceil(Math.abs(Math.min(numericValue, 0)));
-}
-
-function formatCredits(value: number) {
-  return new Intl.NumberFormat(undefined, {
-    maximumFractionDigits: 0,
-    minimumFractionDigits: 0
-  }).format(value);
 }

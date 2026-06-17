@@ -49,14 +49,14 @@
     "nameRequired": "Имя обязательно"
   },
   "auth": {
-    "emailTitle": "Войти по email",
+    "emailTitle": "Создавай и запускай агентные приложения",
     "codeTitle": "Введи код",
     "emailDescription": "Один email для нового или существующего аккаунта.",
     "codeSent": "Код отправлен на {email}.",
     "emailLabel": "Email",
     "emailPlaceholder": "you@example.com",
     "codeLabel": "Код",
-    "codePlaceholder": "123456",
+    "codePlaceholder": "1234",
     "working": "Работаю",
     "continue": "Продолжить",
     "signIn": "Войти",
@@ -64,8 +64,8 @@
   },
   "tabs": {
     "ariaLabel": "Разделы приложений",
-    "apps": "Приложения",
-    "store": "Магазин"
+    "apps": "Агент",
+    "store": "Приложения"
   },
   "store": {
     "comingSoon": "Разрабатывается ИИ",

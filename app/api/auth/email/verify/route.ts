@@ -5,9 +5,9 @@ import {
   isDevelopmentEmailCodeEnabled,
   isValidEmail,
   normalizeEmail
-} from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { verifyEmailLoginCode } from '@/lib/email-login-codes';
+} from '../../../../../lib/auth';
+import { prisma } from '../../../../../lib/db';
+import { verifyEmailLoginCode } from '../../../../../lib/email-login-codes';
 
 type VerifyEmailAuthRequest = {
   code?: string;

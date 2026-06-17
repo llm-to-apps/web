@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser } from '../../../../../../lib/auth';
 import {
   readAgentRunEvents,
   subscribeAgentRunEvents
-} from '@/lib/agent-run-events';
+} from '../../../../../../lib/agent-run-events';
 import {
   elapsedSince,
   logAgentRun,
   warnAgentRun
-} from '@/lib/agent-run-logger';
-import { prisma } from '@/lib/db';
+} from '../../../../../../lib/agent-run-logger';
+import { prisma } from '../../../../../../lib/db';
 
 type AgentRunEventsContext = {
   params: Promise<{ id: string }> | { id: string };

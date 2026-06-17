@@ -1,129 +1,146 @@
-import { redirect } from 'next/navigation';
-import Image from 'next/image';
+'use client';
+
+import { FormEvent, useEffect, useState } from 'react';
+import { Alert, Button, Center, Container, Group, Paper, Stack, Text, TextInput, ThemeIcon, Title } from '@mantine/core';
+import { useRouter } from 'next/navigation';
 import { Brain, Code2, Sparkles, UserRound } from 'lucide-react';
+import { ExperienceField } from '../_components/experience-field';
+import { FormActions } from '../_components/form-actions';
+import { SessionGate } from '../_components/session-gate';
+import type { SessionData } from '../_components/session-provider';
+import { useI18n } from '../_components/i18n-provider';
+import { Os7Logo } from '../../ui-kit/src/os7-brand';
 
-import { getCurrentUser } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { getRequestDictionary } from '@/lib/i18n/server';
-import { ExperienceField, parseExperienceLevel } from '../ui/experience-field';
-import { FormField } from '../ui/form-field';
-import { WelcomeSubmitButton } from './submit-button';
+type OnboardingResponse =
+  | {
+      ok: true;
+    }
+  | {
+      ok: false;
+      message: string;
+    };
 
-type WelcomePageProps = {
-  searchParams?: Promise<{
-    error?: string;
-  }>;
-};
+export default function WelcomePage() {
+  return (
+    <SessionGate requireOnboarded={false}>
+      {(session) => <WelcomeContent session={session} />}
+    </SessionGate>
+  );
+}
 
-export default async function WelcomePage({ searchParams }: WelcomePageProps) {
-  const user = await getCurrentUser();
-  const resolvedSearchParams = await searchParams;
-  const t = await getRequestDictionary();
+function WelcomeContent({ session }: { session: SessionData }) {
+  const router = useRouter();
+  const { t } = useI18n();
+  const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const experienceOptionLabels = {
     advanced: t.profile.experienceAdvanced,
     beginner: t.profile.experienceBeginner,
     none: t.profile.experienceNone
   };
 
-  if (!user) {
-    redirect('/');
-  }
+  useEffect(() => {
+    if (session.user.onboarded) {
+      router.replace('/home');
+    }
+  }, [router, session.user.onboarded]);
 
-  if (user.onboarded) {
-    redirect('/home');
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const name = String(formData.get('name') ?? '').trim();
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/onboarding', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          aiExperienceLevel: formData.get('aiExperienceLevel'),
+          name,
+          vibeCodingExperienceLevel: formData.get('vibeCodingExperienceLevel')
+        })
+      });
+      const data = (await response.json().catch(() => null)) as OnboardingResponse | null;
+
+      if (!response.ok || !data || !data.ok) {
+        throw new Error(
+          data && 'message' in data
+            ? data.message
+            : `Failed to complete onboarding (${response.status})`
+        );
+      }
+
+      router.push('/home');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : t.welcome.nameRequired);
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
-    <main className="welcome-layout">
-      <section className="welcome-shell" aria-labelledby="welcome-title">
-        <div className="welcome-brand">
-          <Image src="/brand/os7-logo.svg" alt="OS7" width={84} height={44} priority />
-          <span>Beta</span>
-        </div>
+    <Container py="xl">
+      <Center>
+        <Stack gap="lg" w="100%">
+          <Group>
+            <Os7Logo w={90} />
+            <Text c="dimmed" fw={700} size="xs">
+              Beta
+            </Text>
+          </Group>
 
-        <form action={completeOnboarding} className="welcome-card">
-          <div className="welcome-card-header">
-            <div className="welcome-icon">
-              <Sparkles size={22} />
-            </div>
-            <div>
-              <h1 id="welcome-title">{t.welcome.title}</h1>
-              <p>{t.welcome.description}</p>
-            </div>
-          </div>
+          <Paper component="form" onSubmit={handleSubmit} p="xl" withBorder>
+            <Stack gap="md">
+              <Group align="flex-start">
+                <ThemeIcon>
+                  <Sparkles size={22} />
+                </ThemeIcon>
+                <div>
+                  <Title id="welcome-title" order={1}>{t.welcome.title}</Title>
+                  <Text c="dimmed">{t.welcome.description}</Text>
+                </div>
+              </Group>
 
-          {resolvedSearchParams?.error ? (
-            <p className="welcome-error">{resolvedSearchParams.error}</p>
-          ) : null}
+              {error ? <Alert color="red">{error}</Alert> : null}
 
-          <FormField
-            autoComplete="name"
-            defaultValue={user.name ?? ''}
-            icon={<UserRound size={16} />}
-            label={t.profile.nameLabel}
-            name="name"
-            placeholder={t.profile.namePlaceholder}
-            required
-          />
+              <TextInput
+                autoComplete="name"
+                defaultValue={session.user.name ?? ''}
+                label={t.profile.nameLabel}
+                leftSection={<UserRound size={16} />}
+                name="name"
+                placeholder={t.profile.namePlaceholder}
+                required
+              />
 
-          <ExperienceField
-            icon={<Brain size={16} />}
-            label={t.profile.aiExperienceLabel}
-            name="aiExperienceLevel"
-            optionLabels={experienceOptionLabels}
-          />
+              <ExperienceField
+                icon={<Brain size={16} />}
+                label={t.profile.aiExperienceLabel}
+                name="aiExperienceLevel"
+                optionLabels={experienceOptionLabels}
+              />
 
-          <ExperienceField
-            icon={<Code2 size={16} />}
-            label={t.profile.vibeCodingExperienceLabel}
-            name="vibeCodingExperienceLevel"
-            optionLabels={experienceOptionLabels}
-          />
+              <ExperienceField
+                icon={<Code2 size={16} />}
+                label={t.profile.vibeCodingExperienceLabel}
+                name="vibeCodingExperienceLevel"
+                optionLabels={experienceOptionLabels}
+              />
 
-          <div className="welcome-actions">
-            <WelcomeSubmitButton loadingLabel={t.welcome.saving}>
-              {t.welcome.continue}
-            </WelcomeSubmitButton>
-          </div>
-        </form>
-      </section>
-    </main>
+              <FormActions>
+                <Button loading={isSaving} type="submit">
+                  {t.welcome.continue}
+                </Button>
+              </FormActions>
+            </Stack>
+          </Paper>
+        </Stack>
+      </Center>
+    </Container>
   );
-}
-
-async function completeOnboarding(formData: FormData) {
-  'use server';
-
-  const user = await getCurrentUser();
-  const t = await getRequestDictionary();
-
-  if (!user) {
-    redirect('/');
-  }
-
-  const name = String(formData.get('name') ?? '').trim();
-  const aiExperienceLevel = parseExperienceLevel(formData.get('aiExperienceLevel'));
-  const vibeCodingExperienceLevel = parseExperienceLevel(
-    formData.get('vibeCodingExperienceLevel')
-  );
-
-  if (!name) {
-    const welcomeUrl = new URL('/welcome', 'http://os7.local');
-    welcomeUrl.searchParams.set('error', t.welcome.nameRequired);
-    redirect(`${welcomeUrl.pathname}${welcomeUrl.search}`);
-  }
-
-  await prisma.user.update({
-    where: {
-      id: user.id
-    },
-    data: {
-      aiExperienceLevel,
-      name,
-      onboarded: true,
-      vibeCodingExperienceLevel
-    }
-  });
-
-  redirect('/home');
 }

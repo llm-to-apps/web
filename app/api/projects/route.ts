@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 
-import { getCurrentUser } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { projectMemberWhere } from '@/lib/project-members';
+import { getCurrentUser } from '../../../lib/auth';
+import { prisma } from '../../../lib/db';
+import { projectMemberWhere } from '../../../lib/project-members';
 
 export async function GET() {
   const user = await getCurrentUser();

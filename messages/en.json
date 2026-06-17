@@ -49,14 +49,14 @@
     "nameRequired": "Name is required"
   },
   "auth": {
-    "emailTitle": "Sign in with email",
+    "emailTitle": "Build and run agentic apps",
     "codeTitle": "Enter your code",
     "emailDescription": "Use one email for new and existing accounts.",
     "codeSent": "Code sent to {email}.",
     "emailLabel": "Email",
     "emailPlaceholder": "you@example.com",
     "codeLabel": "Code",
-    "codePlaceholder": "123456",
+    "codePlaceholder": "1234",
     "working": "Working",
     "continue": "Continue",
     "signIn": "Sign in",
@@ -64,8 +64,8 @@
   },
   "tabs": {
     "ariaLabel": "Application sections",
-    "apps": "Apps",
-    "store": "Store"
+    "apps": "Agent",
+    "store": "Apps"
   },
   "store": {
     "comingSoon": "Developing by AI",

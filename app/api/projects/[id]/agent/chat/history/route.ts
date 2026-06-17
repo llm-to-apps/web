@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getCurrentUser } from '@/lib/auth';
-import { projectAgentMemoryIds } from '@/lib/agent-memory-ids';
-import { deleteMastraMemoryThread } from '@/lib/mastra-memory';
-import { prisma } from '@/lib/db';
-import { projectMemberWhere } from '@/lib/project-members';
-import { publishProjectChatChanged } from '@/lib/project-chat-events';
+import { getCurrentUser } from '../../../../../../../lib/auth';
+import { projectAgentMemoryIds } from '../../../../../../../lib/agent-memory-ids';
+import { deleteMastraMemoryThread } from '../../../../../../../lib/mastra-memory';
+import { prisma } from '../../../../../../../lib/db';
+import { projectMemberWhere } from '../../../../../../../lib/project-members';
+import { publishProjectChatChanged } from '../../../../../../../lib/project-chat-events';
 
 type ProjectAgentChatHistoryContext = {
   params: Promise<{ id: string }> | { id: string };

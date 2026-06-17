@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getCurrentUser } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { projectMemberWhere } from '@/lib/project-members';
-import { subscribeProjectChatChanged } from '@/lib/project-chat-events';
+import { getCurrentUser } from '../../../../../../../lib/auth';
+import { prisma } from '../../../../../../../lib/db';
+import { projectMemberWhere } from '../../../../../../../lib/project-members';
+import { subscribeProjectChatChanged } from '../../../../../../../lib/project-chat-events';
 
 type ProjectAgentChatEventsContext = {
   params: Promise<{ id: string }> | { id: string };

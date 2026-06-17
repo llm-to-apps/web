@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { prisma } from '@/lib/db';
-import { billAgentUsage } from '@/lib/billing';
-import { agentRuntimeUrl, projectUseAgentModel } from '@/lib/env';
-import { projectAgentMemoryIds } from '@/lib/agent-memory-ids';
-import { projectMemberWhere } from '@/lib/project-members';
-import { authenticateAuthToken, ensureAuthToken } from '@/lib/auth-tokens';
-import { publishProjectChatChanged } from '@/lib/project-chat-events';
-import { elapsedSince, logAgentRun, warnAgentRun } from '@/lib/agent-run-logger';
+import { prisma } from '../../../../lib/db';
+import { billAgentUsage } from '../../../../lib/billing';
+import { agentRuntimeUrl, projectUseAgentModel } from '../../../../lib/env';
+import { projectAgentMemoryIds } from '../../../../lib/agent-memory-ids';
+import { projectMemberWhere } from '../../../../lib/project-members';
+import { authenticateAuthToken, ensureAuthToken } from '../../../../lib/auth-tokens';
+import { publishProjectChatChanged } from '../../../../lib/project-chat-events';
+import { elapsedSince, logAgentRun, warnAgentRun } from '../../../../lib/agent-run-logger';
 
 type JsonRpcRequest = {
   id?: string | number | null;

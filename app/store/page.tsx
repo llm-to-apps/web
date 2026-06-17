@@ -1,73 +1,130 @@
-import { redirect } from 'next/navigation';
+'use client';
 
-import { AppIcon } from '../ui/app-icon';
-import { AppShell } from '../ui/app-shell';
-import { InstallButton } from '../ui/install-button';
-import { SignedOutContent } from '../ui/signed-out-content';
-import { getCurrentUser } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { getRequestDictionary } from '@/lib/i18n/server';
-import { isInstallableTemplate } from '@/lib/templates';
+import { useEffect, useState } from 'react';
+import { Alert, Badge, Card, Group, SimpleGrid, Skeleton, Stack, Text, Title } from '@mantine/core';
+import { AppIcon } from '../_components/app-icon';
+import { AppLayout } from '../_components/app-layout';
+import { SessionGate } from '../_components/session-gate';
+import type { SessionData } from '../_components/session-provider';
+import { InstallButton } from './install-button';
+import { useI18n } from '../_components/i18n-provider';
 
-export default async function StorePage() {
-  const user = await getCurrentUser();
-  const t = await getRequestDictionary();
+type StoreTemplate = {
+  id: string;
+  name: string;
+  description: string;
+  icon: string | null;
+  status: string;
+  git: string | null;
+  image: string | null;
+  appPort: number | null;
+  agentPort: number | null;
+};
 
-  if (user && !user.onboarded) {
-    redirect('/welcome');
-  }
+type StoreResponse =
+  | {
+      ok: true;
+      templates: StoreTemplate[];
+    }
+  | {
+      ok: false;
+      message: string;
+    };
 
-  const appTemplates = user
-    ? await prisma.appTemplate.findMany({
-        orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }]
-      })
-    : [];
+export default function StorePage() {
+  return (
+    <SessionGate>
+      {(session) => <StoreContent session={session} />}
+    </SessionGate>
+  );
+}
+
+function StoreContent({ session }: { session: SessionData }) {
+  const { t } = useI18n();
+  const [templates, setTemplates] = useState<StoreTemplate[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    async function loadTemplates() {
+      const response = await fetch('/api/store/templates', {
+        cache: 'no-store'
+      });
+      const data = (await response.json().catch(() => null)) as StoreResponse | null;
+
+      if (!isCurrent) {
+        return;
+      }
+
+      if (!response.ok || !data || !data.ok) {
+        setError(
+          data && 'message' in data
+            ? data.message
+            : `Failed to load store (${response.status})`
+        );
+        return;
+      }
+
+      setTemplates(data.templates);
+    }
+
+    void loadTemplates();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
 
   return (
-    <AppShell
-      user={user}
-      title={user ? t.pages.storeTitle : t.pages.signInTitle}
-      description={user ? t.pages.storeDescription : t.pages.signInDescription}
-    >
-      {user ? (
-        <section className="store-section">
-          <div className="store-grid">
-            {appTemplates.map((template) => (
-              <article className="store-app" key={template.id}>
-                <div className="store-app-main">
-                  <AppIcon icon={template.icon} templateId={template.id} size="large" />
+    <AppLayout usageSummary={session.usageSummary} user={session.user}>
+      {error ? <Alert color="red">{error}</Alert> : null}
+      {!templates && !error ? (
+        <SimpleGrid cols={{ base: 1, md: 2 }}>
+          <Skeleton height={180} radius="lg" />
+          <Skeleton height={180} radius="lg" />
+        </SimpleGrid>
+      ) : null}
+      {templates ? (
+        <SimpleGrid cols={{ base: 1, md: 2 }}>
+          {templates.map((template) => (
+            <Card key={template.id}>
+              <Stack gap="md">
+                <Group align="flex-start" wrap="nowrap">
+                  <AppIcon icon={template.icon ?? undefined} templateId={template.id} size="large" />
                   <div>
-                    <h3>
+                    <Title order={3}>
                       {t.templates[template.id as keyof typeof t.templates]?.name ??
                         template.name}
-                    </h3>
-                    <p>
+                    </Title>
+                    <Text c="dimmed">
                       {t.templates[template.id as keyof typeof t.templates]?.description ??
                         template.description}
-                    </p>
+                    </Text>
                   </div>
-                </div>
-                <div className="store-app-action">
+                </Group>
+                <Group justify="flex-end">
                   {isInstallableTemplate(template) ? (
                     <InstallButton templateId={template.id} />
                   ) : (
-                    <div className="coming-soon-pill">
-                      {t.store.comingSoon}
-                      <span className="progress-dots" aria-hidden="true">
-                        <span />
-                        <span />
-                        <span />
-                      </span>
-                    </div>
+                    <Badge>{t.store.comingSoon}</Badge>
                   )}
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : (
-        <SignedOutContent />
-      )}
-    </AppShell>
+                </Group>
+              </Stack>
+            </Card>
+          ))}
+        </SimpleGrid>
+      ) : null}
+    </AppLayout>
+  );
+}
+
+function isInstallableTemplate(template: StoreTemplate) {
+  return (
+    template.status === 'available' &&
+    Boolean(template.git) &&
+    Boolean(template.image) &&
+    typeof template.appPort === 'number' &&
+    typeof template.agentPort === 'number'
   );
 }

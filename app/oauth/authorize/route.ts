@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser } from '../../../lib/auth';
 import {
   appendOAuthRedirectCode,
   appendOAuthRedirectError,
   createAuthorizationCode,
   findActiveOAuthClient
-} from '@/lib/oauth';
-import { prisma } from '@/lib/db';
-import { publicRequestOrigin } from '@/lib/request-origin';
+} from '../../../lib/oauth';
+import { prisma } from '../../../lib/db';
+import { publicRequestOrigin } from '../../../lib/request-origin';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;

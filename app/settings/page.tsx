@@ -1,106 +1,139 @@
-import { redirect } from 'next/navigation';
+'use client';
+
+import { FormEvent, useState } from 'react';
+import { Alert, Button, Group, Paper, Stack, Text, TextInput, Title } from '@mantine/core';
+import { useRouter } from 'next/navigation';
 import { Brain, Code2, UserRound } from 'lucide-react';
+import { AppLayout } from '../_components/app-layout';
+import { ExperienceField } from '../_components/experience-field';
+import { FormActions } from '../_components/form-actions';
+import { LanguageSwitcher } from '../_components/language-switcher';
+import { SessionGate } from '../_components/session-gate';
+import type { SessionData } from '../_components/session-provider';
+import { useI18n } from '../_components/i18n-provider';
 
-import { requireOnboardedUser } from '@/lib/onboarding';
-import { getRequestDictionary } from '@/lib/i18n/server';
-import { prisma } from '@/lib/db';
-import { AppShell } from '../ui/app-shell';
-import { ExperienceField, parseExperienceLevel } from '../ui/experience-field';
-import { FormField } from '../ui/form-field';
-import { LanguageSwitcher } from '../ui/language-switcher';
-import { SettingsSubmitButton } from './submit-button';
+type SaveResponse =
+  | {
+      ok: true;
+    }
+  | {
+      ok: false;
+      message: string;
+    };
 
-export default async function SettingsPage() {
-  const user = await requireOnboardedUser();
-  const t = await getRequestDictionary();
+export default function SettingsPage() {
+  return (
+    <SessionGate>
+      {(session) => <SettingsContent session={session} />}
+    </SessionGate>
+  );
+}
+
+function SettingsContent({ session }: { session: SessionData }) {
+  const router = useRouter();
+  const { t } = useI18n();
+  const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const experienceOptionLabels = {
     advanced: t.profile.experienceAdvanced,
     beginner: t.profile.experienceBeginner,
     none: t.profile.experienceNone
   };
 
-  return (
-    <AppShell
-      user={user}
-      title={t.settings.title}
-      description={t.settings.description}
-    >
-      <section className="settings-section">
-        <form action={updateProfileSettings} className="settings-card settings-profile-form">
-          <div className="settings-card-heading">
-            <h3>{t.settings.profileTitle}</h3>
-            <p>{t.settings.profileDescription}</p>
-          </div>
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const name = String(formData.get('name') ?? '').trim();
 
-          <FormField
-            autoComplete="name"
-            defaultValue={user.name ?? ''}
-            icon={<UserRound size={16} />}
-            label={t.profile.nameLabel}
-            name="name"
-            placeholder={t.profile.namePlaceholder}
-            required
-          />
+    setIsSaving(true);
+    setError(null);
 
-          <ExperienceField
-            defaultValue={user.aiExperienceLevel}
-            icon={<Brain size={16} />}
-            label={t.profile.aiExperienceLabel}
-            name="aiExperienceLevel"
-            optionLabels={experienceOptionLabels}
-          />
+    try {
+      const response = await fetch('/api/settings/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          aiExperienceLevel: formData.get('aiExperienceLevel'),
+          name,
+          vibeCodingExperienceLevel: formData.get('vibeCodingExperienceLevel')
+        })
+      });
+      const data = (await response.json().catch(() => null)) as SaveResponse | null;
 
-          <ExperienceField
-            defaultValue={user.vibeCodingExperienceLevel}
-            icon={<Code2 size={16} />}
-            label={t.profile.vibeCodingExperienceLabel}
-            name="vibeCodingExperienceLevel"
-            optionLabels={experienceOptionLabels}
-          />
+      if (!response.ok || !data || !data.ok) {
+        throw new Error(
+          data && 'message' in data
+            ? data.message
+            : `Failed to save settings (${response.status})`
+        );
+      }
 
-          <div className="settings-form-actions">
-            <SettingsSubmitButton loadingLabel={t.settings.saving}>
-              {t.settings.saveChanges}
-            </SettingsSubmitButton>
-          </div>
-        </form>
-
-        <div className="settings-card">
-          <div className="settings-row">
-            <div className="settings-row-copy">
-              <h3>{t.settings.languageTitle}</h3>
-              <p>{t.settings.languageDescription}</p>
-            </div>
-            <LanguageSwitcher variant="segmented" />
-          </div>
-        </div>
-      </section>
-    </AppShell>
-  );
-}
-
-async function updateProfileSettings(formData: FormData) {
-  'use server';
-
-  const user = await requireOnboardedUser();
-  const name = String(formData.get('name') ?? '').trim();
-
-  if (!name) {
-    redirect('/settings');
+      router.push('/home');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to save settings');
+    } finally {
+      setIsSaving(false);
+    }
   }
 
-  await prisma.user.update({
-    where: {
-      id: user.id
-    },
-    data: {
-      aiExperienceLevel: parseExperienceLevel(formData.get('aiExperienceLevel')),
-      name,
-      vibeCodingExperienceLevel: parseExperienceLevel(
-        formData.get('vibeCodingExperienceLevel')
-      )
-    }
-  });
+  return (
+    <AppLayout usageSummary={session.usageSummary} user={session.user}>
+      <Stack gap="md">
+        <Paper component="form" onSubmit={handleSubmit} p="lg" withBorder>
+          <Stack gap="md">
+            <div>
+              <Title order={3}>{t.settings.profileTitle}</Title>
+              <Text c="dimmed">{t.settings.profileDescription}</Text>
+            </div>
 
-  redirect('/settings');
+            {error ? <Alert color="red">{error}</Alert> : null}
+
+            <TextInput
+              autoComplete="name"
+              defaultValue={session.user.name ?? ''}
+              label={t.profile.nameLabel}
+              leftSection={<UserRound size={16} />}
+              name="name"
+              placeholder={t.profile.namePlaceholder}
+              required
+            />
+
+            <ExperienceField
+              defaultValue={session.user.aiExperienceLevel}
+              icon={<Brain size={16} />}
+              label={t.profile.aiExperienceLabel}
+              name="aiExperienceLevel"
+              optionLabels={experienceOptionLabels}
+            />
+
+            <ExperienceField
+              defaultValue={session.user.vibeCodingExperienceLevel}
+              icon={<Code2 size={16} />}
+              label={t.profile.vibeCodingExperienceLabel}
+              name="vibeCodingExperienceLevel"
+              optionLabels={experienceOptionLabels}
+            />
+
+            <FormActions>
+              <Button loading={isSaving} type="submit">
+                {t.settings.saveChanges}
+              </Button>
+            </FormActions>
+          </Stack>
+        </Paper>
+
+        <Paper p="lg" withBorder>
+          <Group align="center" justify="space-between">
+            <div>
+              <Title order={3}>{t.settings.languageTitle}</Title>
+              <Text c="dimmed">{t.settings.languageDescription}</Text>
+            </div>
+            <LanguageSwitcher variant="segmented" />
+          </Group>
+        </Paper>
+      </Stack>
+    </AppLayout>
+  );
 }

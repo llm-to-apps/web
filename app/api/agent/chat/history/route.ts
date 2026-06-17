@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 
-import { getCurrentUser } from '@/lib/auth';
-import { userAgentMemoryIds } from '@/lib/agent-memory-ids';
-import { deleteMastraMemoryThread } from '@/lib/mastra-memory';
-import { prisma } from '@/lib/db';
+import { getCurrentUser } from '../../../../../lib/auth';
+import { userAgentMemoryIds } from '../../../../../lib/agent-memory-ids';
+import { deleteMastraMemoryThread } from '../../../../../lib/mastra-memory';
+import { prisma } from '../../../../../lib/db';
 
 export async function DELETE() {
   const user = await getCurrentUser();

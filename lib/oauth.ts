@@ -361,7 +361,3 @@ function constantTimeEqual(left: string, right: string) {
     leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer)
   );
 }
-
-function trimTrailingSlash(value: string) {
-  return value.replace(/\/+$/, '');
-}

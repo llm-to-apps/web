@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { prisma } from '@/lib/db';
-import { authenticateAuthToken } from '@/lib/auth-tokens';
+import { prisma } from '../../../../lib/db';
+import { authenticateAuthToken } from '../../../../lib/auth-tokens';
 
 export async function POST(request: NextRequest) {
   const token = readBearerToken(request);

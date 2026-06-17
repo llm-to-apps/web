@@ -1,7 +1,10 @@
-import './globals.css';
+import '@mantine/core/styles.css';
+import '@mantine/notifications/styles.css';
 import type { Metadata } from 'next';
-import { getRequestLocale } from '@/lib/i18n/server';
-import { I18nProvider } from './ui/i18n-provider';
+import { AppSplash } from './_components/app-splash';
+import { I18nProvider } from './_components/i18n-provider';
+import { SessionProvider } from './_components/session-provider';
+import { WebMantineProvider } from './mantine-provider';
 
 export const metadata: Metadata = {
   title: 'OS7 – your own agentic operating system',
@@ -12,17 +15,21 @@ export const metadata: Metadata = {
   }
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = await getRequestLocale();
-
   return (
-    <html lang={locale}>
+    <html lang="en">
       <body>
-        <I18nProvider initialLocale={locale}>{children}</I18nProvider>
+        <WebMantineProvider>
+          <I18nProvider>
+            <SessionProvider>
+              <AppSplash>{children}</AppSplash>
+            </SessionProvider>
+          </I18nProvider>
+        </WebMantineProvider>
       </body>
     </html>
   );

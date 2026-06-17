@@ -251,7 +251,3 @@ function normalizeForgejoGitBaseUrl(url: string) {
 
   return parsed.toString();
 }
-
-function trimTrailingSlash(value: string) {
-  return value.replace(/\/+$/, '');
-}

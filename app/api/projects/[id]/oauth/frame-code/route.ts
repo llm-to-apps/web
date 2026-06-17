@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getCurrentUser } from '@/lib/auth';
-import { createAuthorizationCode, findActiveOAuthClient } from '@/lib/oauth';
-import { prisma } from '@/lib/db';
-import { projectMemberWhere } from '@/lib/project-members';
+import { getCurrentUser } from '../../../../../../lib/auth';
+import { createAuthorizationCode, findActiveOAuthClient } from '../../../../../../lib/oauth';
+import { prisma } from '../../../../../../lib/db';
+import { projectMemberWhere } from '../../../../../../lib/project-members';
 
 type FrameCodeRequest = {
   clientId?: string;

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { authenticateOAuthAccessToken } from '@/lib/oauth';
+import { authenticateOAuthAccessToken } from '../../../lib/oauth';
 
 export async function GET(request: NextRequest) {
   const token = readBearerToken(request);

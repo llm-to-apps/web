@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getCurrentUser } from '@/lib/auth';
-import { getDeployQueue } from '@/lib/deploy-queue';
-import { prisma } from '@/lib/db';
-import { managerUrl as readManagerUrl } from '@/lib/env';
-import { projectMemberWhere } from '@/lib/project-members';
-import { parseProjectResources } from '@/lib/project-resources';
+import { getCurrentUser } from '../../../../lib/auth';
+import { getDeployQueue } from '../../../../lib/deploy-queue';
+import { prisma } from '../../../../lib/db';
+import { managerUrl as readManagerUrl } from '../../../../lib/env';
+import { projectMemberWhere } from '../../../../lib/project-members';
+import { parseProjectResources } from '../../../../lib/project-resources';
 
 type ProjectRouteContext = {
   params: Promise<{ id: string }> | { id: string };

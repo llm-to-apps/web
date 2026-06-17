@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getCurrentUser } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { userAgentModel } from '@/lib/env';
-import { getAgentRunQueue } from '@/lib/agent-run-queue';
-import { elapsedSince, logAgentRun } from '@/lib/agent-run-logger';
-import { platformBaseUrl } from '@/lib/request-origin';
+import { getCurrentUser } from '../../../../lib/auth';
+import { prisma } from '../../../../lib/db';
+import { userAgentModel } from '../../../../lib/env';
+import { getAgentRunQueue } from '../../../../lib/agent-run-queue';
+import { elapsedSince, logAgentRun } from '../../../../lib/agent-run-logger';
+import { platformBaseUrl } from '../../../../lib/request-origin';
 
 type UserAgentChatRequest = {
   message?: string;

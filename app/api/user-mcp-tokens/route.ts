@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getCurrentUser } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { createAuthToken } from '@/lib/auth-tokens';
+import { getCurrentUser } from '../../../lib/auth';
+import { prisma } from '../../../lib/db';
+import { createAuthToken } from '../../../lib/auth-tokens';
 
 type CreatePersonalMcpTokenRequest = {
   name?: string;

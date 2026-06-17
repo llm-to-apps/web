@@ -1,29 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getCurrentUser } from '@/lib/auth';
-import { ensureAuthToken } from '@/lib/auth-tokens';
-import { getDeployQueue } from '@/lib/deploy-queue';
-import { prisma } from '@/lib/db';
-import { createProjectRepository } from '@/lib/forgejo';
+import { getCurrentUser } from '../../../../lib/auth';
+import { ensureAuthToken } from '../../../../lib/auth-tokens';
+import { getDeployQueue } from '../../../../lib/deploy-queue';
+import { prisma } from '../../../../lib/db';
+import { createProjectRepository } from '../../../../lib/forgejo';
 import {
   managerUrl as readManagerUrl,
   platformDomain as readPlatformDomain,
   projectPublicScheme
-} from '@/lib/env';
-import { ensureProjectOAuthClient, oauthUrls } from '@/lib/oauth';
-import { type ProjectResources } from '@/lib/project-resources';
-import { createAvailableProjectSlug } from '@/lib/project-slugs';
+} from '../../../../lib/env';
+import { ensureProjectOAuthClient, oauthUrls } from '../../../../lib/oauth';
+import { type ProjectResources } from '../../../../lib/project-resources';
+import { createAvailableProjectSlug } from '../../../../lib/project-slugs';
 import {
   parseTemplateManifest,
   renderTemplateEnv
-} from '@/lib/templates/manifest';
+} from '../../../../lib/templates/manifest';
 import {
   cleanSlug,
   createAgentToolsToken,
   createProjectCredentials,
   createProjectId,
   isInstallableTemplate
-} from '@/lib/templates';
+} from '../../../../lib/templates';
 
 type DeployRequest = {
   templateId?: string;

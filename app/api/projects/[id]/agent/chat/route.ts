@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getCurrentUser } from '@/lib/auth';
-import { getAgentRunQueue } from '@/lib/agent-run-queue';
-import { elapsedSince, logAgentRun } from '@/lib/agent-run-logger';
-import { prisma } from '@/lib/db';
-import { projectDevAgentModel, projectUseAgentModel } from '@/lib/env';
-import { canUseProjectAgent, projectMemberWhere } from '@/lib/project-members';
-import { ensureAuthToken } from '@/lib/auth-tokens';
-import { publishProjectChatChanged } from '@/lib/project-chat-events';
+import { getCurrentUser } from '../../../../../../lib/auth';
+import { getAgentRunQueue } from '../../../../../../lib/agent-run-queue';
+import { elapsedSince, logAgentRun } from '../../../../../../lib/agent-run-logger';
+import { prisma } from '../../../../../../lib/db';
+import { projectDevAgentModel, projectUseAgentModel } from '../../../../../../lib/env';
+import { canUseProjectAgent, projectMemberWhere } from '../../../../../../lib/project-members';
+import { ensureAuthToken } from '../../../../../../lib/auth-tokens';
+import { publishProjectChatChanged } from '../../../../../../lib/project-chat-events';
 
 type AgentChatContext = {
   params: Promise<{ id: string }> | { id: string };

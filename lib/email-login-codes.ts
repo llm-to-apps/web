@@ -4,12 +4,13 @@ import { createHmac, createHash, randomInt, timingSafeEqual } from 'node:crypto'
 import { authSecret, redisUrl } from './env';
 
 const emailCodePrefix = 'email-code-v1';
+const emailCodeLength = 4;
 const emailCodeTtlSeconds = 10 * 60;
 
 let redis: Redis | null = null;
 
 export async function createEmailLoginCode(email: string) {
-  const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
+  const code = randomInt(0, 10 ** emailCodeLength).toString().padStart(emailCodeLength, '0');
 
   await getRedis().set(emailLoginCodeKey(email), emailCodeValue(code), 'EX', emailCodeTtlSeconds);
 

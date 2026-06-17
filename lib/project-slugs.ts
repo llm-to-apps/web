@@ -1,8 +1,8 @@
 import { randomInt } from 'node:crypto';
 
-import slugWords from '@/data/slug-words.json';
-import type { prisma } from '@/lib/db';
-import { cleanSlug } from '@/lib/templates';
+import slugWords from '../data/slug-words.json';
+import type { prisma } from './db';
+import { cleanSlug } from './templates';
 
 type PrismaClientLike = typeof prisma;
 

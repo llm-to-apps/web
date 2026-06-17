@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { isValidEmail, normalizeEmail } from '@/lib/auth';
-import { prisma } from '@/lib/db';
-import { sendEmail } from '@/lib/email';
-import { clearEmailLoginCode, createEmailLoginCode } from '@/lib/email-login-codes';
+import { isValidEmail, normalizeEmail } from '../../../../../lib/auth';
+import { prisma } from '../../../../../lib/db';
+import { sendEmail } from '../../../../../lib/email';
+import { clearEmailLoginCode, createEmailLoginCode } from '../../../../../lib/email-login-codes';
 
 type StartEmailAuthRequest = {
   email?: string;

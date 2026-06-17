@@ -1,190 +1,108 @@
-import { AppDesktop } from '../ui/app-desktop';
-import { AppShell } from '../ui/app-shell';
-import { UserAgentChat } from '../ui/user-agent-chat';
-import { requireOnboardedUser } from '@/lib/onboarding';
-import { prisma } from '@/lib/db';
-import { projectMemberWhere } from '@/lib/project-members';
+'use client';
 
-export default async function HomePage() {
-  const user = await requireOnboardedUser();
+import { useEffect, useState } from 'react';
+import type { ComponentProps } from 'react';
+import { Alert, Grid, GridCol, Skeleton, Stack } from '@mantine/core';
+import { AppDesktop, type DesktopProject } from './app-desktop';
+import { UserAgentChat } from './user-agent-chat';
+import { AppLayout } from '../_components/app-layout';
+import { SessionGate } from '../_components/session-gate';
+import type { SessionData } from '../_components/session-provider';
 
-  const deletedProjectVisibleAfter = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
-  const projects = await prisma.project.findMany({
-    where: {
-      members: projectMemberWhere(user.id),
-      OR: [
-        {
-          deletedAt: null,
-          status: {
-            notIn: ['deleting', 'deleted']
-          }
-        },
-        {
-          deletedAt: {
-            gte: deletedProjectVisibleAfter
-          },
-          status: 'deleted'
-        }
-      ]
-    },
-    orderBy: { createdAt: 'desc' },
-    select: {
-      id: true,
-      templateId: true,
-      templateName: true,
-      slug: true,
-      domain: true,
-      url: true,
-      status: true,
-      deletedAt: true,
-      deployError: true
-    }
-  });
-  const userAgentMessages = await prisma.userAgentChatMessage.findMany({
-    where: {
-      userId: user.id
-    },
-    orderBy: {
-      createdAt: 'desc'
-    },
-    take: 50,
-    select: {
-      id: true,
-      role: true,
-      content: true
-    }
-  });
-  const orderedUserAgentMessages = userAgentMessages
-    .reverse()
-    .filter((message) => message.role === 'assistant' || message.role === 'user');
-  const activeUserAgentRun = await prisma.agentRun.findFirst({
-    where: {
-      scope: 'user_agent',
-      status: {
-        in: ['queued', 'running']
-      },
-      userId: user.id
-    },
-    orderBy: {
-      createdAt: 'desc'
-    },
-    select: {
-      id: true
-    }
-  });
-  const userAgentAssistantMessageIds = orderedUserAgentMessages
-    .filter((message) => message.role === 'assistant')
-    .map((message) => message.id);
-  const userAgentUsages =
-    userAgentAssistantMessageIds.length > 0
-      ? await prisma.agentUsage.findMany({
-          where: {
-            assistantMessageId: {
-              in: userAgentAssistantMessageIds
-            },
-            projectId: null,
-            userId: user.id
-          },
-          select: {
-            assistantMessageId: true,
-            requestId: true
-          }
-        })
-      : [];
-  const userAgentRequestIds = userAgentUsages.map((usage) => usage.requestId);
-  const userAgentLedgerEntries =
-    userAgentRequestIds.length > 0
-      ? await prisma.creditLedgerEntry.findMany({
-          where: {
-            actorUserId: user.id,
-            meterType: 'llm_tokens',
-            sourceId: {
-              in: userAgentRequestIds
-            },
-            sourceType: 'agent_run'
-          },
-          select: {
-            credits: true,
-            sourceId: true
-          }
-        })
-      : [];
-  const userAgentCreditsByRequestId = new Map(
-    userAgentLedgerEntries.map((entry) => [entry.sourceId, formatCreditsUsed(entry.credits)])
+type HomeData = {
+  activeRunId: string | null;
+  messages: ComponentProps<typeof UserAgentChat>['initialMessages'];
+  projects: DesktopProject[];
+};
+
+type HomeResponse =
+  | ({
+      ok: true;
+    } & HomeData)
+  | {
+      ok: false;
+      message: string;
+    };
+
+export default function HomePage() {
+  return (
+    <SessionGate>
+      {(session) => <HomeContent session={session} />}
+    </SessionGate>
   );
-  const userAgentUsageByAssistantMessageId = new Map(
-    userAgentUsages
-      .filter((usage) => usage.assistantMessageId)
-      .map((usage) => [
-        usage.assistantMessageId,
-        {
-          creditsUsed: userAgentCreditsByRequestId.get(usage.requestId) ?? 0
-        }
-      ])
-  );
-  const initialUserAgentMessages = orderedUserAgentMessages.map((message) => ({
-    id: message.id,
-    role: message.role as 'assistant' | 'user',
-    content: message.content,
-    usage:
-      message.role === 'assistant'
-        ? userAgentUsageByAssistantMessageId.get(message.id) ?? null
-        : null
-  }));
-  const projectUsageSummaries =
-    projects.length > 0
-      ? await prisma.creditLedgerEntry.groupBy({
-          by: ['projectId'],
-          where: {
-            actorUserId: user.id,
-            projectId: {
-              in: projects.map((project) => project.id)
-            },
-            sourceType: 'agent_run'
-          },
-          _sum: {
-            credits: true
-          }
-        })
-      : [];
-  const usageByProjectId = new Map(
-    projectUsageSummaries.map((usage) => [
-      usage.projectId,
-      formatCreditsUsed(usage._sum.credits)
-    ])
-  );
-  const projectsWithUsage = projects.map((project) => ({
-    ...project,
-    deletedAt: project.deletedAt?.toISOString() ?? null,
-    usage: formatInitialUsage(usageByProjectId.get(project.id))
-  }));
+}
+
+function HomeContent({ session }: { session: SessionData }) {
+  const [data, setData] = useState<HomeData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    async function loadHome() {
+      const response = await fetch('/api/home', {
+        cache: 'no-store'
+      });
+      const payload = (await response.json().catch(() => null)) as HomeResponse | null;
+
+      if (!isCurrent) {
+        return;
+      }
+
+      if (!response.ok || !payload || !payload.ok) {
+        setError(
+          payload && 'message' in payload
+            ? payload.message
+            : `Failed to load home (${response.status})`
+        );
+        return;
+      }
+
+      setData({
+        activeRunId: payload.activeRunId,
+        messages: payload.messages,
+        projects: payload.projects
+      });
+    }
+
+    void loadHome();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
 
   return (
-    <AppShell user={user}>
-      <div className="home-workspace">
-        <UserAgentChat
-          activeRunId={activeUserAgentRun?.id ?? null}
-          initialMessages={initialUserAgentMessages}
-        />
-        <AppDesktop initialProjects={projectsWithUsage} />
-      </div>
-    </AppShell>
+    <AppLayout
+      usageSummary={session.usageSummary}
+      user={session.user}
+    >
+      {error ? <Alert color="red">{error}</Alert> : null}
+      {!data && !error ? (
+        <Grid>
+          <GridCol span={{ base: 12, lg: 8 }}>
+            <Stack>
+              <Skeleton height={420} radius="md" />
+            </Stack>
+          </GridCol>
+          <GridCol span={{ base: 12, lg: 4 }}>
+            <Skeleton height={220} radius="md" />
+          </GridCol>
+        </Grid>
+      ) : null}
+      {data ? (
+        <Grid>
+          <GridCol span={{ base: 12, lg: 8 }}>
+            <UserAgentChat
+              activeRunId={data.activeRunId}
+              initialMessages={data.messages}
+            />
+          </GridCol>
+          <GridCol span={{ base: 12, lg: 4 }}>
+            <AppDesktop initialProjects={data.projects} />
+          </GridCol>
+        </Grid>
+      ) : null}
+    </AppLayout>
   );
-}
-
-function formatInitialUsage(
-  usage: number | null | undefined
-) {
-  if (!usage || usage <= 0) {
-    return null;
-  }
-
-  return {
-    creditsUsed: usage
-  };
-}
-
-function formatCreditsUsed(value: unknown) {
-  const numericValue = Number(value ?? 0);
-  return Math.ceil(Math.abs(Math.min(numericValue, 0)));
 }
