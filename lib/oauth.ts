@@ -122,10 +122,18 @@ export async function findActiveOAuthClient({
   const client = await prisma.oAuthClient.findUnique({
     where: {
       clientId
+    },
+    include: {
+      project: {
+        select: {
+          devDomain: true,
+          domain: true
+        }
+      }
     }
   });
 
-  if (!client || client.revokedAt || client.redirectUri !== redirectUri) {
+  if (!client || client.revokedAt || !isAllowedProjectRedirectUri(client, redirectUri)) {
     return null;
   }
 
@@ -359,5 +367,38 @@ function constantTimeEqual(left: string, right: string) {
 
   return (
     leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer)
+  );
+}
+
+function isAllowedProjectRedirectUri(
+  client: {
+    project: {
+      devDomain: string | null;
+      domain: string;
+    };
+    redirectUri: string;
+  },
+  redirectUri: string
+) {
+  if (client.redirectUri === redirectUri) {
+    return true;
+  }
+
+  let url: URL;
+
+  try {
+    url = new URL(redirectUri);
+  } catch {
+    return false;
+  }
+
+  const allowedHosts = new Set(
+    [client.project.domain, client.project.devDomain].filter(Boolean)
+  );
+
+  return (
+    url.pathname === '/api/auth/callback/os7' &&
+    allowedHosts.has(url.host) &&
+    url.protocol === `${projectPublicScheme()}:`
   );
 }

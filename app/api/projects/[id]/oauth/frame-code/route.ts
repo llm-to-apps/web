@@ -49,6 +49,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       }
     },
     select: {
+      devDomain: true,
       id: true,
       domain: true
     }
@@ -64,9 +65,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   const redirectUrl = new URL(body.redirectUri);
 
-  if (redirectUrl.host !== project.domain) {
+  const allowedHosts = new Set([project.domain, project.devDomain].filter(Boolean));
+
+  if (
+    redirectUrl.pathname !== '/api/auth/callback/os7' ||
+    !allowedHosts.has(redirectUrl.host)
+  ) {
     console.warn('[OAuth Frame Code] redirect host mismatch', {
-      expectedHost: project.domain,
+      expectedHosts: Array.from(allowedHosts),
       projectId: project.id,
       redirectHost: redirectUrl.host
     });
