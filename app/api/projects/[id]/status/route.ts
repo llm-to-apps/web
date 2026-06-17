@@ -107,6 +107,7 @@ async function isRuntimeReady(baseUrl: string) {
 
 function createDevUrl(appUrl: string) {
   const url = new URL(appUrl);
+  url.protocol = 'http:';
   url.port = '8080';
   url.pathname = '/';
   url.search = '';
