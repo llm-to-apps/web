@@ -3,11 +3,9 @@ import { NextRequest } from 'next/server'
 import { getCurrentUser } from '@/server/auth'
 import { prisma } from '@/server/db'
 import { createAuthToken } from '@/server/auth/tokens'
-import { jsonErrorMessage, jsonOk } from '@/server/http'
-
-type CreatePersonalMcpTokenRequest = {
-  name?: string
-}
+import { jsonErrorMessage, jsonOk, jsonValidationError } from '@/server/http'
+import { parseJsonRequest } from '@/shared/schema'
+import { createPersonalMcpTokenRequestSchema } from './schema'
 
 export async function handleUserMcpTokensGet() {
   const user = await getCurrentUser()
@@ -45,7 +43,14 @@ export async function handleUserMcpTokensPost(request: NextRequest) {
     return jsonErrorMessage('Sign in required', 401)
   }
 
-  const body = (await request.json().catch(() => ({}))) as CreatePersonalMcpTokenRequest
+  let body
+
+  try {
+    body = await parseJsonRequest(request, createPersonalMcpTokenRequestSchema)
+  } catch (error) {
+    return jsonValidationError(error)
+  }
+
   const token = await createAuthToken({
     subjectType: 'user',
     userId: user.id,

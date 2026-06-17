@@ -1,3 +1,13 @@
+import {
+  elapsedSince,
+  logError,
+  logInfo,
+  logWarn,
+  type LogContext
+} from '@/server/logger'
+
+export { elapsedSince }
+
 export type AgentRunLogContext = {
   eventType?: string
   jobId?: string | number
@@ -9,18 +19,14 @@ export type AgentRunLogContext = {
   seq?: number
   status?: string
   userId?: string
-}
+} & LogContext
 
 export function logAgentRun(
   marker: string,
   context: AgentRunLogContext = {},
   details: Record<string, unknown> = {}
 ) {
-  console.info('[agent-run]', {
-    marker,
-    ...context,
-    ...details
-  })
+  logInfo(`agent_run.${marker}`, context, details)
 }
 
 export function warnAgentRun(
@@ -28,11 +34,7 @@ export function warnAgentRun(
   context: AgentRunLogContext = {},
   details: Record<string, unknown> = {}
 ) {
-  console.warn('[agent-run]', {
-    marker,
-    ...context,
-    ...details
-  })
+  logWarn(`agent_run.${marker}`, context, details)
 }
 
 export function errorAgentRun(
@@ -40,15 +42,7 @@ export function errorAgentRun(
   context: AgentRunLogContext = {},
   details: Record<string, unknown> = {}
 ) {
-  console.error('[agent-run]', {
-    marker,
-    ...context,
-    ...details
-  })
-}
-
-export function elapsedSince(startedAt: number) {
-  return Date.now() - startedAt
+  logError(`agent_run.${marker}`, context, details)
 }
 
 export function truncateForLog(value: string, maxLength = 180) {

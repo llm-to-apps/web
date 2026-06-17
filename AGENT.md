@@ -39,6 +39,33 @@ This file contains project-specific rules for coding agents working on OS7 web.
 - Route handlers should parse request/context, authenticate, call a feature or
   server service, and map the response. Business logic belongs below the route.
 
+## Logging And Audit
+
+- Server, feature, worker, and integration code must use `@/server/logger`.
+  Do not write raw `console.*` outside the central logger.
+- Use stable event names such as `projects.deploy.started` or
+  `deployment.job.failed_permanently`. Put changing data in structured fields,
+  not in the event string.
+- Include useful context whenever it exists: `requestId`, `userId`, `projectId`,
+  `runId`, `jobId`, `operation`, `status`, and `elapsedMs`.
+- Never log secrets, cookies, authorization headers, OAuth codes, tokens,
+  passwords, database URLs, or full request/response bodies that may contain
+  credentials or user-private content.
+- Server-side unexpected errors must go through the central logger so they are
+  reported to Sentry when `SENTRY_DSN` is configured. Sentry is optional; local
+  and dev environments must keep working without Sentry env vars.
+- Keep Sentry payloads safe and narrow. Redact tokens, cookies, OAuth codes,
+  secrets, provider payloads, SQL details, and large personal-data objects
+  before reporting.
+- Use `@/server/agent/run-logger` for agent run lifecycle logs so agent events
+  stay searchable and consistently shaped.
+- Mutating MCP tools, runtime actions, and background jobs that change visible
+  state must notify the UI through the same realtime/invalidation path used by
+  the matching HTTP or service flow.
+- Audit-worthy actions should be logged at the service/use-case boundary, not
+  only inside route handlers, so HTTP, MCP, jobs, and agents share the same
+  behavior.
+
 ## UI Rules
 
 Web uses Mantine as the UI framework.

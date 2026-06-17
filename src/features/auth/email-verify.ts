@@ -8,17 +8,21 @@ import {
 } from '@/server/auth'
 import { prisma } from '@/server/db'
 import { verifyEmailLoginCode } from '@/server/auth/email-login-codes'
-import { jsonErrorMessage, jsonOk } from '@/server/http'
-
-type VerifyEmailAuthRequest = {
-  code?: string
-  email?: string
-}
+import { jsonErrorMessage, jsonOk, jsonValidationError } from '@/server/http'
+import { logError } from '@/server/logger'
+import { parseJsonRequest } from '@/shared/schema'
+import { verifyEmailAuthRequestSchema } from './schema'
 
 export async function handleEmailVerifyPost(request: NextRequest) {
-  const body = (await request.json()) as VerifyEmailAuthRequest
+  let body
+
+  try {
+    body = await parseJsonRequest(request, verifyEmailAuthRequestSchema)
+  } catch (error) {
+    return jsonValidationError(error)
+  }
   const email = normalizeEmail(body.email ?? '')
-  const code = body.code?.trim() ?? ''
+  const code = body.code
 
   if (!isValidEmail(email)) {
     return jsonErrorMessage('A valid email is required', 400)
@@ -33,7 +37,7 @@ export async function handleEmailVerifyPost(request: NextRequest) {
   try {
     isValidEmailCode = await verifyEmailLoginCode(email, code)
   } catch (error) {
-    console.error('[Auth] Failed to verify email login code', { email, error })
+    logError('auth.email_code.verify.failed', { email }, { error })
     return jsonErrorMessage('Failed to verify email code', 503)
   }
 

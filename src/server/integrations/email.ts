@@ -1,4 +1,5 @@
 import { emailFrom, isProductionEnv, resendApiKey } from '../env'
+import { logInfo } from '../logger'
 
 type SendEmailInput = {
   html?: string
@@ -19,9 +20,9 @@ export async function sendEmail({ html, subject, text, to }: SendEmailInput) {
       throw new Error('RESEND_API_KEY is required to send email')
     }
 
-    console.info('[Email] Skipping send because RESEND_API_KEY is not configured', {
+    logInfo('email.send.skipped', {
+      reason: 'missing_api_key',
       subject,
-      text,
       to
     })
     return { id: 'dev-email-not-sent' }

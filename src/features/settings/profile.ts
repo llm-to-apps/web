@@ -3,7 +3,9 @@ import { NextRequest } from 'next/server'
 import { getCurrentUser } from '@/server/auth'
 import { prisma } from '@/server/db'
 import { parseExperienceLevel } from '@/server/auth/profile'
-import { jsonErrorMessage, jsonOk } from '@/server/http'
+import { jsonErrorMessage, jsonOk, jsonValidationError } from '@/server/http'
+import { parseJsonRequest } from '@/shared/schema'
+import { profileInputSchema } from './schema'
 
 const UI_DELAY_MS = 250
 
@@ -18,16 +20,15 @@ export async function handleProfilePatch(request: NextRequest) {
     return jsonErrorMessage('Complete onboarding first', 403)
   }
 
-  const data = (await request.json().catch(() => null)) as {
-    aiExperienceLevel?: unknown
-    name?: unknown
-    vibeCodingExperienceLevel?: unknown
-  } | null
-  const name = String(data?.name ?? '').trim()
+  let data
 
-  if (!name) {
-    return jsonErrorMessage('Name is required', 400)
+  try {
+    data = await parseJsonRequest(request, profileInputSchema)
+  } catch (error) {
+    return jsonValidationError(error)
   }
+
+  const name = data.name
 
   await waitForUiDelay()
 
@@ -53,6 +54,6 @@ function waitForUiDelay() {
   })
 }
 
-function toFormValue(value: unknown) {
-  return typeof value === 'string' ? value : null
+function toFormValue(value: string | null | undefined) {
+  return value ?? null
 }

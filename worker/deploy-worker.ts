@@ -13,6 +13,7 @@ import {
 import { prisma } from '../src/server/db'
 import { appReadyBaseUrl, envNumber } from '../src/server/env'
 import { deleteProjectRepository } from '../src/server/integrations/forgejo'
+import { logError, logInfo, logWarn, type LogContext } from '../src/server/logger'
 import { startAgentRunWorker } from './agent-run-worker'
 
 type ProjectServiceStatus = {
@@ -45,6 +46,16 @@ const gracefulShutdownTimeoutMs = envNumber(
   10 * 60_000
 )
 
+function jobLogContext(job: Job<{ projectId: string }>): LogContext {
+  return {
+    attempt: job.attemptsMade + 1,
+    jobId: job.id,
+    maxAttempts: job.opts.attempts ?? 1,
+    operation: job.name,
+    projectId: job.data.projectId
+  }
+}
+
 const worker = new Worker(
   deployQueueName,
   async (job: Job) => {
@@ -70,28 +81,23 @@ const worker = new Worker(
 const agentRunWorker = startAgentRunWorker()
 
 worker.on('active', (job) => {
-  console.log(`${job.name} job ${job.id} started`, {
-    projectId: job.data.projectId,
-    attempt: job.attemptsMade + 1,
-    maxAttempts: job.opts.attempts ?? 1
-  })
+  logInfo('deployment.job.started', jobLogContext(job))
 })
 
 worker.on('completed', (job, result) => {
   if (isTimedOutResult(result)) {
-    console.warn(`${job.name} job ${job.id} stopped after readiness timeout`, {
-      projectId: job.data.projectId,
+    logWarn('deployment.job.readiness_timeout', jobLogContext(job), {
       elapsedMs: result.elapsedMs
     })
     return
   }
 
-  console.log(`${job.name} job ${job.id} completed for project ${job.data.projectId}`)
+  logInfo('deployment.job.completed', jobLogContext(job))
 })
 
 worker.on('failed', async (job, error) => {
   if (!job) {
-    console.error('deployment job failed without job context', error)
+    logError('deployment.job.failed_without_context', {}, { error })
     return
   }
 
@@ -99,8 +105,7 @@ worker.on('failed', async (job, error) => {
   const maxAttempts = job.opts.attempts ?? 1
 
   if (attemptsMade < maxAttempts) {
-    console.info(`${job.name} job ${job.id} will retry`, {
-      projectId: job.data.projectId,
+    logInfo('deployment.job.retrying', jobLogContext(job), {
       attempt: attemptsMade,
       maxAttempts,
       reason: error.message
@@ -108,7 +113,7 @@ worker.on('failed', async (job, error) => {
     return
   }
 
-  console.error(`${job.name} job ${job.id} failed permanently`, error)
+  logError('deployment.job.failed_permanently', jobLogContext(job), { error })
 
   const failedStatus = job.name === 'delete-project' ? 'delete_failed' : 'failed'
 
@@ -121,7 +126,9 @@ worker.on('failed', async (job, error) => {
       }
     })
     .catch((updateError) => {
-      console.error('failed to mark project deployment as failed', updateError)
+      logError('deployment.project.mark_failed_failed', jobLogContext(job), {
+        error: updateError
+      })
     })
 })
 
@@ -129,14 +136,13 @@ let isShuttingDown = false
 
 async function shutdown(signal: NodeJS.Signals) {
   if (isShuttingDown) {
-    console.warn(
-      `deploy worker received ${signal} while already shutting down; exiting now`
-    )
+    logWarn('deployment.worker.shutdown.duplicate_signal', { signal })
     process.exit(1)
   }
 
   isShuttingDown = true
-  console.log(`deploy worker received ${signal}, shutting down gracefully`, {
+  logInfo('deployment.worker.shutdown.started', {
+    signal,
     timeoutMs: gracefulShutdownTimeoutMs
   })
   await Promise.all([
@@ -154,13 +160,13 @@ process.on('SIGTERM', () => {
   shutdown('SIGTERM').finally(() => process.exit(0))
 })
 
-console.log(`deploy worker started on queue ${deployQueueName}`)
+logInfo('deployment.worker.started', { queueName: deployQueueName })
 
 async function closeWorkerGracefully(name: string, workerToClose: Worker) {
   const startedAt = Date.now()
   const closeGracefully = workerToClose.close(false)
   closeGracefully.catch((error) => {
-    console.error(`${name} graceful shutdown failed`, error)
+    logError('deployment.worker.close.failed', { workerName: name }, { error })
   })
   const timeout = new Promise<'timeout'>((resolve) => {
     setTimeout(() => resolve('timeout'), gracefulShutdownTimeoutMs).unref()
@@ -172,20 +178,23 @@ async function closeWorkerGracefully(name: string, workerToClose: Worker) {
   ])
 
   if (result === 'closed') {
-    console.log(`${name} closed gracefully`, {
+    logInfo('deployment.worker.close.completed', {
+      workerName: name,
       elapsedMs: Date.now() - startedAt
     })
     return
   }
 
   if (result === 'failed') {
-    console.error(`${name} graceful shutdown failed`, {
+    logError('deployment.worker.close.failed', {
+      workerName: name,
       elapsedMs: Date.now() - startedAt
     })
     return
   }
 
-  console.warn(`${name} graceful shutdown timed out; process will exit`, {
+  logWarn('deployment.worker.close.timed_out', {
+    workerName: name,
     elapsedMs: Date.now() - startedAt,
     timeoutMs: gracefulShutdownTimeoutMs
   })
@@ -193,8 +202,7 @@ async function closeWorkerGracefully(name: string, workerToClose: Worker) {
 
 async function deployProject(job: Job<DeployProjectJob>) {
   const { projectId, managerUrl, managerPayload } = job.data
-  console.log(`deploy-project job ${job.id} validating project`, {
-    projectId,
+  logInfo('deployment.project.validating', jobLogContext(job), {
     domain: managerPayload.domain,
     serviceName: managerPayload.serviceName,
     image: managerPayload.image
@@ -212,9 +220,7 @@ async function deployProject(job: Job<DeployProjectJob>) {
   })
 
   if (!project) {
-    console.warn(
-      `deploy job ${job.id} skipped because project ${projectId} is not active`
-    )
+    logWarn('deployment.project.skipped_inactive', jobLogContext(job))
     return { skipped: true }
   }
 
@@ -225,12 +231,9 @@ async function deployProject(job: Job<DeployProjectJob>) {
       deployError: null
     }
   })
-  console.log(`deploy-project job ${job.id} marked project as deploying`, {
-    projectId
-  })
+  logInfo('deployment.project.marked_deploying', jobLogContext(job))
 
-  console.log(`deploy-project job ${job.id} requesting manager deployment`, {
-    projectId,
+  logInfo('deployment.project.manager_request.started', jobLogContext(job), {
     managerUrl,
     serviceName: managerPayload.serviceName,
     image: managerPayload.image,
@@ -250,21 +253,17 @@ async function deployProject(job: Job<DeployProjectJob>) {
       `Manager deployment request failed with ${response.status}: ${JSON.stringify(result)}`
     )
   }
-  console.log(`deploy-project job ${job.id} manager accepted deployment`, {
-    projectId,
+  logInfo('deployment.project.manager_request.accepted', jobLogContext(job), {
     status: response.status,
     result
   })
 
-  console.log(`deploy-project job ${job.id} waiting for swarm service readiness`, {
-    projectId,
+  logInfo('deployment.project.service_wait.started', jobLogContext(job), {
     timeoutMs: serviceReadyTimeoutMs,
     pollMs: serviceReadyPollMs
   })
   await waitForProjectServiceReady(managerUrl, projectId)
-  console.log(`deploy-project job ${job.id} swarm service is running`, {
-    projectId
-  })
+  logInfo('deployment.project.service_wait.completed', jobLogContext(job))
 
   await prisma.project.update({
     where: { id: projectId },
@@ -273,9 +272,7 @@ async function deployProject(job: Job<DeployProjectJob>) {
       deployError: null
     }
   })
-  console.log(`deploy-project job ${job.id} marked project as starting`, {
-    projectId
-  })
+  logInfo('deployment.project.marked_starting', jobLogContext(job))
 
   await getDeployQueue().add(
     'check-project-ready',
@@ -293,8 +290,7 @@ async function deployProject(job: Job<DeployProjectJob>) {
       }
     }
   )
-  console.log(`deploy-project job ${job.id} enqueued app readiness check`, {
-    projectId,
+  logInfo('deployment.project.readiness_check.enqueued', jobLogContext(job), {
     domain: managerPayload.domain,
     readyJobId: `ready-${projectId}`,
     attempts: appReadyAttempts,
@@ -306,11 +302,8 @@ async function deployProject(job: Job<DeployProjectJob>) {
 
 async function checkProjectReady(job: Job<CheckProjectReadyJob>) {
   const { projectId, domain, readinessStartedAt } = job.data
-  console.log(`check-project-ready job ${job.id} probing app`, {
-    projectId,
+  logInfo('deployment.project.readiness_probe.started', jobLogContext(job), {
     domain,
-    attempt: job.attemptsMade + 1,
-    maxAttempts: job.opts.attempts ?? 1,
     appReadyUrl
   })
 
@@ -326,9 +319,7 @@ async function checkProjectReady(job: Job<CheckProjectReadyJob>) {
   })
 
   if (!project) {
-    console.warn(
-      `readiness job ${job.id} skipped because project ${projectId} is not active`
-    )
+    logWarn('deployment.project.readiness_probe.skipped_inactive', jobLogContext(job))
     return { skipped: true }
   }
 
@@ -345,8 +336,7 @@ async function checkProjectReady(job: Job<CheckProjectReadyJob>) {
       }
     })
 
-    console.error(`check-project-ready job ${job.id} timed out`, {
-      projectId,
+    logError('deployment.project.readiness_probe.timed_out', jobLogContext(job), {
       domain,
       elapsedMs,
       readinessStartedAt
@@ -360,8 +350,7 @@ async function checkProjectReady(job: Job<CheckProjectReadyJob>) {
   }
 
   const response = await fetchProjectApp(domain)
-  console.log(`check-project-ready job ${job.id} app responded`, {
-    projectId,
+  logInfo('deployment.project.readiness_probe.responded', jobLogContext(job), {
     domain,
     status: response.status
   })
@@ -375,9 +364,10 @@ async function checkProjectReady(job: Job<CheckProjectReadyJob>) {
     }
   })
 
-  console.log(
-    `project app ${domain} became ready with HTTP ${response.status} on attempt ${job.attemptsMade + 1}`
-  )
+  logInfo('deployment.project.ready', jobLogContext(job), {
+    domain,
+    status: response.status
+  })
 
   return {
     ok: true,
@@ -387,8 +377,7 @@ async function checkProjectReady(job: Job<CheckProjectReadyJob>) {
 
 async function deleteProject(job: Job<DeleteProjectJob>) {
   const { projectId, managerUrl, resources } = job.data
-  console.log(`delete-project job ${job.id} validating project`, {
-    projectId,
+  logInfo('deployment.project.delete.validating', jobLogContext(job), {
     serviceName: resources.swarm?.serviceName,
     hasMysql: Boolean(resources.mysql),
     hasGit: Boolean(resources.git)
@@ -400,16 +389,12 @@ async function deleteProject(job: Job<DeleteProjectJob>) {
   })
 
   if (!project) {
-    console.warn(
-      `delete job ${job.id} skipped because project ${projectId} no longer exists`
-    )
+    logWarn('deployment.project.delete.skipped_missing', jobLogContext(job))
     return { skipped: true }
   }
 
   if (project.deletedAt) {
-    console.info(
-      `delete job ${job.id} skipped because project ${projectId} is already deleted`
-    )
+    logInfo('deployment.project.delete.skipped_already_deleted', jobLogContext(job))
     return { skipped: true }
   }
 
@@ -425,8 +410,7 @@ async function deleteProject(job: Job<DeleteProjectJob>) {
       : undefined
   }
 
-  console.log(`delete-project job ${job.id} requesting manager deletion`, {
-    projectId,
+  logInfo('deployment.project.delete.manager_request.started', jobLogContext(job), {
     managerUrl,
     serviceName: managerPayload.serviceName
   })
@@ -449,13 +433,11 @@ async function deleteProject(job: Job<DeleteProjectJob>) {
       )}`
     )
   }
-  console.log(`delete-project job ${job.id} manager deleted project resources`, {
-    projectId,
+  logInfo('deployment.project.delete.manager_request.completed', jobLogContext(job), {
     result: managerResult
   })
 
-  console.log(`delete-project job ${job.id} deleting Forgejo repository/user`, {
-    projectId,
+  logInfo('deployment.project.delete.git_delete.started', jobLogContext(job), {
     owner: resources.git?.owner,
     name: resources.git?.name
   })
@@ -476,9 +458,7 @@ async function deleteProject(job: Job<DeleteProjectJob>) {
       managerJobId: String(job.id ?? '')
     }
   })
-  console.log(`delete-project job ${job.id} marked project as deleted`, {
-    projectId
-  })
+  logInfo('deployment.project.delete.marked_deleted', jobLogContext(job))
 
   return {
     ok: true,
@@ -510,7 +490,7 @@ async function waitForProjectServiceReady(managerUrl: string, projectId: string)
     }
 
     lastStatus = status
-    console.log('swarm service readiness poll', {
+    logInfo('deployment.project.service_wait.poll', {
       projectId,
       poll: pollCount,
       elapsedMs: Date.now() - startedAt,
@@ -547,7 +527,7 @@ async function fetchProjectApp(domain: string) {
     throw new Error(`HTTP ${response.status}`)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown app readiness error'
-    console.warn('project app readiness probe failed', {
+    logWarn('deployment.project.readiness_probe.failed', {
       domain,
       appReadyUrl: url,
       message

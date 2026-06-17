@@ -1,11 +1,11 @@
 import { NextRequest } from 'next/server'
 
-import {
-  deployProjectForUser,
-  type DeployProjectRequest
-} from '@/features/projects/deploy'
+import { deployProjectForUser } from '@/features/projects/deploy'
+import { deployProjectRequestSchema } from '@/features/projects/schema'
 import { getCurrentUser } from '@/server/auth'
-import { jsonErrorMessage, jsonResult } from '@/server/http'
+import { jsonErrorMessage, jsonResult, jsonValidationError } from '@/server/http'
+import { logError } from '@/server/logger'
+import { parseJsonRequest } from '@/shared/schema'
 
 export async function handleProjectDeployPost(request: NextRequest) {
   try {
@@ -15,17 +15,27 @@ export async function handleProjectDeployPost(request: NextRequest) {
       return jsonErrorMessage('Sign in before deploying an application', 401)
     }
 
+    const input = await parseJsonRequest(request, deployProjectRequestSchema)
+
     return jsonResult(
       await deployProjectForUser({
-        input: (await request.json()) as DeployProjectRequest,
+        input,
         user
       })
     )
   } catch (error) {
-    console.error('Failed to deploy project', error)
+    if (isValidationError(error)) {
+      return jsonValidationError(error)
+    }
+
+    logError('projects.deploy.failed', {}, { error })
 
     return jsonErrorMessage(errorMessage(error), 500)
   }
+}
+
+function isValidationError(error: unknown) {
+  return error instanceof Error && error.name === 'SchemaValidationError'
 }
 
 function errorMessage(error: unknown) {

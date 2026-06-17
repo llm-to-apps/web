@@ -6,6 +6,7 @@ import {
   type AppError,
   type AppResult
 } from '@/shared/result'
+import { schemaErrorMessage } from '@/shared/schema'
 
 export type PublicApiSuccess<T extends Record<string, unknown> = Record<string, never>> =
   {
@@ -50,6 +51,10 @@ export function jsonErrorMessage(
       status
     }
   )
+}
+
+export function jsonValidationError(error: unknown) {
+  return jsonErrorMessage(schemaErrorMessage(error), 400)
 }
 
 export function jsonError(error: AppError) {

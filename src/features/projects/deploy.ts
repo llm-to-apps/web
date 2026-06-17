@@ -12,12 +12,8 @@ import { createQueuedProjectRecord } from './deploy-project-record'
 import { enqueueProjectDeploy } from './deploy-queue'
 import { createDeployResources } from './deploy-resources'
 import { buildManagerDeployPayload, createDevSlug } from './deploy-runtime'
+import { type DeployProjectRequest } from './schema'
 import { loadInstallableTemplate, resolveDeploySlug } from './deploy-template'
-
-export type DeployProjectRequest = {
-  templateId?: string
-  slug?: string
-}
 
 export type DeployProjectResult = {
   projectId: string

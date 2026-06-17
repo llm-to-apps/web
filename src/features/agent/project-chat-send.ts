@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 
 import { elapsedSince, logAgentRun } from '@/server/agent/run-logger'
 import { getCurrentUser } from '@/server/auth'
-import { jsonErrorMessage, jsonOk } from '@/server/http'
+import { jsonErrorMessage, jsonOk, jsonValidationError } from '@/server/http'
 
 import { type AgentChatContext } from './project-chat-shared'
 import { parseProjectChatSendInput } from './project-chat-send-input'
@@ -26,11 +26,13 @@ export async function handleProjectAgentChatPost(
   }
 
   const { id } = await context.params
-  const { message, mode } = await parseProjectChatSendInput(request)
+  const input = await parseProjectChatSendInput(request).catch((error) => error)
 
-  if (!message) {
-    return jsonErrorMessage('Message is required', 400)
+  if (input instanceof Error) {
+    return jsonValidationError(input)
   }
+
+  const { message, mode } = input
   logAgentRun(
     'api.chat.received',
     {

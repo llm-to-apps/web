@@ -7,14 +7,20 @@ import {
   clearEmailLoginCode,
   createEmailLoginCode
 } from '@/server/auth/email-login-codes'
-import { jsonErrorMessage, jsonOk } from '@/server/http'
-
-type StartEmailAuthRequest = {
-  email?: string
-}
+import { jsonErrorMessage, jsonOk, jsonValidationError } from '@/server/http'
+import { logError } from '@/server/logger'
+import { parseJsonRequest } from '@/shared/schema'
+import { startEmailAuthRequestSchema } from './schema'
 
 export async function handleEmailStartPost(request: NextRequest) {
-  const body = (await request.json()) as StartEmailAuthRequest
+  let body
+
+  try {
+    body = await parseJsonRequest(request, startEmailAuthRequestSchema)
+  } catch (error) {
+    return jsonValidationError(error)
+  }
+
   const email = normalizeEmail(body.email ?? '')
 
   if (!isValidEmail(email)) {
@@ -34,7 +40,7 @@ export async function handleEmailStartPost(request: NextRequest) {
   try {
     loginCode = await createEmailLoginCode(email)
   } catch (error) {
-    console.error('[Auth] Failed to store email login code', { email, error })
+    logError('auth.email_code.store.failed', { email }, { error })
     return jsonErrorMessage('Failed to create email code', 503)
   }
 
@@ -47,7 +53,7 @@ export async function handleEmailStartPost(request: NextRequest) {
     })
   } catch (error) {
     await clearEmailLoginCode(email).catch(() => undefined)
-    console.error('[Auth] Failed to send email login code', { email, error })
+    logError('auth.email_code.send.failed', { email }, { error })
     return jsonErrorMessage('Failed to send email code', 502)
   }
 

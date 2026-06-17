@@ -5,12 +5,10 @@ import { prisma } from '@/server/db'
 import { userAgentModel } from '@/server/env'
 import { getAgentRunQueue } from '@/server/agent/run-queue'
 import { elapsedSince, logAgentRun } from '@/server/agent/run-logger'
-import { jsonErrorMessage, jsonOk } from '@/server/http'
+import { jsonErrorMessage, jsonOk, jsonValidationError } from '@/server/http'
 import { platformBaseUrl } from '@/server/request-origin'
-
-type UserAgentChatRequest = {
-  message?: string
-}
+import { parseJsonRequest } from '@/shared/schema'
+import { userAgentChatRequestSchema } from './schema'
 
 export async function handleUserAgentChatPost(request: NextRequest) {
   const startedAt = Date.now()
@@ -21,12 +19,15 @@ export async function handleUserAgentChatPost(request: NextRequest) {
     return jsonErrorMessage('Sign in before chatting with the agent', 401)
   }
 
-  const body = (await request.json()) as UserAgentChatRequest
-  const message = body.message?.trim()
+  let body
 
-  if (!message) {
-    return jsonErrorMessage('Message is required', 400)
+  try {
+    body = await parseJsonRequest(request, userAgentChatRequestSchema)
+  } catch (error) {
+    return jsonValidationError(error)
   }
+
+  const message = body.message
   logAgentRun(
     'api.chat.received',
     {

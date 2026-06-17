@@ -1,14 +1,13 @@
 import { type NextRequest } from 'next/server'
 
-import { type AgentChatRequest } from './project-chat-shared'
+import { parseJsonRequest } from '@/shared/schema'
+import { projectAgentChatRequestSchema } from './schema'
 
 export async function parseProjectChatSendInput(request: NextRequest) {
-  const body = (await request.json()) as AgentChatRequest
-  const message = body.message?.trim() ?? ''
-  const mode: 'dev' | 'use' = body.mode === 'dev' ? 'dev' : 'use'
+  const body = await parseJsonRequest(request, projectAgentChatRequestSchema)
 
   return {
-    message,
-    mode
+    message: body.message,
+    mode: body.mode
   }
 }

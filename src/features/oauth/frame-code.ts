@@ -8,6 +8,7 @@ import { getCurrentUser } from '@/server/auth'
 import { createAuthorizationCode, findActiveOAuthClient } from '@/server/oauth'
 import { prisma } from '@/server/db'
 import { jsonErrorMessage } from '@/server/http'
+import { logInfo, logWarn } from '@/server/logger'
 import { projectMemberWhere } from '@/server/project-members'
 
 type RouteContext = {
@@ -21,22 +22,24 @@ export async function handleOAuthFrameCodePost(
   const user = await getCurrentUser()
 
   if (!user) {
-    console.warn('[OAuth Frame Code] rejected unsigned request')
+    logWarn('oauth.frame_code.unsigned')
     return jsonErrorMessage('Sign in required', 401)
   }
 
   const { id } = await context.params
   const body = (await request.json().catch(() => null)) as OAuthFrameCodeRequest | null
-  console.info('[OAuth Frame Code] request', {
+  logInfo('oauth.frame_code.started', {
     clientId: body?.clientId,
     projectId: id,
     redirectUri: body?.redirectUri,
-    state: body?.state,
     userId: user.id
   })
 
   if (!body?.clientId || !body.redirectUri || !body.state) {
-    console.warn('[OAuth Frame Code] invalid request body', body)
+    logWarn('oauth.frame_code.invalid_request', {
+      projectId: id,
+      userId: user.id
+    })
     return jsonErrorMessage('Invalid OAuth request', 400)
   }
 
@@ -57,7 +60,7 @@ export async function handleOAuthFrameCodePost(
   })
 
   if (!project) {
-    console.warn('[OAuth Frame Code] project not found or not owned', {
+    logWarn('oauth.frame_code.project_not_found', {
       projectId: id,
       userId: user.id
     })
@@ -72,7 +75,7 @@ export async function handleOAuthFrameCodePost(
     redirectUrl.pathname !== '/api/auth/callback/os7' ||
     !allowedHosts.has(redirectUrl.host)
   ) {
-    console.warn('[OAuth Frame Code] redirect host mismatch', {
+    logWarn('oauth.frame_code.redirect_host_mismatch', {
       expectedHosts: Array.from(allowedHosts),
       projectId: project.id,
       redirectHost: redirectUrl.host
@@ -86,7 +89,7 @@ export async function handleOAuthFrameCodePost(
   })
 
   if (!client || client.projectId !== project.id) {
-    console.warn('[OAuth Frame Code] client mismatch', {
+    logWarn('oauth.frame_code.client_mismatch', {
       clientId: body.clientId,
       clientProjectId: client?.projectId,
       projectId: project.id
@@ -100,11 +103,10 @@ export async function handleOAuthFrameCodePost(
     scope: body.scope ?? 'openid email profile',
     userId: user.id
   })
-  console.info('[OAuth Frame Code] issued code', {
+  logInfo('oauth.frame_code.issued', {
     clientId: body.clientId,
     projectId: project.id,
     redirectUri: body.redirectUri,
-    state: body.state,
     userId: user.id
   })
 

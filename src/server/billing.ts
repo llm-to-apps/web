@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client'
 
 import { prisma } from './db'
+import { logWarn } from './logger'
 
 const llmMeterType = 'llm_tokens'
 const million = new Prisma.Decimal(1_000_000)
@@ -37,7 +38,7 @@ export async function billAgentUsage({
   })
 
   if (!price) {
-    console.warn('[Billing] Missing usage price; skipping agent debit', {
+    logWarn('billing.usage_price.missing', {
       meterType: llmMeterType,
       model,
       requestId
