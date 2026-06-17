@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getCurrentUser } from '../../../../../lib/auth';
 import { prisma } from '../../../../../lib/db';
+import { appReadyBaseUrl } from '../../../../../lib/env';
 import { projectMemberWhere } from '../../../../../lib/project-members';
 
 type ProjectStatusContext = {
@@ -41,7 +42,9 @@ export async function GET(_request: NextRequest, context: ProjectStatusContext) 
       deletedAt: null
     },
     select: {
+      devDomain: true,
       id: true,
+      domain: true,
       status: true,
       devUrl: true,
       url: true
@@ -57,9 +60,10 @@ export async function GET(_request: NextRequest, context: ProjectStatusContext) 
 
   const prodUrl = project.url.replace(/\/$/, '');
   const devUrl = (project.devUrl ?? createDevUrl(prodUrl)).replace(/\/$/, '');
+  const devHost = project.devDomain ?? new URL(devUrl).host;
   const [prodReady, devReady] = await Promise.all([
-    isRuntimeReady(prodUrl),
-    isRuntimeReady(devUrl)
+    isRuntimeReady(project.domain),
+    isRuntimeReady(devHost)
   ]);
 
   return NextResponse.json(
@@ -86,14 +90,17 @@ export async function GET(_request: NextRequest, context: ProjectStatusContext) 
   );
 }
 
-async function isRuntimeReady(baseUrl: string) {
+async function isRuntimeReady(host: string) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 1500);
 
   try {
-    const healthUrl = new URL('/api/health', baseUrl);
+    const healthUrl = new URL('/api/health', appReadyBaseUrl());
     const response = await fetch(healthUrl, {
       cache: 'no-store',
+      headers: {
+        Host: host
+      },
       redirect: 'manual',
       signal: controller.signal
     });
