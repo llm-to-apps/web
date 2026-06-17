@@ -255,14 +255,29 @@ function changedFields(
 }
 
 function sameJson(left: unknown, right: unknown) {
-  return JSON.stringify(left ?? null) === JSON.stringify(right ?? null)
+  return stableStringify(left ?? null) === stableStringify(right ?? null)
 }
 
 function hashJson(input: unknown) {
   return createHash('sha256')
-    .update(JSON.stringify(input ?? null))
+    .update(stableStringify(input ?? null))
     .digest('hex')
     .slice(0, 12)
+}
+
+function stableStringify(input: unknown): string {
+  if (!input || typeof input !== 'object') {
+    return JSON.stringify(input)
+  }
+
+  if (Array.isArray(input)) {
+    return `[${input.map((item) => stableStringify(item)).join(',')}]`
+  }
+
+  return `{${Object.entries(input)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, value]) => `${JSON.stringify(key)}:${stableStringify(value)}`)
+    .join(',')}}`
 }
 
 function githubRawManifestUrl({
