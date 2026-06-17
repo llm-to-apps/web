@@ -36,8 +36,8 @@ type UsagePriceSeed = {
 };
 
 const prisma = new PrismaClient();
-const moneyTemplateManifestCommit = '04a308062b8019415323d55c922981ae972b3b79';
-const moneyTemplateImage = 'ghcr.io/llm-to-apps/money-template:sha-04a3080';
+const moneyTemplateManifestCommit = 'c31e7cdcd65345ddf9a20a2d4fabdbf4f2652af4';
+const moneyTemplateImage = 'ghcr.io/llm-to-apps/money-template:sha-c31e7cd';
 const moneyTemplateManifestBaseUrl = `https://cdn.jsdelivr.net/gh/llm-to-apps/money-template@${moneyTemplateManifestCommit}`;
 
 const staticAppTemplates: AppTemplateSeed[] = [
