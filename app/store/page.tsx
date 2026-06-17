@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Alert, Badge, Card, Group, SimpleGrid, Skeleton, Stack, Text, Title } from '@mantine/core';
+import { Alert, Badge, Card, Group, Loader, SimpleGrid, Skeleton, Stack, Text, Title } from '@mantine/core';
 import { AppIcon } from '../_components/app-icon';
 import { AppLayout } from '../_components/app-layout';
 import { SessionGate } from '../_components/session-gate';
@@ -107,7 +107,9 @@ function StoreContent({ session }: { session: SessionData }) {
                   {isInstallableTemplate(template) ? (
                     <InstallButton templateId={template.id} />
                   ) : (
-                    <Badge>{t.store.comingSoon}</Badge>
+                    <Badge leftSection={<Loader size="xs" type="dots" />}>
+                      {t.store.comingSoon}
+                    </Badge>
                   )}
                 </Group>
               </Stack>
