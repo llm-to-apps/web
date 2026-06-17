@@ -1,3 +1,6 @@
+import http from 'node:http';
+import https from 'node:https';
+
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getCurrentUser } from '../../../../../lib/auth';
@@ -91,26 +94,47 @@ export async function GET(_request: NextRequest, context: ProjectStatusContext) 
 }
 
 async function isRuntimeReady(host: string) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 1500);
-
   try {
-    const healthUrl = new URL('/api/health', appReadyBaseUrl());
-    const response = await fetch(healthUrl, {
-      cache: 'no-store',
-      headers: {
-        Host: host
-      },
-      redirect: 'manual',
-      signal: controller.signal
-    });
+    const response = await requestRuntimeHealth(host);
 
     return response.status >= 200 && response.status < 400;
   } catch {
     return false;
-  } finally {
-    clearTimeout(timeout);
   }
+}
+
+function requestRuntimeHealth(host: string) {
+  return new Promise<{ status: number }>((resolve, reject) => {
+    const baseUrl = new URL(appReadyBaseUrl());
+    const healthPath = new URL('/api/health', baseUrl);
+    const client = healthPath.protocol === 'https:' ? https : http;
+    const request = client.request(
+      {
+        headers: {
+          Host: host
+        },
+        hostname: healthPath.hostname,
+        method: 'GET',
+        path: `${healthPath.pathname}${healthPath.search}`,
+        port: healthPath.port || undefined,
+        protocol: healthPath.protocol,
+        timeout: 1500
+      },
+      (response) => {
+        response.resume();
+
+        resolve({
+          status: response.statusCode ?? 0
+        });
+      }
+    );
+
+    request.on('timeout', () => {
+      request.destroy(new Error('Runtime health request timed out'));
+    });
+    request.on('error', reject);
+    request.end();
+  });
 }
 
 function createDevUrl(appUrl: string) {
