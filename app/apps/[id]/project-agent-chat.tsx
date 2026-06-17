@@ -141,6 +141,7 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
     const [isSending, setIsSending] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement | null>(null)
     const activeRunRef = useRef<string | null>(null)
+    const startRunStreamRef = useRef<(runId: string) => void>(() => undefined)
     const isClearingRef = useRef(false)
     const isSendingRef = useRef(false)
     const previousModeRef = useRef<AgentMode>(mode)
@@ -153,6 +154,10 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
     useEffect(() => {
       isClearingRef.current = isClearing
     }, [isClearing])
+
+    useEffect(() => {
+      startRunStreamRef.current = startRunStream
+    })
 
     useEffect(() => {
       messagesEndRef.current?.scrollIntoView({
@@ -175,8 +180,8 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
         return
       }
 
-      startRunStream(activeRunId)
-    }, [activeRunId, t.chat.started])
+      startRunStreamRef.current(activeRunId)
+    }, [activeRunId])
 
     useEffect(() => {
       let isStopped = false
@@ -208,7 +213,7 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
         }
 
         if (data.activeRunId && activeRunRef.current !== data.activeRunId) {
-          startRunStream(data.activeRunId)
+          startRunStreamRef.current(data.activeRunId)
         } else if (!data.activeRunId) {
           activeRunRef.current = null
         }

@@ -104,12 +104,19 @@ export function UserAgentChat({
   const [isSending, setIsSending] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const activeRunRef = useRef<string | null>(null)
+  const streamAgentRunRef = useRef<
+    (runId: string, assistantMessageId: string) => Promise<void>
+  >(async () => undefined)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
       block: 'end'
     })
   }, [messages])
+
+  useEffect(() => {
+    streamAgentRunRef.current = streamAgentRun
+  })
 
   useEffect(() => {
     if (!activeRunId || activeRunRef.current === activeRunId) {
@@ -133,7 +140,7 @@ export function UserAgentChat({
           ]
     )
     setIsSending(true)
-    streamAgentRun(activeRunId, assistantMessageId).finally(() => {
+    streamAgentRunRef.current(activeRunId, assistantMessageId).finally(() => {
       setIsSending(false)
     })
   }, [activeRunId, t.chat.started])
