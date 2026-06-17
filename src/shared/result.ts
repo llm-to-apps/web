@@ -21,15 +21,17 @@ export type AppSuccess<T> = {
 
 export type AppResult<T> = AppSuccess<T> | AppError
 
-export type ApiResponse<T> =
+export type AppResultResponse<T> =
   | {
       ok: true
       data: T
     }
   | {
       ok: false
-      code: AppErrorCode
-      message: string
+      error: {
+        code: AppErrorCode
+        message: string
+      }
     }
 
 export function appOk<T>(data: T): AppSuccess<T> {
@@ -67,7 +69,7 @@ export function appErrorStatus(code: AppErrorCode) {
   }
 }
 
-export function apiResponseFromResult<T>(result: AppResult<T>): ApiResponse<T> {
+export function apiResponseFromResult<T>(result: AppResult<T>): AppResultResponse<T> {
   if (result.ok) {
     return {
       ok: true,
@@ -77,7 +79,9 @@ export function apiResponseFromResult<T>(result: AppResult<T>): ApiResponse<T> {
 
   return {
     ok: false,
-    code: result.code,
-    message: result.message
+    error: {
+      code: result.code,
+      message: result.message
+    }
   }
 }

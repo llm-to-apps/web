@@ -5,20 +5,15 @@ import { Download } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { Alert, Button, Stack } from '@mantine/core'
 import { useI18n } from '../_components/i18n-provider'
+import type { ApiResponse } from '@/shared/api'
 
-type InstallResult =
-  | {
-      ok: true
-      url: string
-      projectId: string
-      template: string
-      status: string
-      jobId: string
-    }
-  | {
-      ok: false
-      message: string
-    }
+type InstallResult = ApiResponse<{
+  jobId: string
+  projectId: string
+  status: string
+  template: string
+  url: string
+}>
 
 type InstallButtonProps = {
   templateId: string
@@ -49,7 +44,10 @@ export function InstallButton({ templateId }: InstallButtonProps) {
       if (!response.ok || !data.ok) {
         setResult({
           ok: false,
-          message: 'message' in data ? data.message : t.store.installFailed
+          error: {
+            code: 'INTERNAL',
+            message: !data.ok ? data.error.message : t.store.installFailed
+          }
         })
         return
       }
@@ -60,7 +58,10 @@ export function InstallButton({ templateId }: InstallButtonProps) {
     } catch (error) {
       setResult({
         ok: false,
-        message: error instanceof Error ? error.message : t.store.installFailed
+        error: {
+          code: 'INTERNAL',
+          message: error instanceof Error ? error.message : t.store.installFailed
+        }
       })
     } finally {
       setIsInstalling(false)
@@ -78,7 +79,9 @@ export function InstallButton({ templateId }: InstallButtonProps) {
       </Button>
       {result ? (
         <Alert color={result.ok ? 'green' : 'red'}>
-          {result.ok ? format(t.store.queued, { url: result.url }) : result.message}
+          {result.ok
+            ? format(t.store.queued, { url: result.data.url })
+            : result.error.message}
         </Alert>
       ) : null}
     </Stack>
@@ -94,7 +97,10 @@ async function readInstallResult(
   if (!text) {
     return {
       ok: false,
-      message: formatEmptyResponse(response.status)
+      error: {
+        code: 'INTERNAL',
+        message: formatEmptyResponse(response.status)
+      }
     }
   }
 
@@ -103,7 +109,10 @@ async function readInstallResult(
   } catch {
     return {
       ok: false,
-      message: text.slice(0, 200) || formatEmptyResponse(response.status)
+      error: {
+        code: 'INTERNAL',
+        message: text.slice(0, 200) || formatEmptyResponse(response.status)
+      }
     }
   }
 }

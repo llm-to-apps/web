@@ -722,7 +722,7 @@ function devModeRules() {
 - Classify the task before acting: inspect, edit, debug, verify, or explain.
 - Before changing project code, database models, MCP tools, UI, dependencies, or files, attempt to read AGENT.md once with readProjectFile. If it exists, follow its project-specific rules. If it is missing, continue normally.
 - Use the smallest workflow that can complete the task.
-- After Prisma schema changes, run npm run prisma:generate and npm run typecheck, restart the app process, then inspect app status or logs.
+- After Prisma schema changes, create a migration with npm run prisma:migrate:dev -- --name <change_name>, then run npm run prisma:generate, npm run prisma:validate, and npm run typecheck. Use npm run db:test:reset only for isolated SQLite e2e databases. Restart the app process, then inspect app status or logs.
 - Do not intentionally edit generated framework files such as next-env.d.ts.
 - Do not add UI or code fallbacks to hide missing required database tables or columns.
 - For routine CRUD UI, preserve local screen state with client state, optimistic updates, or focused JSON refetches. Do not use full route refreshes, periodic whole-view polling, or browser reloads as the default mutation UX.

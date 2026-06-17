@@ -22,15 +22,9 @@ import { SessionGate } from '../_components/session-gate'
 import type { SessionData } from '../_components/session-provider'
 import { useI18n } from '../_components/i18n-provider'
 import { Os7Logo } from '../../ui-kit/src/os7-brand'
+import type { ApiResponse } from '@/shared/api'
 
-type OnboardingResponse =
-  | {
-      ok: true
-    }
-  | {
-      ok: false
-      message: string
-    }
+type OnboardingResponse = ApiResponse
 
 export default function WelcomePage() {
   return (
@@ -81,8 +75,8 @@ function WelcomeContent({ session }: { session: SessionData }) {
 
       if (!response.ok || !data || !data.ok) {
         throw new Error(
-          data && 'message' in data
-            ? data.message
+          data && !data.ok
+            ? data.error.message
             : `Failed to complete onboarding (${response.status})`
         )
       }

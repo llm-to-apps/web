@@ -19,6 +19,7 @@ import { SessionGate } from '../_components/session-gate'
 import type { SessionData } from '../_components/session-provider'
 import { InstallButton } from './install-button'
 import { useI18n } from '../_components/i18n-provider'
+import type { ApiResponse } from '@/shared/api'
 
 type StoreTemplate = {
   id: string
@@ -32,15 +33,7 @@ type StoreTemplate = {
   agentPort: number | null
 }
 
-type StoreResponse =
-  | {
-      ok: true
-      templates: StoreTemplate[]
-    }
-  | {
-      ok: false
-      message: string
-    }
+type StoreResponse = ApiResponse<{ templates: StoreTemplate[] }>
 
 export default function StorePage() {
   return <SessionGate>{(session) => <StoreContent session={session} />}</SessionGate>
@@ -66,14 +59,14 @@ function StoreContent({ session }: { session: SessionData }) {
 
       if (!response.ok || !data || !data.ok) {
         setError(
-          data && 'message' in data
-            ? data.message
+          data && !data.ok
+            ? data.error.message
             : `Failed to load store (${response.status})`
         )
         return
       }
 
-      setTemplates(data.templates)
+      setTemplates(data.data.templates)
     }
 
     void loadTemplates()

@@ -27,17 +27,36 @@ This file contains project-specific rules for coding agents working on OS7 web.
 
 ## API Contracts
 
-- Public OS7 JSON APIs should return `{ ok: true, ...payload }` or
-  `{ ok: false, message, code? }`.
-- Use `jsonOk` and `jsonErrorMessage` from `@/server/http` for ordinary public
-  API responses so DTOs stay typed without changing the wire format.
+- Public OS7 JSON APIs must use `ApiResponse<T>` from `@/shared/api`:
+  `{ ok: true, data: T }` for success and
+  `{ ok: false, error: { code, message } }` for errors.
+- Use `jsonOk`, `jsonErrorMessage`, `jsonError`, and `jsonResult` from
+  `@/server/http` for ordinary public API responses. Do not return raw success
+  DTOs or flattened error envelopes from public JSON routes.
 - Use `AppResult` plus `jsonResult` for service/use-case flows that already
   return `appOk`/`appError`.
-- Keep protocol routes protocol-native: OAuth, MCP JSON-RPC, SSE, and health
-  endpoints do not need the public OS7 `{ ok, message }` helper when their
-  protocol requires a different shape.
+- Keep protocol routes protocol-native: OAuth provider routes, token
+  introspection, MCP JSON-RPC, SSE, webhooks, and redirects may use their own
+  protocol shape when required. Document any new exception explicitly.
 - Route handlers should parse request/context, authenticate, call a feature or
   server service, and map the response. Business logic belongs below the route.
+
+## Database Migrations And Seed Data
+
+- Web uses Prisma migrations as the production schema source of truth. Do not
+  use `prisma db push` for long-lived environments.
+- After editing `prisma/schema.prisma`, create a committed migration with
+  `npm run prisma:migrate:dev -- --name <change_name>`, then run
+  `npm run prisma:generate`, `npm run prisma:validate`, and `npm run typecheck`.
+- Runtime containers should apply committed migrations with
+  `npm run db:deploy` before starting the app.
+- Seed data must be idempotent. Run it explicitly with `npm run db:seed` or through
+  `npm run db:bootstrap`; do not hide seed writes inside ordinary app startup.
+- Keep seed data focused on platform bootstrap data such as templates and usage
+  prices. User-owned data belongs in tests or fixtures, not production seeds.
+- PostgreSQL is the production provider. SQLite is allowed only for isolated
+  local/e2e databases through `npm run db:test:reset`, which uses a generated
+  Prisma schema and `db push` against `file:./prisma/test-e2e.db`.
 
 ## Logging And Audit
 

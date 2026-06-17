@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 import { getCurrentUser } from '@/server/auth'
 import { prisma } from '@/server/db'
+import { jsonErrorMessage } from '@/server/http'
 import { projectMemberWhere } from '@/server/project-members'
 import { subscribeProjectChatChanged } from '@/server/agent/project-chat-events'
 
@@ -18,10 +19,7 @@ export async function handleProjectAgentChatEventsGet(
   const user = await getCurrentUser()
 
   if (!user) {
-    return NextResponse.json(
-      { ok: false, message: 'Sign in before reading project chat events' },
-      { status: 401 }
-    )
+    return jsonErrorMessage('Sign in before reading project chat events', 401)
   }
 
   const { id } = await context.params
@@ -40,10 +38,7 @@ export async function handleProjectAgentChatEventsGet(
   })
 
   if (!project) {
-    return NextResponse.json(
-      { ok: false, message: 'Application not found' },
-      { status: 404 }
-    )
+    return jsonErrorMessage('Application not found', 404)
   }
 
   return new Response(createProjectChatEventStream(user.id, project.id, request.signal), {

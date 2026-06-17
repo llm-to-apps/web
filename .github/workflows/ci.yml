@@ -19,6 +19,20 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: os7_platform
+          POSTGRES_PASSWORD: password
+          POSTGRES_USER: os7
+        options: >-
+          --health-cmd "pg_isready -U os7 -d os7_platform"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
 
     steps:
       - name: Checkout
@@ -35,8 +49,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate Prisma schema
+        run: npm run prisma:validate
+        env:
+          DATABASE_URL: postgresql://os7:password@localhost:5432/os7_platform
+
       - name: Generate Prisma client
         run: npm run prisma:generate
+        env:
+          DATABASE_URL: postgresql://os7:password@localhost:5432/os7_platform
+
+      - name: Apply database migrations
+        run: npm run db:deploy
         env:
           DATABASE_URL: postgresql://os7:password@localhost:5432/os7_platform
 

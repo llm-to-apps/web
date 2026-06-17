@@ -28,6 +28,7 @@ import {
 } from '../_components/chat-progress'
 import { ChatOptionsMenu } from './chat-options-menu'
 import { useI18n } from '../_components/i18n-provider'
+import type { ApiResponse } from '@/shared/api'
 
 type ChatMessage = {
   id: string
@@ -80,11 +81,7 @@ type UserAgentChatProps = {
   initialMessages?: ChatMessage[]
 }
 
-type AgentRunResponse = {
-  ok?: boolean
-  runId?: string
-  message?: string
-}
+type AgentRunResponse = ApiResponse<{ runId: string }>
 
 export function UserAgentChat({
   activeRunId = null,
@@ -199,11 +196,15 @@ export function UserAgentChat({
 
       const data = (await response.json().catch(() => null)) as AgentRunResponse | null
 
-      if (!response.ok || !data?.runId) {
-        throw new Error(data?.message ?? `${t.chat.requestFailed} (${response.status})`)
+      if (!response.ok || !data || !data.ok) {
+        throw new Error(
+          data && !data.ok
+            ? data.error.message
+            : `${t.chat.requestFailed} (${response.status})`
+        )
       }
 
-      await streamAgentRun(data.runId, assistantMessageId)
+      await streamAgentRun(data.data.runId, assistantMessageId)
       ensureAssistantMessage(assistantMessageId, t.chat.done)
     } catch (error) {
       const message = error instanceof Error ? error.message : t.chat.requestFailed
@@ -224,12 +225,14 @@ export function UserAgentChat({
       const response = await fetch('/api/agent/chat/history', {
         method: 'DELETE'
       })
-      const data = (await response.json().catch(() => null)) as {
-        message?: string
-      } | null
+      const data = (await response.json().catch(() => null)) as ApiResponse | null
 
       if (!response.ok) {
-        throw new Error(data?.message ?? `${t.chat.clearFailed} (${response.status})`)
+        throw new Error(
+          data && !data.ok
+            ? data.error.message
+            : `${t.chat.clearFailed} (${response.status})`
+        )
       }
 
       setMessages([welcomeMessage])

@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 import { getCurrentUser } from '@/server/auth'
 import { prisma } from '@/server/db'
+import { jsonErrorMessage, jsonOk } from '@/server/http'
 import { projectMemberWhere } from '@/server/project-members'
 
 import {
@@ -17,10 +18,7 @@ export async function handleProjectAgentChatGet(
   const user = await getCurrentUser()
 
   if (!user) {
-    return NextResponse.json(
-      { ok: false, message: 'Sign in before reading the agent chat' },
-      { status: 401 }
-    )
+    return jsonErrorMessage('Sign in before reading the agent chat', 401)
   }
 
   const { id } = await context.params
@@ -40,10 +38,7 @@ export async function handleProjectAgentChatGet(
   })
 
   if (!project) {
-    return NextResponse.json(
-      { ok: false, message: 'Application not found' },
-      { status: 404 }
-    )
+    return jsonErrorMessage('Application not found', 404)
   }
 
   const [chatMessages, activeRun] = await Promise.all([
@@ -132,7 +127,7 @@ export async function handleProjectAgentChatGet(
       ])
   )
 
-  return NextResponse.json({
+  return jsonOk({
     activeRunId: activeRun?.id ?? null,
     messages: orderedMessages.map((message) => ({
       content: message.content,
@@ -143,7 +138,6 @@ export async function handleProjectAgentChatGet(
         message.role === 'assistant'
           ? formatInitialUsage(usageByAssistantMessageId.get(message.id))
           : null
-    })),
-    ok: true
+    }))
   })
 }

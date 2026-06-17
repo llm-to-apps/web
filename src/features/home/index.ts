@@ -1,6 +1,5 @@
-import { NextResponse } from 'next/server'
-
 import { getCurrentUser } from '@/server/auth'
+import { jsonErrorMessage, jsonOk } from '@/server/http'
 import { loadHomeProjects } from './projects'
 import { loadHomeUserAgentChat } from './user-agent-chat'
 
@@ -8,17 +7,11 @@ export async function handleHomeGet() {
   const user = await getCurrentUser()
 
   if (!user) {
-    return NextResponse.json(
-      { ok: false, message: 'Sign in before viewing home' },
-      { status: 401 }
-    )
+    return jsonErrorMessage('Sign in before viewing home', 401)
   }
 
   if (!user.onboarded) {
-    return NextResponse.json(
-      { ok: false, message: 'Complete onboarding first' },
-      { status: 403 }
-    )
+    return jsonErrorMessage('Complete onboarding first', 403)
   }
 
   const [projects, userAgentChat] = await Promise.all([
@@ -26,8 +19,7 @@ export async function handleHomeGet() {
     loadHomeUserAgentChat(user.id)
   ])
 
-  return NextResponse.json({
-    ok: true,
+  return jsonOk({
     activeRunId: userAgentChat.activeRunId,
     messages: userAgentChat.messages,
     projects

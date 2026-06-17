@@ -6,9 +6,31 @@ Next.js app for user registration and template deployment.
 
 ```bash
 npm install
-npm run prisma:push
+npm run db:deploy
+npm run db:seed
 npm run dev
 ```
+
+Create new schema changes with Prisma migrations:
+
+```bash
+npm run prisma:migrate:dev -- --name describe_change
+```
+
+Production startup applies committed migrations with `prisma migrate deploy`.
+Seed data is idempotent, but it should be run explicitly with `npm run db:seed`
+or as part of `npm run db:bootstrap`, not on every app process start.
+
+The production database provider is PostgreSQL. Fast local database e2e flows can
+use SQLite through the generated Prisma schema path:
+
+```bash
+npm run db:test:reset
+DATABASE_URL=file:$(pwd)/prisma/test-e2e.db npm run db:seed
+```
+
+SQLite uses `db push` only for isolated test databases. Production and CI should
+continue to verify committed PostgreSQL migrations with `npm run db:deploy`.
 
 For local Docker-based development:
 

@@ -11,15 +11,9 @@ import { LanguageSwitcher } from '../_components/language-switcher'
 import { SessionGate } from '../_components/session-gate'
 import type { SessionData } from '../_components/session-provider'
 import { useI18n } from '../_components/i18n-provider'
+import type { ApiResponse } from '@/shared/api'
 
-type SaveResponse =
-  | {
-      ok: true
-    }
-  | {
-      ok: false
-      message: string
-    }
+type SaveResponse = ApiResponse
 
 export default function SettingsPage() {
   return <SessionGate>{(session) => <SettingsContent session={session} />}</SessionGate>
@@ -60,8 +54,8 @@ function SettingsContent({ session }: { session: SessionData }) {
 
       if (!response.ok || !data || !data.ok) {
         throw new Error(
-          data && 'message' in data
-            ? data.message
+          data && !data.ok
+            ? data.error.message
             : `Failed to save settings (${response.status})`
         )
       }

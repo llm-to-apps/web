@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 import {
   type OAuthFrameCodeRequest,
@@ -7,7 +7,7 @@ import {
 import { getCurrentUser } from '@/server/auth'
 import { createAuthorizationCode, findActiveOAuthClient } from '@/server/oauth'
 import { prisma } from '@/server/db'
-import { jsonErrorMessage } from '@/server/http'
+import { jsonErrorMessage, jsonOk } from '@/server/http'
 import { logInfo, logWarn } from '@/server/logger'
 import { projectMemberWhere } from '@/server/project-members'
 
@@ -110,11 +110,10 @@ export async function handleOAuthFrameCodePost(
     userId: user.id
   })
 
-  const payload: OAuthFrameCodeResponse = {
-    ok: true,
+  const payload: Omit<OAuthFrameCodeResponse, 'ok'> = {
     code,
     state: body.state
   }
 
-  return NextResponse.json(payload)
+  return jsonOk(payload)
 }

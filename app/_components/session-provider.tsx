@@ -10,6 +10,7 @@ import {
   useState
 } from 'react'
 import type { CurrentUser } from '@/server/auth'
+import type { ApiResponse } from '@/shared/api'
 
 export type UsageSummary = {
   title: string
@@ -35,16 +36,10 @@ type SessionContextValue = SessionState & {
   refresh: () => Promise<void>
 }
 
-type SessionResponse =
-  | {
-      ok: true
-      usageSummary: UsageSummary
-      user: CurrentUser
-    }
-  | {
-      ok: false
-      user: null
-    }
+type SessionResponse = ApiResponse<{
+  usageSummary: UsageSummary
+  user: CurrentUser
+}>
 
 const SessionContext = createContext<SessionContextValue | null>(null)
 
@@ -70,8 +65,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     setSession({
       data: {
-        usageSummary: data.usageSummary,
-        user: data.user
+        usageSummary: data.data.usageSummary,
+        user: data.data.user
       },
       status: 'authenticated'
     })

@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 import {
   getProjectRuntimeStatus,
   readProjectId
 } from '@/features/projects/runtime-status'
 import { getCurrentUser } from '@/server/auth'
-import { jsonErrorMessage } from '@/server/http'
+import { jsonErrorMessage, jsonOk } from '@/server/http'
 import { appErrorStatus } from '@/shared/result'
 
 type ProjectStatusContext = {
@@ -37,15 +37,9 @@ export async function handleProjectStatusGet(
     return jsonErrorMessage(result.message, appErrorStatus(result.code), result.code)
   }
 
-  return NextResponse.json(
-    {
-      ok: true,
-      ...result.data
-    },
-    {
-      headers: {
-        'cache-control': 'no-store'
-      }
+  return jsonOk(result.data, {
+    headers: {
+      'cache-control': 'no-store'
     }
-  )
+  })
 }

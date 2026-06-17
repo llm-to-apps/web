@@ -18,6 +18,7 @@ import { useHover } from '@mantine/hooks'
 import { Download, Store } from 'lucide-react'
 import { AppIcon } from '../_components/app-icon'
 import { useI18n } from '../_components/i18n-provider'
+import type { ApiResponse } from '@/shared/api'
 
 export type DesktopProject = {
   id: string
@@ -34,15 +35,7 @@ export type DesktopProject = {
   } | null
 }
 
-type ProjectResult =
-  | {
-      ok: true
-      project: DesktopProject
-    }
-  | {
-      ok: false
-      message: string
-    }
+type ProjectResult = ApiResponse<{ project: DesktopProject }>
 
 type AppDesktopProps = {
   initialProjects: DesktopProject[]
@@ -83,7 +76,7 @@ export function AppDesktop({ initialProjects }: AppDesktopProps) {
             const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}`)
             const data = (await response.json()) as ProjectResult
 
-            return response.ok && data.ok ? data.project : null
+            return response.ok && data.ok ? data.data.project : null
           })
         )
 

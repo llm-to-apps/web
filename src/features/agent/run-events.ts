@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 import { elapsedSince, logAgentRun } from '@/server/agent/run-logger'
 import { getCurrentUser } from '@/server/auth'
 import { prisma } from '@/server/db'
+import { jsonErrorMessage } from '@/server/http'
 
 import { createRunEventStream } from './run-event-stream'
 
@@ -18,10 +19,7 @@ export async function handleAgentRunEventsGet(
   const user = await getCurrentUser()
 
   if (!user) {
-    return NextResponse.json(
-      { ok: false, message: 'Sign in before reading agent run events' },
-      { status: 401 }
-    )
+    return jsonErrorMessage('Sign in before reading agent run events', 401)
   }
 
   const { id } = await context.params
@@ -37,10 +35,7 @@ export async function handleAgentRunEventsGet(
   })
 
   if (!run) {
-    return NextResponse.json(
-      { ok: false, message: 'Agent run not found' },
-      { status: 404 }
-    )
+    return jsonErrorMessage('Agent run not found', 404)
   }
 
   const requestedAfter = Number(request.nextUrl.searchParams.get('after') || '0')

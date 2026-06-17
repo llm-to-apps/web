@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 
 import { clientError, clientInfo, clientWarn } from '@/shared/client-logger'
+import type { ApiResponse } from '@/shared/api'
 
 type ProjectOAuthBridgeProps = {
   appOrigin: string
@@ -66,10 +67,10 @@ export function ProjectOAuthBridge({ appOrigin, projectId }: ProjectOAuthBridgeP
             })
           }
         )
-        const payload = (await response.json().catch(() => null)) as
-          | { ok: true; code: string; state: string }
-          | { ok: false; message?: string }
-          | null
+        const payload = (await response.json().catch(() => null)) as ApiResponse<{
+          code: string
+          state: string
+        }> | null
 
         if (!response.ok || !payload) {
           clientWarn('oauth_bridge.frame_code.failed', { status: response.status })
@@ -78,9 +79,9 @@ export function ProjectOAuthBridge({ appOrigin, projectId }: ProjectOAuthBridgeP
 
         if (!payload.ok) {
           clientWarn('oauth_bridge.frame_code.rejected', {
-            message: payload.message
+            message: payload.error.message
           })
-          throw new Error(payload.message || 'OAuth bridge request failed')
+          throw new Error(payload.error.message || 'OAuth bridge request failed')
         }
 
         clientInfo('oauth_bridge.response.posted', { appOrigin })
@@ -88,8 +89,8 @@ export function ProjectOAuthBridge({ appOrigin, projectId }: ProjectOAuthBridgeP
           source,
           {
             type: 'oauth:response',
-            code: payload.code,
-            state: payload.state
+            code: payload.data.code,
+            state: payload.data.state
           },
           appOrigin
         )

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "prisma generate && prisma db push && npm run seed && next dev",
+    "dev": "npm run prisma:generate && npm run db:deploy && npm run db:seed && next dev",
     "worker": "npm run worker:build && node dist-worker/worker/deploy-worker.js",
     "worker:start": "node dist-worker/worker/deploy-worker.js",
     "worker:build": "tsc -p tsconfig.worker.json",
@@ -14,9 +14,16 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "prisma:generate": "prisma generate",
-    "prisma:push": "prisma db push",
-    "seed": "node --experimental-strip-types prisma/seed.ts",
+    "prisma:generate": "node scripts/prisma.mjs generate",
+    "prisma:migrate:dev": "node scripts/prisma.mjs migrate dev",
+    "prisma:migrate:deploy": "npm run db:deploy",
+    "prisma:validate": "node scripts/prisma.mjs validate",
+    "db:bootstrap": "npm run db:deploy && npm run db:seed",
+    "db:deploy": "node scripts/prisma.mjs migrate deploy",
+    "db:push": "RUST_LOG=${RUST_LOG:-info} node scripts/prisma.mjs db push",
+    "db:seed": "node --experimental-strip-types prisma/seed.ts",
+    "db:test:reset": "rm -f prisma/test-e2e.db prisma/test-e2e.db-journal && DATABASE_URL=file:$(pwd)/prisma/test-e2e.db npm run prisma:generate && RUST_LOG=info DATABASE_URL=file:$(pwd)/prisma/test-e2e.db node scripts/prisma.mjs db push --skip-generate",
+    "seed": "npm run db:seed",
     "slugs:build": "node scripts/build-slug-words.mjs"
   },
   "dependencies": {

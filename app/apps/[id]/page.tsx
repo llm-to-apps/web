@@ -19,6 +19,7 @@ import { formatMessage } from '@/shared/i18n/dictionaries'
 import { useI18n } from '../../_components/i18n-provider'
 import { ProjectAgentPanel } from './project-agent-panel'
 import { ProjectOAuthBridge } from './project-oauth-bridge'
+import type { ApiResponse } from '@/shared/api'
 
 type ProjectWorkspace = {
   activeRunId: string | null
@@ -31,35 +32,22 @@ type ProjectWorkspace = {
   usageSummary: ComponentProps<typeof ProjectAgentPanel>['usageSummary']
 }
 
-type ProjectWorkspaceResponse =
-  | ({
-      ok: true
-    } & ProjectWorkspace)
-  | {
-      ok: false
-      message: string
-    }
+type ProjectWorkspaceResponse = ApiResponse<ProjectWorkspace>
 
-type ProjectStatusResponse =
-  | {
-      ok: true
-      dev: {
-        ready: boolean
-        url: string
-      }
-      prod: {
-        ready: boolean
-        url: string
-      }
-      project: {
-        id: string
-        status: string
-      }
-    }
-  | {
-      ok: false
-      message?: string
-    }
+type ProjectStatusResponse = ApiResponse<{
+  dev: {
+    ready: boolean
+    url: string
+  }
+  prod: {
+    ready: boolean
+    url: string
+  }
+  project: {
+    id: string
+    status: string
+  }
+}>
 
 export default function ProjectPage() {
   const params = useParams<{ id: string }>()
@@ -92,19 +80,19 @@ export default function ProjectPage() {
 
       if (!response.ok || !payload || !payload.ok) {
         setError(
-          payload && 'message' in payload
-            ? payload.message
+          payload && !payload.ok
+            ? payload.error.message
             : `Failed to load application (${response.status})`
         )
         return
       }
 
       setData({
-        activeRunId: payload.activeRunId,
-        appOrigin: payload.appOrigin,
-        messages: payload.messages,
-        project: payload.project,
-        usageSummary: payload.usageSummary
+        activeRunId: payload.data.activeRunId,
+        appOrigin: payload.data.appOrigin,
+        messages: payload.data.messages,
+        project: payload.data.project,
+        usageSummary: payload.data.usageSummary
       })
     }
 
@@ -135,10 +123,7 @@ export default function ProjectPage() {
           method: 'POST'
         }
       )
-      const payload = (await response.json().catch(() => null)) as
-        | { ok: true }
-        | { ok: false; message?: string }
-        | null
+      const payload = (await response.json().catch(() => null)) as ApiResponse | null
 
       if (!isCurrent) {
         return false
@@ -146,8 +131,8 @@ export default function ProjectPage() {
 
       if (!response.ok || !payload?.ok) {
         setDevError(
-          payload && 'message' in payload
-            ? payload.message || 'Development server did not start'
+          payload && !payload.ok
+            ? payload.error.message || 'Development server did not start'
             : `Development server did not start (${response.status})`
         )
         return false
@@ -174,15 +159,15 @@ export default function ProjectPage() {
 
         if (!response.ok || !payload || !payload.ok) {
           setDevError(
-            payload && 'message' in payload
-              ? payload.message || 'Development preview is unavailable'
+            payload && !payload.ok
+              ? payload.error.message || 'Development preview is unavailable'
               : `Development preview is unavailable (${response.status})`
           )
           return
         }
 
-        if (payload.dev.ready) {
-          setDevReadyUrl(payload.dev.url)
+        if (payload.data.dev.ready) {
+          setDevReadyUrl(payload.data.dev.url)
           return
         }
 

@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 import { getCurrentUser } from '@/server/auth'
-import { jsonErrorMessage } from '@/server/http'
+import { jsonErrorMessage, jsonOk } from '@/server/http'
 import {
   findWorkspaceProject,
   loadWorkspaceChat,
@@ -52,8 +52,7 @@ export async function handleProjectWorkspaceGet(
   const devUrl = (project.devUrl ?? createDevUrl(appUrl)).replace(/\/$/, '')
   const activeAppUrl = mode === 'dev' ? devUrl : appUrl
 
-  return NextResponse.json({
-    ok: true,
+  return jsonOk({
     activeRunId: chat.activeRunId,
     appOrigin: new URL(activeAppUrl).origin,
     messages: chat.messages,

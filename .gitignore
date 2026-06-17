@@ -3,6 +3,9 @@ node_modules
 out
 dist-worker
 next-env.d.ts
+prisma/schema.generated.*.prisma
+prisma/test-e2e.db
+prisma/test-e2e.db-journal
 .env
 .env.local
 .DS_Store

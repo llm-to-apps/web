@@ -31,6 +31,7 @@ import {
   formatChatProgressMessage
 } from '../../_components/chat-progress'
 import { useI18n } from '../../_components/i18n-provider'
+import type { ApiResponse } from '@/shared/api'
 
 type ProjectAgentChatProps = {
   activeRunId?: string | null
@@ -51,17 +52,12 @@ export type ProjectAgentChatHandle = {
   clearHistory: () => void
 }
 
-type AgentRunResponse = {
-  ok?: boolean
-  runId?: string
-  message?: string
-}
+type AgentRunResponse = ApiResponse<{ runId: string }>
 
-type ProjectChatStateResponse = {
-  activeRunId?: string | null
-  messages?: ChatMessage[]
-  ok?: boolean
-}
+type ProjectChatStateResponse = ApiResponse<{
+  activeRunId: string | null
+  messages: ChatMessage[]
+}>
 
 type ChatMessage = {
   id: string
@@ -208,13 +204,15 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
           return
         }
 
-        if (!isSendingRef.current && data.messages) {
-          setMessages(data.messages.length > 0 ? data.messages : [welcomeMessage])
+        if (!isSendingRef.current && data.data.messages) {
+          setMessages(
+            data.data.messages.length > 0 ? data.data.messages : [welcomeMessage]
+          )
         }
 
-        if (data.activeRunId && activeRunRef.current !== data.activeRunId) {
-          startRunStreamRef.current(data.activeRunId)
-        } else if (!data.activeRunId) {
+        if (data.data.activeRunId && activeRunRef.current !== data.data.activeRunId) {
+          startRunStreamRef.current(data.data.activeRunId)
+        } else if (!data.data.activeRunId) {
           activeRunRef.current = null
         }
       }
@@ -288,12 +286,16 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
 
         const data = (await response.json().catch(() => null)) as AgentRunResponse | null
 
-        if (!response.ok || !data?.runId) {
-          throw new Error(data?.message ?? `${t.chat.requestFailed} (${response.status})`)
+        if (!response.ok || !data || !data.ok) {
+          throw new Error(
+            data && !data.ok
+              ? data.error.message
+              : `${t.chat.requestFailed} (${response.status})`
+          )
         }
 
-        activeRunRef.current = data.runId
-        await streamAgentRun(data.runId, assistantMessageId)
+        activeRunRef.current = data.data.runId
+        await streamAgentRun(data.data.runId, assistantMessageId)
         ensureAssistantMessage(assistantMessageId, t.chat.done)
       } catch (error) {
         const message = error instanceof Error ? error.message : t.chat.requestFailed
@@ -317,12 +319,14 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
             method: 'DELETE'
           }
         )
-        const data = (await response.json().catch(() => null)) as {
-          message?: string
-        } | null
+        const data = (await response.json().catch(() => null)) as ApiResponse | null
 
         if (!response.ok) {
-          throw new Error(data?.message ?? `${t.chat.clearFailed} (${response.status})`)
+          throw new Error(
+            data && !data.ok
+              ? data.error.message
+              : `${t.chat.clearFailed} (${response.status})`
+          )
         }
 
         setMessages([welcomeMessage])

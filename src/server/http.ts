@@ -1,36 +1,24 @@
 import { NextResponse } from 'next/server'
 
+import { appErrorStatus, type AppError, type AppResult } from '@/shared/result'
 import {
-  apiResponseFromResult,
-  appErrorStatus,
-  type AppError,
-  type AppResult
-} from '@/shared/result'
+  type ApiErrorResponse,
+  type ApiResponse,
+  type ApiSuccessResponse
+} from '@/shared/api'
 import { schemaErrorMessage } from '@/shared/schema'
 
-export type PublicApiSuccess<T extends Record<string, unknown> = Record<string, never>> =
-  {
-    ok: true
-  } & T
+export type { ApiErrorResponse, ApiResponse, ApiSuccessResponse }
 
-export type PublicApiError = {
-  ok: false
-  message: string
-  code?: AppError['code']
-}
+export type PublicApiSuccess<T = Record<string, never>> = ApiSuccessResponse<T>
+export type PublicApiError = ApiErrorResponse
+export type PublicApiResponse<T = Record<string, never>> = ApiResponse<T>
 
-export type PublicApiResponse<T extends Record<string, unknown> = Record<string, never>> =
-  | PublicApiSuccess<T>
-  | PublicApiError
-
-export function jsonOk<T extends Record<string, unknown> = Record<string, never>>(
-  data?: T,
-  init?: ResponseInit
-) {
-  return NextResponse.json<PublicApiSuccess<T>>(
+export function jsonOk<T = Record<string, never>>(data = {} as T, init?: ResponseInit) {
+  return NextResponse.json<ApiSuccessResponse<T>>(
     {
       ok: true,
-      ...(data ?? ({} as T))
+      data
     },
     init
   )
@@ -41,11 +29,13 @@ export function jsonErrorMessage(
   status: number,
   code?: AppError['code']
 ) {
-  return NextResponse.json<PublicApiError>(
+  return NextResponse.json<ApiErrorResponse>(
     {
       ok: false,
-      message,
-      ...(code ? { code } : {})
+      error: {
+        code: code ?? appErrorCodeFromStatus(status),
+        message
+      }
     },
     {
       status
@@ -58,15 +48,32 @@ export function jsonValidationError(error: unknown) {
 }
 
 export function jsonError(error: AppError) {
-  return NextResponse.json(apiResponseFromResult(error), {
-    status: appErrorStatus(error.code)
-  })
+  return jsonErrorMessage(error.message, appErrorStatus(error.code), error.code)
 }
 
-export function jsonResult<T>(result: AppResult<T>) {
+export function jsonResult<T extends Record<string, unknown>>(result: AppResult<T>) {
   if (!result.ok) {
     return jsonError(result)
   }
 
-  return NextResponse.json(apiResponseFromResult(result))
+  return jsonOk(result.data)
+}
+
+function appErrorCodeFromStatus(status: number): AppError['code'] {
+  switch (status) {
+    case 400:
+      return 'BAD_REQUEST'
+    case 401:
+      return 'UNAUTHORIZED'
+    case 403:
+      return 'FORBIDDEN'
+    case 404:
+      return 'NOT_FOUND'
+    case 409:
+      return 'CONFLICT'
+    case 429:
+      return 'RATE_LIMITED'
+    default:
+      return 'INTERNAL'
+  }
 }

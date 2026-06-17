@@ -8,6 +8,7 @@ import { UserAgentChat } from './user-agent-chat'
 import { AppLayout } from '../_components/app-layout'
 import { SessionGate } from '../_components/session-gate'
 import type { SessionData } from '../_components/session-provider'
+import type { ApiResponse } from '@/shared/api'
 
 type HomeData = {
   activeRunId: string | null
@@ -15,14 +16,7 @@ type HomeData = {
   projects: DesktopProject[]
 }
 
-type HomeResponse =
-  | ({
-      ok: true
-    } & HomeData)
-  | {
-      ok: false
-      message: string
-    }
+type HomeResponse = ApiResponse<HomeData>
 
 export default function HomePage() {
   return <SessionGate>{(session) => <HomeContent session={session} />}</SessionGate>
@@ -47,17 +41,17 @@ function HomeContent({ session }: { session: SessionData }) {
 
       if (!response.ok || !payload || !payload.ok) {
         setError(
-          payload && 'message' in payload
-            ? payload.message
+          payload && !payload.ok
+            ? payload.error.message
             : `Failed to load home (${response.status})`
         )
         return
       }
 
       setData({
-        activeRunId: payload.activeRunId,
-        messages: payload.messages,
-        projects: payload.projects
+        activeRunId: payload.data.activeRunId,
+        messages: payload.data.messages,
+        projects: payload.data.projects
       })
     }
 

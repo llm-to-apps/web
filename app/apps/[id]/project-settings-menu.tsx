@@ -17,6 +17,7 @@ import { AlertTriangle, Eraser, ExternalLink, MoreHorizontal, Trash2 } from 'luc
 import { useI18n } from '../../_components/i18n-provider'
 import { FormActions } from '../../_components/form-actions'
 import { useRouter } from 'next/navigation'
+import type { ApiResponse } from '@/shared/api'
 
 type ProjectSettingsMenuProps = {
   isClearHistoryDisabled?: boolean
@@ -74,13 +75,10 @@ export function ProjectSettingsMenu({
       const response = await fetch(`/api/projects/${encodeURIComponent(project.id)}`, {
         method: 'DELETE'
       })
-      const data = (await response.json().catch(() => null)) as
-        | { ok: true }
-        | { ok: false; message?: string }
-        | null
+      const data = (await response.json().catch(() => null)) as ApiResponse | null
 
       if (!response.ok || !data?.ok) {
-        throw new Error(data && 'message' in data ? data.message : t.desktop.deleteFailed)
+        throw new Error(data && !data.ok ? data.error.message : t.desktop.deleteFailed)
       }
 
       setIsDeleteOpen(false)

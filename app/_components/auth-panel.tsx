@@ -17,17 +17,11 @@ import {
 import { useI18n } from './i18n-provider'
 import { useSession } from './session-provider'
 import { Os7Logo } from '../../ui-kit/src/os7-brand'
+import type { ApiResponse } from '@/shared/api'
 
 type AuthStep = 'email' | 'code'
 
-type AuthResult =
-  | {
-      ok: true
-    }
-  | {
-      ok: false
-      message: string
-    }
+type AuthResult = ApiResponse
 
 type AuthPanelProps = {
   redirectTo?: string
@@ -76,7 +70,10 @@ export function AuthPanel({ redirectTo = '/home' }: AuthPanelProps) {
       if (!response.ok || !data.ok) {
         setResult({
           ok: false,
-          message: 'message' in data ? data.message : t.auth.authenticationFailed
+          error: {
+            code: 'INTERNAL',
+            message: !data.ok ? data.error.message : t.auth.authenticationFailed
+          }
         })
         return
       }
@@ -84,7 +81,8 @@ export function AuthPanel({ redirectTo = '/home' }: AuthPanelProps) {
       if (step === 'email') {
         setStep('code')
         setResult({
-          ok: true
+          ok: true,
+          data: {}
         })
         return
       }
@@ -94,7 +92,10 @@ export function AuthPanel({ redirectTo = '/home' }: AuthPanelProps) {
     } catch (error) {
       setResult({
         ok: false,
-        message: error instanceof Error ? error.message : t.auth.authenticationFailed
+        error: {
+          code: 'INTERNAL',
+          message: error instanceof Error ? error.message : t.auth.authenticationFailed
+        }
       })
     } finally {
       setIsSubmitting(false)
@@ -171,7 +172,9 @@ export function AuthPanel({ redirectTo = '/home' }: AuthPanelProps) {
               Checking code...
             </Text>
           ) : null}
-          {result?.ok === false ? <Alert color="red">{result.message}</Alert> : null}
+          {result?.ok === false ? (
+            <Alert color="red">{result.error.message}</Alert>
+          ) : null}
         </Stack>
       </Card>
     </Stack>
