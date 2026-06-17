@@ -6,7 +6,7 @@
     "dev": "npm run prisma:generate && npm run db:deploy && npm run db:seed && next dev",
     "worker": "npm run worker:build && node dist-worker/worker/deploy-worker.js",
     "worker:start": "node dist-worker/worker/deploy-worker.js",
-    "worker:build": "tsc -p tsconfig.worker.json",
+    "worker:build": "rm -rf dist-worker && tsc -p tsconfig.worker.json && tsc-alias -p tsconfig.worker.json",
     "build": "next build && npm run worker:build",
     "start": "next start",
     "cli": "tsx cli/index.ts",
@@ -55,6 +55,7 @@
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.9",
     "prettier": "^3.8.4",
+    "tsc-alias": "^1.8.17",
     "typescript": "^5.8.3",
     "vitest": "^4.1.9"
   }
