@@ -24,7 +24,7 @@
     "db:bootstrap": "npm run db:deploy && npm run db:seed",
     "db:deploy": "node scripts/prisma.mjs migrate deploy",
     "db:push": "RUST_LOG=${RUST_LOG:-info} node scripts/prisma.mjs db push",
-    "db:seed": "node --experimental-strip-types prisma/seed.ts",
+    "db:seed": "tsx prisma/seed.ts",
     "db:test:reset": "rm -f prisma/test-e2e.db prisma/test-e2e.db-journal && DATABASE_URL=file:$(pwd)/prisma/test-e2e.db npm run prisma:generate && RUST_LOG=info DATABASE_URL=file:$(pwd)/prisma/test-e2e.db node scripts/prisma.mjs db push --skip-generate",
     "seed": "npm run db:seed",
     "slugs:build": "node scripts/build-slug-words.mjs"
