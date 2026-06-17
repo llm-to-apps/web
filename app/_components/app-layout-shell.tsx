@@ -1,6 +1,6 @@
-'use client';
+'use client'
 
-import type { ReactNode } from 'react';
+import type { ReactNode } from 'react'
 import {
   AppShell,
   Box,
@@ -11,25 +11,25 @@ import {
   Stack,
   Text,
   Title
-} from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
-import type { CurrentUser } from '../../lib/auth';
-import { Os7Logo, os7Brand } from '../../ui-kit/src/os7-brand';
-import { AccountMenu } from './account-menu';
-import { AppBreadcrumbs } from './app-breadcrumbs';
-import { HeaderNav } from './header-nav';
+} from '@mantine/core'
+import { useDisclosure } from '@mantine/hooks'
+import type { CurrentUser } from '@/server/auth'
+import { Os7Logo, os7Brand } from '../../ui-kit/src/os7-brand'
+import { AccountMenu } from './account-menu'
+import { AppBreadcrumbs } from './app-breadcrumbs'
+import { HeaderNav } from './header-nav'
 
 type AppLayoutShellProps = {
-  children: ReactNode;
-  description?: string;
-  siteHref: string;
-  title?: string;
+  children: ReactNode
+  description?: string
+  siteHref: string
+  title?: string
   usageSummary: {
-    title: string;
-    total: string;
-  } | null;
-  user: CurrentUser;
-};
+    title: string
+    total: string
+  } | null
+  user: CurrentUser
+}
 
 export function AppLayoutShell({
   children,
@@ -39,14 +39,10 @@ export function AppLayoutShell({
   usageSummary,
   user
 }: AppLayoutShellProps) {
-  const [opened, { close, toggle }] = useDisclosure();
+  const [opened, { close, toggle }] = useDisclosure()
 
   return (
-    <AppShell
-      footer={{ height: 44, offset: false }}
-      header={{ height: 64 }}
-      padding="md"
-    >
+    <AppShell footer={{ height: 44, offset: false }} header={{ height: 64 }} padding="md">
       <AppShell.Header>
         <Container h="100%">
           <Box
@@ -110,5 +106,5 @@ export function AppLayoutShell({
         </Container>
       </AppShell.Footer>
     </AppShell>
-  );
+  )
 }

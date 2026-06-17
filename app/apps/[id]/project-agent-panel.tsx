@@ -1,42 +1,42 @@
-'use client';
+'use client'
 
-import { useCallback, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ActionIcon, Box, Group, Paper, Stack, Text } from '@mantine/core';
-import { ArrowLeft } from 'lucide-react';
-import { useI18n } from '../../_components/i18n-provider';
+import { useCallback, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { ActionIcon, Box, Group, Paper, Stack, Text } from '@mantine/core'
+import { ArrowLeft } from 'lucide-react'
+import { useI18n } from '../../_components/i18n-provider'
 import {
   ProjectAgentChat,
   type AgentMode,
   type ProjectAgentChatHandle
-} from './project-agent-chat';
-import { ProjectSettingsMenu } from './project-settings-menu';
+} from './project-agent-chat'
+import { ProjectSettingsMenu } from './project-settings-menu'
 
 type ProjectAgentPanelProps = {
-  activeRunId?: string | null;
+  activeRunId?: string | null
   initialMessages?: Array<{
-    id: string;
-    role: 'assistant' | 'user';
-    source?: string | null;
-    content: string;
+    id: string
+    role: 'assistant' | 'user'
+    source?: string | null
+    content: string
     usage?: {
-      creditsUsed: number;
-    } | null;
-  }>;
+      creditsUsed: number
+    } | null
+  }>
   project: {
-    appUrl: string;
-    id: string;
-    name: string;
-    status: string;
-    domain: string;
-    toolsUrl: string;
-  };
+    appUrl: string
+    id: string
+    name: string
+    status: string
+    domain: string
+    toolsUrl: string
+  }
   usageSummary?: {
-    title: string;
-    total: string;
-  } | null;
-};
+    title: string
+    total: string
+  } | null
+}
 
 export function ProjectAgentPanel({
   activeRunId = null,
@@ -44,31 +44,31 @@ export function ProjectAgentPanel({
   project,
   usageSummary = null
 }: ProjectAgentPanelProps) {
-  const { t } = useI18n();
-  const pathname = usePathname();
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const { t } = useI18n()
+  const pathname = usePathname()
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const mode = useMemo<AgentMode>(
     () => (searchParams.get('mode') === 'dev' ? 'dev' : 'use'),
     [searchParams]
-  );
-  const [isSending, setIsSending] = useState(false);
-  const chatRef = useRef<ProjectAgentChatHandle | null>(null);
+  )
+  const [isSending, setIsSending] = useState(false)
+  const chatRef = useRef<ProjectAgentChatHandle | null>(null)
 
   const handleSendingChange = useCallback((nextIsSending: boolean) => {
-    setIsSending(nextIsSending);
-  }, []);
+    setIsSending(nextIsSending)
+  }, [])
 
   const handleModeChange = useCallback(
     (nextMode: AgentMode) => {
-      const nextParams = new URLSearchParams(searchParams.toString());
-      nextParams.set('mode', nextMode);
+      const nextParams = new URLSearchParams(searchParams.toString())
+      nextParams.set('mode', nextMode)
       router.replace(`${pathname}?${nextParams.toString()}`, {
         scroll: false
-      });
+      })
     },
     [pathname, router, searchParams]
-  );
+  )
 
   return (
     <Paper h="100%" mih={0} p="md" style={{ overflow: 'hidden' }} w="100%" withBorder>
@@ -78,7 +78,8 @@ export function ProjectAgentPanel({
           pos="absolute"
           right={0}
           style={{
-            background: 'linear-gradient(180deg, #fff 0%, rgba(255,255,255,0.92) 58%, rgba(255,255,255,0) 100%)',
+            background:
+              'linear-gradient(180deg, #fff 0%, rgba(255,255,255,0.92) 58%, rgba(255,255,255,0) 100%)',
             zIndex: 2
           }}
           top={0}
@@ -114,16 +115,16 @@ export function ProjectAgentPanel({
           </Group>
         </Box>
 
-      <ProjectAgentChat
-        activeRunId={activeRunId}
-        initialMessages={initialMessages}
-        mode={mode}
-        onModeChange={handleModeChange}
-        onSendingChange={handleSendingChange}
-        project={project}
-        ref={chatRef}
-      />
+        <ProjectAgentChat
+          activeRunId={activeRunId}
+          initialMessages={initialMessages}
+          mode={mode}
+          onModeChange={handleModeChange}
+          onSendingChange={handleSendingChange}
+          project={project}
+          ref={chatRef}
+        />
       </Stack>
     </Paper>
-  );
+  )
 }

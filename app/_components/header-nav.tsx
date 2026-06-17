@@ -1,19 +1,19 @@
-'use client';
+'use client'
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Group, NavLink, Stack } from '@mantine/core';
-import { Bot, PanelsTopLeft } from 'lucide-react';
-import { useI18n } from './i18n-provider';
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { Group, NavLink, Stack } from '@mantine/core'
+import { Bot, PanelsTopLeft } from 'lucide-react'
+import { useI18n } from './i18n-provider'
 
 type HeaderNavProps = {
-  layout?: 'header' | 'drawer';
-  onNavigate?: () => void;
-};
+  layout?: 'header' | 'drawer'
+  onNavigate?: () => void
+}
 
 export function HeaderNav({ layout = 'header', onNavigate }: HeaderNavProps) {
-  const pathname = usePathname();
-  const { t } = useI18n();
+  const pathname = usePathname()
+  const { t } = useI18n()
   const items = [
     {
       href: '/home',
@@ -27,7 +27,7 @@ export function HeaderNav({ layout = 'header', onNavigate }: HeaderNavProps) {
       isActive: pathname === '/store',
       label: t.tabs.store
     }
-  ];
+  ]
 
   if (layout === 'drawer') {
     return (
@@ -45,7 +45,7 @@ export function HeaderNav({ layout = 'header', onNavigate }: HeaderNavProps) {
           />
         ))}
       </Stack>
-    );
+    )
   }
 
   return (
@@ -77,5 +77,5 @@ export function HeaderNav({ layout = 'header', onNavigate }: HeaderNavProps) {
         />
       ))}
     </Group>
-  );
+  )
 }

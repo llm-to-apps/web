@@ -1,10 +1,10 @@
-import '@mantine/core/styles.css';
-import '@mantine/notifications/styles.css';
-import type { Metadata } from 'next';
-import { AppSplash } from './_components/app-splash';
-import { I18nProvider } from './_components/i18n-provider';
-import { SessionProvider } from './_components/session-provider';
-import { WebMantineProvider } from './mantine-provider';
+import '@mantine/core/styles.css'
+import '@mantine/notifications/styles.css'
+import type { Metadata } from 'next'
+import { AppSplash } from './_components/app-splash'
+import { I18nProvider } from './_components/i18n-provider'
+import { SessionProvider } from './_components/session-provider'
+import { WebMantineProvider } from './mantine-provider'
 
 export const metadata: Metadata = {
   title: 'OS7 – your own agentic operating system',
@@ -13,12 +13,12 @@ export const metadata: Metadata = {
     icon: '/favicon.svg',
     apple: '/apple-touch-icon.png'
   }
-};
+}
 
 export default function RootLayout({
   children
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   return (
     <html lang="en">
@@ -32,5 +32,5 @@ export default function RootLayout({
         </WebMantineProvider>
       </body>
     </html>
-  );
+  )
 }

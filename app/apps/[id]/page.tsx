@@ -1,7 +1,7 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
-import type { ComponentProps } from 'react';
+import { useEffect, useState } from 'react'
+import type { ComponentProps } from 'react'
 import {
   Alert,
   Center,
@@ -13,67 +13,67 @@ import {
   Stack,
   Text,
   Title
-} from '@mantine/core';
-import { useParams, useSearchParams } from 'next/navigation';
-import { formatMessage } from '../../../lib/i18n/dictionaries';
-import { useI18n } from '../../_components/i18n-provider';
-import { ProjectAgentPanel } from './project-agent-panel';
-import { ProjectOAuthBridge } from './project-oauth-bridge';
+} from '@mantine/core'
+import { useParams, useSearchParams } from 'next/navigation'
+import { formatMessage } from '@/shared/i18n/dictionaries'
+import { useI18n } from '../../_components/i18n-provider'
+import { ProjectAgentPanel } from './project-agent-panel'
+import { ProjectOAuthBridge } from './project-oauth-bridge'
 
 type ProjectWorkspace = {
-  activeRunId: string | null;
-  appOrigin: string;
-  messages: ComponentProps<typeof ProjectAgentPanel>['initialMessages'];
+  activeRunId: string | null
+  appOrigin: string
+  messages: ComponentProps<typeof ProjectAgentPanel>['initialMessages']
   project: ComponentProps<typeof ProjectAgentPanel>['project'] & {
-    deployError: string | null;
-    devUrl: string;
-  };
-  usageSummary: ComponentProps<typeof ProjectAgentPanel>['usageSummary'];
-};
+    deployError: string | null
+    devUrl: string
+  }
+  usageSummary: ComponentProps<typeof ProjectAgentPanel>['usageSummary']
+}
 
 type ProjectWorkspaceResponse =
   | ({
-      ok: true;
+      ok: true
     } & ProjectWorkspace)
   | {
-      ok: false;
-      message: string;
-    };
+      ok: false
+      message: string
+    }
 
 type ProjectStatusResponse =
   | {
-      ok: true;
+      ok: true
       dev: {
-        ready: boolean;
-        url: string;
-      };
+        ready: boolean
+        url: string
+      }
       prod: {
-        ready: boolean;
-        url: string;
-      };
+        ready: boolean
+        url: string
+      }
       project: {
-        id: string;
-        status: string;
-      };
+        id: string
+        status: string
+      }
     }
   | {
-      ok: false;
-      message?: string;
-    };
+      ok: false
+      message?: string
+    }
 
 export default function ProjectPage() {
-  const params = useParams<{ id: string }>();
-  const searchParams = useSearchParams();
-  const { t } = useI18n();
-  const [data, setData] = useState<ProjectWorkspace | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [devReadyUrl, setDevReadyUrl] = useState<string | null>(null);
-  const [devError, setDevError] = useState<string | null>(null);
-  const mode = searchParams.get('mode') === 'dev' ? 'dev' : 'use';
-  const previewUrl = mode === 'dev' ? devReadyUrl : data?.project.appUrl;
+  const params = useParams<{ id: string }>()
+  const searchParams = useSearchParams()
+  const { t } = useI18n()
+  const [data, setData] = useState<ProjectWorkspace | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [devReadyUrl, setDevReadyUrl] = useState<string | null>(null)
+  const [devError, setDevError] = useState<string | null>(null)
+  const mode = searchParams.get('mode') === 'dev' ? 'dev' : 'use'
+  const previewUrl = mode === 'dev' ? devReadyUrl : data?.project.appUrl
 
   useEffect(() => {
-    let isCurrent = true;
+    let isCurrent = true
 
     async function loadProject() {
       const response = await fetch(
@@ -81,13 +81,13 @@ export default function ProjectPage() {
         {
           cache: 'no-store'
         }
-      );
-      const payload = (await response.json().catch(() => null)) as
-        | ProjectWorkspaceResponse
-        | null;
+      )
+      const payload = (await response
+        .json()
+        .catch(() => null)) as ProjectWorkspaceResponse | null
 
       if (!isCurrent) {
-        return;
+        return
       }
 
       if (!response.ok || !payload || !payload.ok) {
@@ -95,8 +95,8 @@ export default function ProjectPage() {
           payload && 'message' in payload
             ? payload.message
             : `Failed to load application (${response.status})`
-        );
-        return;
+        )
+        return
       }
 
       setData({
@@ -105,27 +105,27 @@ export default function ProjectPage() {
         messages: payload.messages,
         project: payload.project,
         usageSummary: payload.usageSummary
-      });
+      })
     }
 
-    void loadProject();
+    void loadProject()
 
     return () => {
-      isCurrent = false;
-    };
-  }, [mode, params.id]);
+      isCurrent = false
+    }
+  }, [mode, params.id])
 
   useEffect(() => {
-    setDevReadyUrl(null);
-    setDevError(null);
+    setDevReadyUrl(null)
+    setDevError(null)
 
     if (mode !== 'dev' || data?.project.status !== 'ready') {
-      return undefined;
+      return undefined
     }
 
-    let isCurrent = true;
-    let pollTimeoutId: ReturnType<typeof setTimeout> | null = null;
-    let keepAliveIntervalId: ReturnType<typeof setInterval> | null = null;
+    let isCurrent = true
+    let pollTimeoutId: ReturnType<typeof setTimeout> | null = null
+    let keepAliveIntervalId: ReturnType<typeof setInterval> | null = null
 
     async function startDevServer() {
       const response = await fetch(
@@ -134,14 +134,14 @@ export default function ProjectPage() {
           cache: 'no-store',
           method: 'POST'
         }
-      );
+      )
       const payload = (await response.json().catch(() => null)) as
         | { ok: true }
         | { ok: false; message?: string }
-        | null;
+        | null
 
       if (!isCurrent) {
-        return false;
+        return false
       }
 
       if (!response.ok || !payload?.ok) {
@@ -149,11 +149,11 @@ export default function ProjectPage() {
           payload && 'message' in payload
             ? payload.message || 'Development server did not start'
             : `Development server did not start (${response.status})`
-        );
-        return false;
+        )
+        return false
       }
 
-      return true;
+      return true
     }
 
     async function checkDevServer() {
@@ -163,13 +163,13 @@ export default function ProjectPage() {
           {
             cache: 'no-store'
           }
-        );
-        const payload = (await response.json().catch(() => null)) as
-          | ProjectStatusResponse
-          | null;
+        )
+        const payload = (await response
+          .json()
+          .catch(() => null)) as ProjectStatusResponse | null
 
         if (!isCurrent) {
-          return;
+          return
         }
 
         if (!response.ok || !payload || !payload.ok) {
@@ -177,68 +177,76 @@ export default function ProjectPage() {
             payload && 'message' in payload
               ? payload.message || 'Development preview is unavailable'
               : `Development preview is unavailable (${response.status})`
-          );
-          return;
+          )
+          return
         }
 
         if (payload.dev.ready) {
-          setDevReadyUrl(payload.dev.url);
-          return;
+          setDevReadyUrl(payload.dev.url)
+          return
         }
 
-        pollTimeoutId = setTimeout(checkDevServer, 1200);
+        pollTimeoutId = setTimeout(checkDevServer, 1200)
       } catch {
         if (isCurrent) {
-          pollTimeoutId = setTimeout(checkDevServer, 1200);
+          pollTimeoutId = setTimeout(checkDevServer, 1200)
         }
       }
     }
 
     async function startAndWait() {
-      const started = await startDevServer();
+      const started = await startDevServer()
 
       if (!started) {
-        return;
+        return
       }
 
       keepAliveIntervalId = setInterval(() => {
-        void startDevServer();
-      }, 30_000);
-      await checkDevServer();
+        void startDevServer()
+      }, 30_000)
+      await checkDevServer()
     }
 
-    void startAndWait();
+    void startAndWait()
 
     return () => {
-      isCurrent = false;
+      isCurrent = false
       if (pollTimeoutId) {
-        clearTimeout(pollTimeoutId);
+        clearTimeout(pollTimeoutId)
       }
       if (keepAliveIntervalId) {
-        clearInterval(keepAliveIntervalId);
+        clearInterval(keepAliveIntervalId)
       }
-    };
-  }, [data?.project.status, mode, params.id]);
+    }
+  }, [data?.project.status, mode, params.id])
 
   if (error) {
     return (
       <Center h="100vh" p="md">
         <Alert color="red">{error}</Alert>
       </Center>
-    );
+    )
   }
 
   if (!data) {
     return (
       <Grid h="100vh" p="md" styles={{ inner: { height: '100%' } }}>
-        <GridCol display="flex" h={{ base: 'auto', lg: '100%' }} span={{ base: 12, lg: 4 }}>
+        <GridCol
+          display="flex"
+          h={{ base: 'auto', lg: '100%' }}
+          span={{ base: 12, lg: 4 }}
+        >
           <Skeleton flex={1} radius="md" />
         </GridCol>
-        <GridCol display="flex" h={{ base: 'auto', lg: '100%' }} span={{ base: 12, lg: 8 }}>
+        <GridCol
+          display="flex"
+          h={{ base: 'auto', lg: '100%' }}
+          span={{ base: 12, lg: 8 }}
+        >
           <Skeleton flex={1} radius="md" />
         </GridCol>
       </Grid>
-    );
+    )
   }
 
   return (
@@ -256,11 +264,7 @@ export default function ProjectPage() {
       <GridCol display="flex" h={{ base: 'auto', lg: '100%' }} span={{ base: 12, lg: 8 }}>
         <Stack flex={1} gap="sm" h="100%" mih={0} w="100%">
           {data.project.status === 'ready' ? (
-            <Paper
-              flex={1}
-              style={{ overflow: 'hidden' }}
-              withBorder
-            >
+            <Paper flex={1} style={{ overflow: 'hidden' }} withBorder>
               {devError ? (
                 <Center h="100%" p="md">
                   <Alert color="red">{devError}</Alert>
@@ -274,7 +278,9 @@ export default function ProjectPage() {
                     height: '100%',
                     width: '100%'
                   }}
-                  title={formatMessage(t.project.iframeTitle, { name: data.project.name })}
+                  title={formatMessage(t.project.iframeTitle, {
+                    name: data.project.name
+                  })}
                 />
               ) : (
                 <Center h="100%" p="md">
@@ -296,7 +302,9 @@ export default function ProjectPage() {
                       status: data.project.status
                     })}
                   </Title>
-                  <Text c="dimmed">{data.project.deployError || t.project.previewPending}</Text>
+                  <Text c="dimmed">
+                    {data.project.deployError || t.project.previewPending}
+                  </Text>
                 </Stack>
               </Center>
             </Paper>
@@ -304,5 +312,5 @@ export default function ProjectPage() {
         </Stack>
       </GridCol>
     </Grid>
-  );
+  )
 }

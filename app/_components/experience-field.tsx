@@ -1,26 +1,26 @@
-'use client';
+'use client'
 
-import type { ReactNode } from 'react';
-import type { UserExperienceLevel } from '@prisma/client';
-import { Group, Input, SegmentedControl, Stack, Text } from '@mantine/core';
-import { GraduationCap, Sparkles, UserRound } from 'lucide-react';
+import type { ReactNode } from 'react'
+import type { UserExperienceLevel } from '@prisma/client'
+import { Group, Input, SegmentedControl, Stack, Text } from '@mantine/core'
+import { GraduationCap, Sparkles, UserRound } from 'lucide-react'
 
 type ExperienceFieldProps = {
-  defaultValue?: UserExperienceLevel | null;
-  icon?: ReactNode;
-  label: string;
-  name: 'aiExperienceLevel' | 'vibeCodingExperienceLevel';
-  optionLabels: Record<UserExperienceLevel, string>;
-};
+  defaultValue?: UserExperienceLevel | null
+  icon?: ReactNode
+  label: string
+  name: 'aiExperienceLevel' | 'vibeCodingExperienceLevel'
+  optionLabels: Record<UserExperienceLevel, string>
+}
 
 const experienceOptions: Array<{
-  icon: ReactNode;
-  value: UserExperienceLevel;
+  icon: ReactNode
+  value: UserExperienceLevel
 }> = [
   { icon: <UserRound size={16} />, value: 'none' },
   { icon: <GraduationCap size={16} />, value: 'beginner' },
   { icon: <Sparkles size={16} />, value: 'advanced' }
-];
+]
 
 export function ExperienceField({
   defaultValue = 'none',
@@ -29,7 +29,7 @@ export function ExperienceField({
   name,
   optionLabels
 }: ExperienceFieldProps) {
-  const selectedValue = defaultValue ?? 'none';
+  const selectedValue = defaultValue ?? 'none'
 
   return (
     <Stack gap="xs">
@@ -53,5 +53,5 @@ export function ExperienceField({
         name={name}
       />
     </Stack>
-  );
+  )
 }

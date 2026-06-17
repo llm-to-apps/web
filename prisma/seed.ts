@@ -1,46 +1,45 @@
-const { PrismaClient } = require('@prisma/client') as typeof import('@prisma/client');
-const fs = require('node:fs') as typeof import('node:fs');
-const path = require('node:path') as typeof import('node:path');
-import type { Prisma } from '@prisma/client';
+import { PrismaClient, type Prisma } from '@prisma/client'
+import fs from 'node:fs'
+import path from 'node:path'
 
 type AppTemplateSeed = {
-  id: string;
-  slug: string;
-  name: string;
-  description: string;
-  icon: string;
-  status: 'available' | 'coming_soon';
-  repository?: string;
-  git?: string;
-  image?: string;
-  appPort?: number;
-  agentPort?: number;
-  sortOrder: number;
-  manifestUrl?: string;
-  manifest?: Prisma.InputJsonValue;
-};
+  id: string
+  slug: string
+  name: string
+  description: string
+  icon: string
+  status: 'available' | 'coming_soon'
+  repository?: string
+  git?: string
+  image?: string
+  appPort?: number
+  agentPort?: number
+  sortOrder: number
+  manifestUrl?: string
+  manifest?: Prisma.InputJsonValue
+}
 
 type UsagePriceSeed = {
-  id: string;
-  meterType: string;
-  provider?: string | null;
-  model?: string | null;
-  unit: string;
-  inputCredits?: string | null;
-  outputCredits?: string | null;
-  unitCredits?: string | null;
-  inputCostUsd?: string | null;
-  outputCostUsd?: string | null;
-  unitCostUsd?: string | null;
-  effectiveFrom: Date;
-  effectiveTo?: Date | null;
-  metadata?: Prisma.InputJsonValue | null;
-};
+  id: string
+  meterType: string
+  provider?: string | null
+  model?: string | null
+  unit: string
+  inputCredits?: string | null
+  outputCredits?: string | null
+  unitCredits?: string | null
+  inputCostUsd?: string | null
+  outputCostUsd?: string | null
+  unitCostUsd?: string | null
+  effectiveFrom: Date
+  effectiveTo?: Date | null
+  metadata?: Prisma.InputJsonValue | null
+}
 
-const prisma = new PrismaClient();
-const moneyTemplateManifestCommit = 'f67b4176d813dc0abe8854be70b700fe83247f9e';
-const moneyTemplateImage = 'ghcr.io/llm-to-apps/money-template:sha-f67b417';
-const moneyTemplateManifestBaseUrl = `https://cdn.jsdelivr.net/gh/llm-to-apps/money-template@${moneyTemplateManifestCommit}`;
+const prisma = new PrismaClient()
+const moneyTemplateManifestCommit = 'f67b4176d813dc0abe8854be70b700fe83247f9e'
+const moneyTemplateImage = 'ghcr.io/llm-to-apps/money-template:sha-f67b417'
+const moneyTemplateManifestBaseUrl = `https://cdn.jsdelivr.net/gh/llm-to-apps/money-template@${moneyTemplateManifestCommit}`
 
 const staticAppTemplates: AppTemplateSeed[] = [
   {
@@ -56,7 +55,8 @@ const staticAppTemplates: AppTemplateSeed[] = [
     id: 'personalCrm',
     slug: 'personal-crm',
     name: 'Personal CRM',
-    description: 'Lightweight contact manager with notes, follow-ups, and relationship history.',
+    description:
+      'Lightweight contact manager with notes, follow-ups, and relationship history.',
     icon: 'crm',
     status: 'coming_soon',
     sortOrder: 30
@@ -137,12 +137,13 @@ const staticAppTemplates: AppTemplateSeed[] = [
     id: 'bookingCalendar',
     slug: 'booking-calendar',
     name: 'Booking Calendar',
-    description: 'Calendly-style scheduling app where people can book available time slots.',
+    description:
+      'Calendly-style scheduling app where people can book available time slots.',
     icon: 'booking',
     status: 'coming_soon',
     sortOrder: 120
   }
-];
+]
 
 const usagePrices: UsagePriceSeed[] = [
   {
@@ -188,24 +189,24 @@ const usagePrices: UsagePriceSeed[] = [
       note: 'Placeholder MVP S2S email price. Charged after successful send when email API is implemented.'
     }
   }
-];
+]
 
 main()
   .catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
+    console.error(error)
+    process.exitCode = 1
   })
   .finally(async () => {
-    await prisma.$disconnect();
-  });
+    await prisma.$disconnect()
+  })
 
 async function main() {
-  await seedAppTemplates();
-  await seedUsagePrices();
+  await seedAppTemplates()
+  await seedUsagePrices()
 }
 
 async function seedAppTemplates() {
-  const includeDevTemplates = process.env.NODE_ENV !== 'production';
+  const includeDevTemplates = process.env.NODE_ENV !== 'production'
   const moneyTemplates = includeDevTemplates
     ? [
         templateFromLocalManifest('../templates/money/manifest.json', {
@@ -221,18 +222,15 @@ async function seedAppTemplates() {
         await templateFromManifestUrl(`${moneyTemplateManifestBaseUrl}/manifest.json`, {
           image: moneyTemplateImage
         })
-      ];
-  const appTemplates = [
-    ...moneyTemplates,
-    ...staticAppTemplates
-  ];
+      ]
+  const appTemplates = [...moneyTemplates, ...staticAppTemplates]
 
   if (!includeDevTemplates) {
     await prisma.appTemplate.deleteMany({
       where: {
         id: 'money-dev'
       }
-    });
+    })
   }
 
   for (const template of appTemplates) {
@@ -271,7 +269,7 @@ async function seedAppTemplates() {
         sortOrder: template.sortOrder,
         status: template.status
       }
-    });
+    })
   }
 }
 
@@ -312,7 +310,7 @@ async function seedUsagePrices() {
         unitCostUsd: price.unitCostUsd ?? null,
         unitCredits: price.unitCredits ?? null
       }
-    });
+    })
   }
 }
 
@@ -320,51 +318,53 @@ async function templateFromManifestUrl(
   url: string,
   overrides: { image?: string } = {}
 ): Promise<AppTemplateSeed> {
-  const response = await fetch(url);
+  const response = await fetch(url)
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch template manifest ${url}: ${response.status}`);
+    throw new Error(`Failed to fetch template manifest ${url}: ${response.status}`)
   }
 
-  const manifest = (await response.json()) as MoneyTemplateManifest;
-  return templateFromManifest(manifest, url, overrides);
+  const manifest = (await response.json()) as MoneyTemplateManifest
+  return templateFromManifest(manifest, url, overrides)
 }
 
 function templateFromLocalManifest(
   relativePath: string,
   overrides: { image?: string; manifestUrl: string }
 ): AppTemplateSeed {
-  const manifestPath = path.resolve(process.cwd(), relativePath);
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as MoneyTemplateManifest;
+  const manifestPath = path.resolve(process.cwd(), relativePath)
+  const manifest = JSON.parse(
+    fs.readFileSync(manifestPath, 'utf8')
+  ) as MoneyTemplateManifest
 
-  return templateFromManifest(manifest, overrides.manifestUrl, overrides);
+  return templateFromManifest(manifest, overrides.manifestUrl, overrides)
 }
 
 type MoneyTemplateManifest = {
-  id: string;
-  slug: string;
-  name: string;
-  description: string;
-  icon: string;
-  status: 'available' | 'coming_soon';
-  sortOrder?: number;
+  id: string
+  slug: string
+  name: string
+  description: string
+  icon: string
+  status: 'available' | 'coming_soon'
+  sortOrder?: number
   source: {
-    repository: string;
-    remote: string;
-  };
-  image?: string;
+    repository: string
+    remote: string
+  }
+  image?: string
   runtime: {
-    appPort: number;
-    agentPort: number;
-  };
-};
+    appPort: number
+    agentPort: number
+  }
+}
 
 function templateFromManifest(
   manifest: MoneyTemplateManifest,
   manifestUrl: string,
   overrides: { image?: string } = {}
 ): AppTemplateSeed {
-  const image = overrides.image ?? manifest.image;
+  const image = overrides.image ?? manifest.image
 
   return {
     id: manifest.id,
@@ -384,5 +384,5 @@ function templateFromManifest(
       ...manifest,
       ...(image ? { image } : {})
     } as Prisma.InputJsonValue
-  };
+  }
 }

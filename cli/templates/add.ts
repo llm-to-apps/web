@@ -1,13 +1,13 @@
-import { prisma } from '../../lib/db';
+import { prisma } from '../../src/server/db'
 import {
   parseTemplateManifest,
   templateManifestToAppTemplateFields
-} from '../../lib/templates/manifest';
+} from '../../src/shared/templates/manifest'
 
 export async function addTemplateCommand(manifestUrl: string) {
-  const manifest = await fetchTemplateManifest(manifestUrl);
-  const template = parseTemplateManifest(manifest);
-  const data = templateManifestToAppTemplateFields(template, manifestUrl);
+  const manifest = await fetchTemplateManifest(manifestUrl)
+  const template = parseTemplateManifest(manifest)
+  const data = templateManifestToAppTemplateFields(template, manifestUrl)
 
   await prisma.appTemplate.upsert({
     where: {
@@ -15,11 +15,11 @@ export async function addTemplateCommand(manifestUrl: string) {
     },
     create: data,
     update: data
-  });
+  })
 
-  await prisma.$disconnect();
+  await prisma.$disconnect()
 
-  console.log(`Registered template ${data.id} from ${manifestUrl}`);
+  console.log(`Registered template ${data.id} from ${manifestUrl}`)
 }
 
 async function fetchTemplateManifest(manifestUrl: string) {
@@ -27,13 +27,13 @@ async function fetchTemplateManifest(manifestUrl: string) {
     headers: {
       Accept: 'application/json'
     }
-  });
+  })
 
   if (!response.ok) {
     throw new Error(
       `Failed to fetch manifest ${manifestUrl}: ${response.status} ${response.statusText}`
-    );
+    )
   }
 
-  return response.json() as Promise<unknown>;
+  return response.json() as Promise<unknown>
 }

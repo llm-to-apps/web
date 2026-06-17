@@ -1,13 +1,12 @@
-import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { mkdir, writeFile } from 'node:fs/promises'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const SOURCE_URL =
-  'https://www.eff.org/files/2016/07/18/eff_large_wordlist.txt';
-const OUTPUT_PATH = '../data/slug-words.json';
-const MAX_WORDS = 10_000;
-const MIN_LENGTH = 4;
-const MAX_LENGTH = 12;
+const SOURCE_URL = 'https://www.eff.org/files/2016/07/18/eff_large_wordlist.txt'
+const OUTPUT_PATH = '../data/slug-words.json'
+const MAX_WORDS = 10_000
+const MIN_LENGTH = 4
+const MAX_LENGTH = 12
 
 const blockedWords = new Set([
   'admin',
@@ -64,7 +63,7 @@ const blockedWords = new Set([
   'xerox',
   'yahoo',
   'youtube'
-]);
+])
 
 const badFragments = [
   'anal',
@@ -98,39 +97,36 @@ const badFragments = [
   'trump',
   'vagina',
   'whore'
-];
+]
 
-const scriptDir = dirname(fileURLToPath(import.meta.url));
-const outputFile = resolve(scriptDir, OUTPUT_PATH);
+const scriptDir = dirname(fileURLToPath(import.meta.url))
+const outputFile = resolve(scriptDir, OUTPUT_PATH)
 
-const response = await fetch(SOURCE_URL);
+const response = await fetch(SOURCE_URL)
 
 if (!response.ok) {
-  throw new Error(`Failed to fetch word list: ${response.status}`);
+  throw new Error(`Failed to fetch word list: ${response.status}`)
 }
 
 const words = (await response.text())
   .split(/\r?\n/)
   .map((line) => line.trim().toLowerCase().split(/\s+/).at(-1) ?? '')
-  .filter(isUsableWord);
+  .filter(isUsableWord)
 
-const uniqueWords = [...new Set(words)];
+const uniqueWords = [...new Set(words)]
 const selectedWords = uniqueWords
   .sort((left, right) => stableWordScore(left) - stableWordScore(right))
   .slice(0, MAX_WORDS)
-  .sort();
+  .sort()
 
 if (selectedWords.length < 5_000) {
-  throw new Error(`Only generated ${selectedWords.length} words`);
+  throw new Error(`Only generated ${selectedWords.length} words`)
 }
 
-await mkdir(dirname(outputFile), { recursive: true });
-await writeFile(
-  outputFile,
-  `${JSON.stringify(selectedWords, null, 2)}\n`
-);
+await mkdir(dirname(outputFile), { recursive: true })
+await writeFile(outputFile, `${JSON.stringify(selectedWords, null, 2)}\n`)
 
-console.log(`Wrote ${selectedWords.length} words to ${outputFile}`);
+console.log(`Wrote ${selectedWords.length} words to ${outputFile}`)
 
 function isUsableWord(word) {
   return (
@@ -145,16 +141,16 @@ function isUsableWord(word) {
     !word.endsWith('ness') &&
     !word.endsWith('tion') &&
     !word.endsWith('sion')
-  );
+  )
 }
 
 function stableWordScore(word) {
-  let hash = 2166136261;
+  let hash = 2166136261
 
   for (let index = 0; index < word.length; index += 1) {
-    hash ^= word.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
+    hash ^= word.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
   }
 
-  return hash >>> 0;
+  return hash >>> 0
 }

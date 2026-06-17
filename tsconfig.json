@@ -9,6 +9,15 @@
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"],
+      "@/features/*": ["./src/features/*"],
+      "@/platform/*": ["./src/platform/*"],
+      "@/server/*": ["./src/server/*"],
+      "@/shared/*": ["./src/shared/*"],
+      "@/ui/*": ["./src/ui/*"]
+    },
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",

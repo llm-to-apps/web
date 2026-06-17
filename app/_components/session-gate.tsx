@@ -1,15 +1,15 @@
-'use client';
+'use client'
 
-import type { ReactNode } from 'react';
-import { Suspense, useEffect } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { type SessionData, useSession } from './session-provider';
+import type { ReactNode } from 'react'
+import { Suspense, useEffect } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { type SessionData, useSession } from './session-provider'
 
 type SessionGateProps = {
-  children: (session: SessionData) => ReactNode;
-  requireOnboarded?: boolean;
-  redirectIfAuthenticatedTo?: string;
-};
+  children: (session: SessionData) => ReactNode
+  requireOnboarded?: boolean
+  redirectIfAuthenticatedTo?: string
+}
 
 export function SessionGate({
   children,
@@ -25,7 +25,7 @@ export function SessionGate({
         {children}
       </SessionGateContent>
     </Suspense>
-  );
+  )
 }
 
 function SessionGateContent({
@@ -33,45 +33,52 @@ function SessionGateContent({
   requireOnboarded,
   redirectIfAuthenticatedTo
 }: SessionGateProps & { requireOnboarded: boolean }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const session = useSession();
+  const pathname = usePathname()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const session = useSession()
 
   useEffect(() => {
     if (session.status === 'loading') {
-      return;
+      return
     }
 
     if (session.status === 'unauthenticated') {
-      const next = `${pathname}${searchParams.toString() ? `?${searchParams}` : ''}`;
-      router.replace(`/?next=${encodeURIComponent(next)}`);
-      return;
+      const next = `${pathname}${searchParams.toString() ? `?${searchParams}` : ''}`
+      router.replace(`/?next=${encodeURIComponent(next)}`)
+      return
     }
 
-    const sessionData = session.data;
+    const sessionData = session.data
 
     if (!sessionData) {
-      return;
+      return
     }
 
     if (redirectIfAuthenticatedTo) {
-      router.replace(sessionData.user.onboarded ? redirectIfAuthenticatedTo : '/welcome');
-      return;
+      router.replace(sessionData.user.onboarded ? redirectIfAuthenticatedTo : '/welcome')
+      return
     }
 
     if (requireOnboarded && !sessionData.user.onboarded) {
-      router.replace('/welcome');
+      router.replace('/welcome')
     }
-  }, [pathname, redirectIfAuthenticatedTo, requireOnboarded, router, searchParams, session]);
+  }, [
+    pathname,
+    redirectIfAuthenticatedTo,
+    requireOnboarded,
+    router,
+    searchParams,
+    session
+  ])
 
   if (session.status !== 'authenticated') {
-    return <SessionPlaceholder />;
+    return <SessionPlaceholder />
   }
 
-  return children(session.data);
+  return children(session.data)
 }
 
 function SessionPlaceholder() {
-  return null;
+  return null
 }

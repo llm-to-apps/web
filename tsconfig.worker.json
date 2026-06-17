@@ -10,6 +10,6 @@
     "isolatedModules": false,
     "plugins": []
   },
-  "include": ["lib/**/*.ts", "worker/**/*.ts"],
+  "include": ["lib/**/*.ts", "src/**/*.ts", "worker/**/*.ts"],
   "exclude": ["node_modules", ".next"]
 }

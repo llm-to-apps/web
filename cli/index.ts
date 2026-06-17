@@ -1,26 +1,21 @@
-import { Command } from 'commander';
-import { addTemplateCommand } from './templates/add';
+import { Command } from 'commander'
+import { addTemplateCommand } from './templates/add'
 
-const program = new Command();
+const program = new Command()
 
-program
-  .name('os7')
-  .description('OS7 platform CLI')
-  .version('0.1.0');
+program.name('os7').description('OS7 platform CLI').version('0.1.0')
 
-const templates = program
-  .command('templates')
-  .description('Manage application templates');
+const templates = program.command('templates').description('Manage application templates')
 
 templates
   .command('add')
   .description('Fetch, validate, and register a template manifest')
   .argument('<manifest-url>', 'Raw URL to a template manifest.json')
-  .action(addTemplateCommand);
+  .action(addTemplateCommand)
 
 program.parseAsync().catch((error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = error instanceof Error ? error.message : String(error)
 
-  console.error(message);
-  process.exitCode = 1;
-});
+  console.error(message)
+  process.exitCode = 1
+})

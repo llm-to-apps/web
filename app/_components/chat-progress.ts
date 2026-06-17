@@ -21,51 +21,45 @@ const toolDisplayNames: Record<string, string> = {
   startProjectDevServer: 'Start dev',
   stopProjectDevServer: 'Stop dev',
   writeProjectFile: 'Write project file'
-};
+}
 
 type ChatProgressEvent = {
-  message: string;
-  toolInput?: unknown;
-  toolName?: string;
-};
+  message: string
+  toolInput?: unknown
+  toolName?: string
+}
 
-export function formatChatProgressMessage(
-  event: ChatProgressEvent,
-  fallback: string
-) {
-  const toolName = event.toolName;
+export function formatChatProgressMessage(event: ChatProgressEvent, fallback: string) {
+  const toolName = event.toolName
 
   if (toolName) {
-    return formatToolProgressEvent(event, toolName);
+    return formatToolProgressEvent(event, toolName)
   }
 
-  const message = event.message.trim();
+  const message = event.message.trim()
 
-  return message || fallback;
+  return message || fallback
 }
 
 export function formatChatErrorMessage(message: string) {
-  const normalizedMessage = message.trim();
+  const normalizedMessage = message.trim()
 
   if (!normalizedMessage) {
-    return 'Agent error';
+    return 'Agent error'
   }
 
-  return normalizedMessage;
+  return normalizedMessage
 }
 
-function formatToolProgressEvent(
-  event: ChatProgressEvent,
-  toolName: string
-) {
-  const displayName = formatToolDisplayName(toolName);
-  const appName = toolName === 'askAppAgent' ? findAppName(event.toolInput) : '';
+function formatToolProgressEvent(event: ChatProgressEvent, toolName: string) {
+  const displayName = formatToolDisplayName(toolName)
+  const appName = toolName === 'askAppAgent' ? findAppName(event.toolInput) : ''
 
-  return appName ? `${displayName}: ${appName}` : displayName;
+  return appName ? `${displayName}: ${appName}` : displayName
 }
 
 function formatToolDisplayName(toolName: string) {
-  return toolDisplayNames[toolName] ?? humanizeIdentifier(toolName);
+  return toolDisplayNames[toolName] ?? humanizeIdentifier(toolName)
 }
 
 function humanizeIdentifier(value: string) {
@@ -73,23 +67,23 @@ function humanizeIdentifier(value: string) {
     .replace(/[_-]+/g, ' ')
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
     .trim()
-    .toLowerCase();
+    .toLowerCase()
 
   if (!spacedValue) {
-    return 'tool';
+    return 'tool'
   }
 
-  return `${spacedValue.charAt(0).toUpperCase()}${spacedValue.slice(1)}`;
+  return `${spacedValue.charAt(0).toUpperCase()}${spacedValue.slice(1)}`
 }
 
 function findAppName(toolInput: unknown) {
   if (!isObjectRecord(toolInput)) {
-    return '';
+    return ''
   }
 
-  return typeof toolInput.appName === 'string' ? toolInput.appName.trim() : '';
+  return typeof toolInput.appName === 'string' ? toolInput.appName.trim() : ''
 }
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 }

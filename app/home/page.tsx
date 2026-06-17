@@ -1,52 +1,48 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
-import type { ComponentProps } from 'react';
-import { Alert, Grid, GridCol, Skeleton, Stack } from '@mantine/core';
-import { AppDesktop, type DesktopProject } from './app-desktop';
-import { UserAgentChat } from './user-agent-chat';
-import { AppLayout } from '../_components/app-layout';
-import { SessionGate } from '../_components/session-gate';
-import type { SessionData } from '../_components/session-provider';
+import { useEffect, useState } from 'react'
+import type { ComponentProps } from 'react'
+import { Alert, Grid, GridCol, Skeleton, Stack } from '@mantine/core'
+import { AppDesktop, type DesktopProject } from './app-desktop'
+import { UserAgentChat } from './user-agent-chat'
+import { AppLayout } from '../_components/app-layout'
+import { SessionGate } from '../_components/session-gate'
+import type { SessionData } from '../_components/session-provider'
 
 type HomeData = {
-  activeRunId: string | null;
-  messages: ComponentProps<typeof UserAgentChat>['initialMessages'];
-  projects: DesktopProject[];
-};
+  activeRunId: string | null
+  messages: ComponentProps<typeof UserAgentChat>['initialMessages']
+  projects: DesktopProject[]
+}
 
 type HomeResponse =
   | ({
-      ok: true;
+      ok: true
     } & HomeData)
   | {
-      ok: false;
-      message: string;
-    };
+      ok: false
+      message: string
+    }
 
 export default function HomePage() {
-  return (
-    <SessionGate>
-      {(session) => <HomeContent session={session} />}
-    </SessionGate>
-  );
+  return <SessionGate>{(session) => <HomeContent session={session} />}</SessionGate>
 }
 
 function HomeContent({ session }: { session: SessionData }) {
-  const [data, setData] = useState<HomeData | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<HomeData | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    let isCurrent = true;
+    let isCurrent = true
 
     async function loadHome() {
       const response = await fetch('/api/home', {
         cache: 'no-store'
-      });
-      const payload = (await response.json().catch(() => null)) as HomeResponse | null;
+      })
+      const payload = (await response.json().catch(() => null)) as HomeResponse | null
 
       if (!isCurrent) {
-        return;
+        return
       }
 
       if (!response.ok || !payload || !payload.ok) {
@@ -54,29 +50,26 @@ function HomeContent({ session }: { session: SessionData }) {
           payload && 'message' in payload
             ? payload.message
             : `Failed to load home (${response.status})`
-        );
-        return;
+        )
+        return
       }
 
       setData({
         activeRunId: payload.activeRunId,
         messages: payload.messages,
         projects: payload.projects
-      });
+      })
     }
 
-    void loadHome();
+    void loadHome()
 
     return () => {
-      isCurrent = false;
-    };
-  }, []);
+      isCurrent = false
+    }
+  }, [])
 
   return (
-    <AppLayout
-      usageSummary={session.usageSummary}
-      user={session.user}
-    >
+    <AppLayout usageSummary={session.usageSummary} user={session.user}>
       {error ? <Alert color="red">{error}</Alert> : null}
       {!data && !error ? (
         <Grid>
@@ -104,5 +97,5 @@ function HomeContent({ session }: { session: SessionData }) {
         </Grid>
       ) : null}
     </AppLayout>
-  );
+  )
 }

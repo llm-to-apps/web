@@ -2,6 +2,43 @@
 
 This file contains project-specific rules for coding agents working on OS7 web.
 
+## Code Organization
+
+- Keep `app/` focused on Next.js pages, layouts, route handlers, and small route
+  wiring.
+- Put domain use cases in `src/features/*`; routes should call these services
+  instead of owning business logic directly.
+- Split large features by responsibility. Prefer small files such as
+  `*-route.ts`, `*-query.ts`, `*-runtime.ts`, `*-events.ts`, `*-types.ts`,
+  `*-access.ts`, and focused command helpers instead of one feature file owning
+  parsing, auth checks, database queries, queue writes, and response mapping.
+- Put server-only infrastructure in `src/server/*`, such as env, database,
+  request-origin, auth adapters, queues, and external service clients.
+- Keep `src/server/*` organized by domain: `auth`, `oauth`, `agent`, `deploy`,
+  and `integrations` for external systems.
+- Put shared contracts and pure utilities in `src/shared/*`, including
+  `AppResult`, `AppError`, manifest types, schema helpers, and DTO types.
+- Put platform orchestration helpers in `src/platform/*`, such as app template,
+  runtime, deployment, and manager abstractions.
+- Prefer path aliases (`@/features`, `@/server`, `@/shared`, `@/platform`) for
+  new code.
+- Do not add `lib/*` compatibility exports. New and migrated code must import
+  directly from `src/server`, `src/features`, `src/shared`, or `src/platform`.
+
+## API Contracts
+
+- Public OS7 JSON APIs should return `{ ok: true, ...payload }` or
+  `{ ok: false, message, code? }`.
+- Use `jsonOk` and `jsonErrorMessage` from `@/server/http` for ordinary public
+  API responses so DTOs stay typed without changing the wire format.
+- Use `AppResult` plus `jsonResult` for service/use-case flows that already
+  return `appOk`/`appError`.
+- Keep protocol routes protocol-native: OAuth, MCP JSON-RPC, SSE, and health
+  endpoints do not need the public OS7 `{ ok, message }` helper when their
+  protocol requires a different shape.
+- Route handlers should parse request/context, authenticate, call a feature or
+  server service, and map the response. Business logic belongs below the route.
+
 ## UI Rules
 
 Web uses Mantine as the UI framework.
@@ -18,8 +55,13 @@ Web uses Mantine as the UI framework.
 
 ## Verification
 
-After UI, routing, or dependency changes, run:
+Before committing architecture, routing, API, dependency, or UI changes, run:
 
+- `npm run format:check`
+- `npm run lint`
 - `npm run typecheck`
-- `npx tsc --noEmit --noUnusedLocals --noUnusedParameters`
+- `npm run worker:build`
 - `npm run build`
+
+Use `npm run format` after broad refactors or before fixing formatting-only CI
+failures.

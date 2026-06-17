@@ -1,7 +1,14 @@
-'use client';
+'use client'
 
-import { FormEvent, KeyboardEvent, type ReactNode, useEffect, useRef, useState } from 'react';
-import { Bot, User } from 'lucide-react';
+import {
+  FormEvent,
+  KeyboardEvent,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState
+} from 'react'
+import { Bot, User } from 'lucide-react'
 import {
   Avatar,
   Badge,
@@ -13,106 +20,104 @@ import {
   Stack,
   Text,
   Textarea
-} from '@mantine/core';
-import { useHover } from '@mantine/hooks';
+} from '@mantine/core'
+import { useHover } from '@mantine/hooks'
 import {
   formatChatErrorMessage,
   formatChatProgressMessage
-} from '../_components/chat-progress';
-import { ChatOptionsMenu } from './chat-options-menu';
-import { useI18n } from '../_components/i18n-provider';
+} from '../_components/chat-progress'
+import { ChatOptionsMenu } from './chat-options-menu'
+import { useI18n } from '../_components/i18n-provider'
 
 type ChatMessage = {
-  id: string;
-  role: 'assistant' | 'user';
-  content: string;
-  kind?: 'message' | 'progress' | 'error';
-  usage?: CreditUsage | null;
-};
+  id: string
+  role: 'assistant' | 'user'
+  content: string
+  kind?: 'message' | 'progress' | 'error'
+  usage?: CreditUsage | null
+}
 
 type TokenUsage = {
-  completionTokens?: number;
-  promptTokens?: number;
-  totalTokens?: number;
-};
+  completionTokens?: number
+  promptTokens?: number
+  totalTokens?: number
+}
 
 type CreditUsage = {
-  creditsUsed: number;
-};
+  creditsUsed: number
+}
 
 type AgentStreamEvent =
   | {
-      type: 'text';
-      text: string;
-    }
-	  | {
-	      type: 'progress';
-	      message: string;
-	      toolInput?: unknown;
-	      toolName?: string;
-	      toolState?: 'running' | 'finished';
-	    }
-  | {
-      type: 'error';
-      message: string;
+      type: 'text'
+      text: string
     }
   | {
-      type: 'usage';
-      usage: TokenUsage;
+      type: 'progress'
+      message: string
+      toolInput?: unknown
+      toolName?: string
+      toolState?: 'running' | 'finished'
     }
   | {
-      type: 'credits';
-      creditsUsed: number;
+      type: 'error'
+      message: string
     }
   | {
-      type: 'done';
-    };
+      type: 'usage'
+      usage: TokenUsage
+    }
+  | {
+      type: 'credits'
+      creditsUsed: number
+    }
+  | {
+      type: 'done'
+    }
 
 type UserAgentChatProps = {
-  activeRunId?: string | null;
-  initialMessages?: ChatMessage[];
-};
+  activeRunId?: string | null
+  initialMessages?: ChatMessage[]
+}
 
 type AgentRunResponse = {
-  ok?: boolean;
-  runId?: string;
-  message?: string;
-};
+  ok?: boolean
+  runId?: string
+  message?: string
+}
 
 export function UserAgentChat({
   activeRunId = null,
   initialMessages = []
 }: UserAgentChatProps) {
-  const { t } = useI18n();
+  const { t } = useI18n()
   const welcomeMessage: ChatMessage = {
     id: 'welcome',
     role: 'assistant',
     content: t.userAgent.welcome
-  };
+  }
   const [messages, setMessages] = useState<ChatMessage[]>(
-    initialMessages.length > 0
-      ? initialMessages
-      : [welcomeMessage]
-  );
-  const [input, setInput] = useState('');
-  const [isClearing, setIsClearing] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const activeRunRef = useRef<string | null>(null);
+    initialMessages.length > 0 ? initialMessages : [welcomeMessage]
+  )
+  const [input, setInput] = useState('')
+  const [isClearing, setIsClearing] = useState(false)
+  const [isSending, setIsSending] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement | null>(null)
+  const activeRunRef = useRef<string | null>(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
       block: 'end'
-    });
-  }, [messages]);
+    })
+  }, [messages])
 
   useEffect(() => {
     if (!activeRunId || activeRunRef.current === activeRunId) {
-      return;
+      return
     }
 
-    activeRunRef.current = activeRunId;
-    const assistantMessageId = `run-${activeRunId}`;
+    activeRunRef.current = activeRunId
+    const assistantMessageId = `run-${activeRunId}`
 
     setMessages((currentMessages) =>
       currentMessages.some((message) => message.id === assistantMessageId)
@@ -126,40 +131,40 @@ export function UserAgentChat({
               kind: 'progress'
             }
           ]
-    );
-    setIsSending(true);
+    )
+    setIsSending(true)
     streamAgentRun(activeRunId, assistantMessageId).finally(() => {
-      setIsSending(false);
-    });
-  }, [activeRunId, t.chat.started]);
+      setIsSending(false)
+    })
+  }, [activeRunId, t.chat.started])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    await sendMessage();
+    event.preventDefault()
+    await sendMessage()
   }
 
   function handleInputKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) {
-      return;
+      return
     }
 
-    event.preventDefault();
-    void sendMessage();
+    event.preventDefault()
+    void sendMessage()
   }
 
   async function sendMessage() {
-    const content = input.trim();
+    const content = input.trim()
 
     if (!content || isSending) {
-      return;
+      return
     }
 
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: 'user',
       content
-    };
-    const assistantMessageId = crypto.randomUUID();
+    }
+    const assistantMessageId = crypto.randomUUID()
 
     setMessages((currentMessages) => [
       ...currentMessages,
@@ -170,9 +175,9 @@ export function UserAgentChat({
         content: t.chat.started,
         kind: 'progress'
       }
-    ]);
-    setInput('');
-    setIsSending(true);
+    ])
+    setInput('')
+    setIsSending(true)
 
     try {
       const response = await fetch('/api/agent/chat', {
@@ -183,44 +188,46 @@ export function UserAgentChat({
         body: JSON.stringify({
           message: content
         })
-      });
+      })
 
-      const data = (await response.json().catch(() => null)) as AgentRunResponse | null;
+      const data = (await response.json().catch(() => null)) as AgentRunResponse | null
 
       if (!response.ok || !data?.runId) {
-        throw new Error(data?.message ?? `${t.chat.requestFailed} (${response.status})`);
+        throw new Error(data?.message ?? `${t.chat.requestFailed} (${response.status})`)
       }
 
-      await streamAgentRun(data.runId, assistantMessageId);
-      ensureAssistantMessage(assistantMessageId, t.chat.done);
+      await streamAgentRun(data.runId, assistantMessageId)
+      ensureAssistantMessage(assistantMessageId, t.chat.done)
     } catch (error) {
-      const message = error instanceof Error ? error.message : t.chat.requestFailed;
-      replaceMessage(assistantMessageId, formatChatErrorMessage(message), 'error');
+      const message = error instanceof Error ? error.message : t.chat.requestFailed
+      replaceMessage(assistantMessageId, formatChatErrorMessage(message), 'error')
     } finally {
-      setIsSending(false);
+      setIsSending(false)
     }
   }
 
   async function clearHistory() {
     if (isSending || isClearing) {
-      return;
+      return
     }
 
-    setIsClearing(true);
+    setIsClearing(true)
 
     try {
       const response = await fetch('/api/agent/chat/history', {
         method: 'DELETE'
-      });
-      const data = (await response.json().catch(() => null)) as { message?: string } | null;
+      })
+      const data = (await response.json().catch(() => null)) as {
+        message?: string
+      } | null
 
       if (!response.ok) {
-        throw new Error(data?.message ?? `${t.chat.clearFailed} (${response.status})`);
+        throw new Error(data?.message ?? `${t.chat.clearFailed} (${response.status})`)
       }
 
-      setMessages([welcomeMessage]);
+      setMessages([welcomeMessage])
     } catch (error) {
-      const message = error instanceof Error ? error.message : t.chat.clearFailed;
+      const message = error instanceof Error ? error.message : t.chat.clearFailed
       setMessages((currentMessages) => [
         ...currentMessages,
         {
@@ -229,9 +236,9 @@ export function UserAgentChat({
           content: message,
           kind: 'error'
         }
-      ]);
+      ])
     } finally {
-      setIsClearing(false);
+      setIsClearing(false)
     }
   }
 
@@ -250,7 +257,7 @@ export function UserAgentChat({
             }
           : message
       )
-    );
+    )
   }
 
   function appendToMessage(
@@ -278,7 +285,7 @@ export function UserAgentChat({
               kind
             }
           ]
-    );
+    )
   }
 
   function ensureAssistantMessage(messageId: string, fallbackContent: string) {
@@ -291,56 +298,56 @@ export function UserAgentChat({
             }
           : message
       )
-    );
+    )
   }
 
   function formatProgressMessage(event: Extract<AgentStreamEvent, { type: 'progress' }>) {
-    return formatChatProgressMessage(event, t.chat.working);
+    return formatChatProgressMessage(event, t.chat.working)
   }
 
   async function streamAgentRun(runId: string, assistantMessageId: string) {
-    let hasAssistantText = false;
+    let hasAssistantText = false
 
     await subscribeAgentRun(runId, (event) => {
       if (event.type === 'text') {
         if (!hasAssistantText) {
-          hasAssistantText = true;
-          replaceMessage(assistantMessageId, event.text, 'message');
-          return;
+          hasAssistantText = true
+          replaceMessage(assistantMessageId, event.text, 'message')
+          return
         }
 
-        appendToMessage(assistantMessageId, event.text);
-        return;
+        appendToMessage(assistantMessageId, event.text)
+        return
       }
 
       if (event.type === 'progress') {
         if (!hasAssistantText) {
-          replaceMessage(assistantMessageId, formatProgressMessage(event), 'progress');
+          replaceMessage(assistantMessageId, formatProgressMessage(event), 'progress')
         }
-        return;
+        return
       }
 
       if (event.type === 'error') {
-        const errorMessage = formatChatErrorMessage(event.message);
+        const errorMessage = formatChatErrorMessage(event.message)
         if (!hasAssistantText) {
-          replaceMessage(assistantMessageId, errorMessage, 'error');
-          return;
+          replaceMessage(assistantMessageId, errorMessage, 'error')
+          return
         }
 
-        appendToMessage(assistantMessageId, `\n${errorMessage}`, 'error');
-        return;
+        appendToMessage(assistantMessageId, `\n${errorMessage}`, 'error')
+        return
       }
 
       if (event.type === 'usage') {
-        return;
+        return
       }
 
       if (event.type === 'credits') {
         updateMessageUsage(assistantMessageId, {
           creditsUsed: event.creditsUsed
-        });
+        })
       }
-    });
+    })
   }
 
   function updateMessageUsage(messageId: string, usage: CreditUsage) {
@@ -353,7 +360,7 @@ export function UserAgentChat({
             }
           : message
       )
-    );
+    )
   }
 
   return (
@@ -370,99 +377,104 @@ export function UserAgentChat({
         pos="absolute"
         right={0}
         style={{
-          background: 'linear-gradient(180deg, #fff 0%, rgba(255,255,255,0.92) 58%, rgba(255,255,255,0) 100%)',
+          background:
+            'linear-gradient(180deg, #fff 0%, rgba(255,255,255,0.92) 58%, rgba(255,255,255,0) 100%)',
           zIndex: 2
         }}
         top={0}
       >
         <Group justify="flex-end" pb="xl" pt="md" px="md">
-            <ChatOptionsMenu
-              disabled={isSending || isClearing}
-              isClearing={isClearing}
-              onClearHistory={clearHistory}
-            />
+          <ChatOptionsMenu
+            disabled={isSending || isClearing}
+            isClearing={isClearing}
+            onClearHistory={clearHistory}
+          />
         </Group>
       </Box>
       <Stack h="100%" mih={0}>
         <ScrollArea flex={1} mih={0} aria-live="polite">
           <Stack gap="sm" pr="sm" pt={56}>
-          {messages.map((message) => (
-            <MessageBubble
-              key={message.id}
-              usage={message.role === 'assistant' ? message.usage : null}
-            >
-	              <Group align="flex-start" gap="sm">
-              <Avatar color={message.role === 'assistant' ? 'os7' : 'gray'} size={30}>
-                {message.role === 'assistant' ? <Bot size={16} /> : <User size={16} />}
-              </Avatar>
-              <Stack gap={4} flex={1}>
-	              <MessageText>
-	                {message.kind === 'progress' ? (
-	                  <Group component="span" gap={6} wrap="nowrap">
-	                    <Loader size="xs" type="dots" />
-	                    <Text component="span">{message.content}</Text>
-	                  </Group>
-	                ) : (
-	                  message.content
-	                )}
-	              </MessageText>
-              </Stack>
-              </Group>
-            </MessageBubble>
-          ))}
-          <div ref={messagesEndRef} />
+            {messages.map((message) => (
+              <MessageBubble
+                key={message.id}
+                usage={message.role === 'assistant' ? message.usage : null}
+              >
+                <Group align="flex-start" gap="sm">
+                  <Avatar color={message.role === 'assistant' ? 'os7' : 'gray'} size={30}>
+                    {message.role === 'assistant' ? (
+                      <Bot size={16} />
+                    ) : (
+                      <User size={16} />
+                    )}
+                  </Avatar>
+                  <Stack gap={4} flex={1}>
+                    <MessageText>
+                      {message.kind === 'progress' ? (
+                        <Group component="span" gap={6} wrap="nowrap">
+                          <Loader size="xs" type="dots" />
+                          <Text component="span">{message.content}</Text>
+                        </Group>
+                      ) : (
+                        message.content
+                      )}
+                    </MessageText>
+                  </Stack>
+                </Group>
+              </MessageBubble>
+            ))}
+            <div ref={messagesEndRef} />
           </Stack>
         </ScrollArea>
 
         <form onSubmit={handleSubmit}>
           <Stack>
-          <Textarea
-            aria-label={t.chat.messageAria}
-            disabled={isSending}
-            onKeyDown={handleInputKeyDown}
-            onChange={(event) => setInput(event.target.value)}
-            placeholder={t.userAgent.placeholder}
-            rows={3}
-            value={input}
-          />
+            <Textarea
+              aria-label={t.chat.messageAria}
+              disabled={isSending}
+              onKeyDown={handleInputKeyDown}
+              onChange={(event) => setInput(event.target.value)}
+              placeholder={t.userAgent.placeholder}
+              rows={3}
+              value={input}
+            />
           </Stack>
         </form>
       </Stack>
     </Paper>
-  );
+  )
 }
 
 function MessageBubble({
   children,
   usage
 }: {
-  children: ReactNode;
-  usage?: CreditUsage | null;
+  children: ReactNode
+  usage?: CreditUsage | null
 }) {
-  const { hovered, ref } = useHover();
+  const { hovered, ref } = useHover()
 
   return (
     <Paper ref={ref} p="sm" pos="relative" withBorder>
       {hovered && usage ? <CreditUsageBadge usage={usage} /> : null}
       {children}
     </Paper>
-  );
+  )
 }
 
 function CreditUsageBadge({ usage }: { usage: CreditUsage }) {
-  const { locale } = useI18n();
+  const { locale } = useI18n()
 
   if (usage.creditsUsed <= 0) {
-    return null;
+    return null
   }
 
-  const formattedCredits = formatCredits(usage.creditsUsed, locale);
+  const formattedCredits = formatCredits(usage.creditsUsed, locale)
 
   return (
     <Badge pos="absolute" right={8} top={8} title={`${formattedCredits} credits used`}>
       {formattedCredits} ₵
     </Badge>
-  );
+  )
 }
 
 function MessageText({ children }: { children: ReactNode }) {
@@ -470,53 +482,50 @@ function MessageText({ children }: { children: ReactNode }) {
     <Text component="pre" ff="inherit" lh="md" m={0} pt={4} textWrap="wrap">
       {children}
     </Text>
-  );
+  )
 }
 
 function formatCredits(value: number, locale?: string) {
   return new Intl.NumberFormat(locale, {
     maximumFractionDigits: 0,
     minimumFractionDigits: 0
-  }).format(value);
+  }).format(value)
 }
 
-function subscribeAgentRun(
-  runId: string,
-  onEvent: (event: AgentStreamEvent) => void
-) {
+function subscribeAgentRun(runId: string, onEvent: (event: AgentStreamEvent) => void) {
   return new Promise<void>((resolve, reject) => {
-    const source = new EventSource(`/api/agent/runs/${encodeURIComponent(runId)}/events`);
+    const source = new EventSource(`/api/agent/runs/${encodeURIComponent(runId)}/events`)
 
     source.onmessage = (message) => {
-      const event = parseAgentRunEvent(message.data);
+      const event = parseAgentRunEvent(message.data)
 
       if (!event) {
-        return;
+        return
       }
 
-      onEvent(event);
+      onEvent(event)
 
       if (event.type === 'done') {
-        source.close();
-        resolve();
+        source.close()
+        resolve()
       }
 
       if (event.type === 'error') {
-        source.close();
-        resolve();
+        source.close()
+        resolve()
       }
-    };
+    }
 
     source.onerror = () => {
-      source.close();
-      reject(new Error('Agent event stream failed'));
-    };
-  });
+      source.close()
+      reject(new Error('Agent event stream failed'))
+    }
+  })
 }
 
 function parseAgentRunEvent(data: string): AgentStreamEvent | null {
   try {
-    const event = JSON.parse(data) as AgentStreamEvent;
+    const event = JSON.parse(data) as AgentStreamEvent
 
     if (
       event.type === 'text' ||
@@ -526,11 +535,11 @@ function parseAgentRunEvent(data: string): AgentStreamEvent | null {
       event.type === 'credits' ||
       event.type === 'done'
     ) {
-      return event;
+      return event
     }
   } catch {
-    return null;
+    return null
   }
 
-  return null;
+  return null
 }

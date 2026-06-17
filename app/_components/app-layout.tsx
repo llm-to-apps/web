@@ -1,18 +1,18 @@
-'use client';
+'use client'
 
-import type { ReactNode } from 'react';
-import type { CurrentUser } from '../../lib/auth';
-import { Box, Center, Container, Stack, Text, Title } from '@mantine/core';
-import { AppLayoutShell } from './app-layout-shell';
-import type { UsageSummary } from './session-provider';
+import type { ReactNode } from 'react'
+import type { CurrentUser } from '@/server/auth'
+import { Box, Center, Container, Stack, Text, Title } from '@mantine/core'
+import { AppLayoutShell } from './app-layout-shell'
+import type { UsageSummary } from './session-provider'
 
 type AppLayoutProps = {
-  user: CurrentUser | null;
-  usageSummary?: UsageSummary;
-  title?: string;
-  description?: string;
-  children: ReactNode;
-};
+  user: CurrentUser | null
+  usageSummary?: UsageSummary
+  title?: string
+  description?: string
+  children: ReactNode
+}
 
 export function AppLayout({
   user,
@@ -32,7 +32,7 @@ export function AppLayout({
       >
         {children}
       </AppLayoutShell>
-    );
+    )
   }
 
   return (
@@ -51,5 +51,5 @@ export function AppLayout({
         </Center>
       </Container>
     </Box>
-  );
+  )
 }

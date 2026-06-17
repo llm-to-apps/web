@@ -1,21 +1,21 @@
-'use client';
+'use client'
 
-import { ActionIcon, Menu } from '@mantine/core';
-import { Eraser, MoreHorizontal } from 'lucide-react';
-import { useI18n } from '../_components/i18n-provider';
+import { ActionIcon, Menu } from '@mantine/core'
+import { Eraser, MoreHorizontal } from 'lucide-react'
+import { useI18n } from '../_components/i18n-provider'
 
 type ChatOptionsMenuProps = {
-  disabled?: boolean;
-  isClearing?: boolean;
-  onClearHistory: () => void;
-};
+  disabled?: boolean
+  isClearing?: boolean
+  onClearHistory: () => void
+}
 
 export function ChatOptionsMenu({
   disabled = false,
   isClearing = false,
   onClearHistory
 }: ChatOptionsMenuProps) {
-  const { t } = useI18n();
+  const { t } = useI18n()
 
   return (
     <Menu position="bottom-end" shadow="md">
@@ -40,5 +40,5 @@ export function ChatOptionsMenu({
         </Menu.Item>
       </Menu.Dropdown>
     </Menu>
-  );
+  )
 }

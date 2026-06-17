@@ -6,15 +6,15 @@ For the MVP, `usage_prices` stores the amount charged to users directly in credi
 
 Initial LLM prices are recorded per million tokens:
 
-| Meter | Model | Input credits | Output credits | Input cost USD | Output cost USD |
-| --- | --- | ---: | ---: | ---: | ---: |
-| `llm_tokens` | `openai/gpt-5-mini` | `2500` | `20000` | `0.25` | `2.00` |
-| `llm_tokens` | `openai/gpt-5` | `12500` | `100000` | `1.25` | `10.00` |
+| Meter        | Model               | Input credits | Output credits | Input cost USD | Output cost USD |
+| ------------ | ------------------- | ------------: | -------------: | -------------: | --------------: |
+| `llm_tokens` | `openai/gpt-5-mini` |        `2500` |        `20000` |         `0.25` |          `2.00` |
+| `llm_tokens` | `openai/gpt-5`      |       `12500` |       `100000` |         `1.25` |         `10.00` |
 
 Initial S2S prices are recorded per request:
 
-| Meter | Unit credits | Unit cost USD |
-| --- | ---: | ---: |
-| `s2s_email_send` | `100` | `0.001` |
+| Meter            | Unit credits | Unit cost USD |
+| ---------------- | -----------: | ------------: |
+| `s2s_email_send` |        `100` |       `0.001` |
 
 When usage is billed, OS7 writes an immutable `credit_ledger_entries` row with the charged credits and the estimated cost snapshot. Changing a row in `usage_prices` only affects future ledger entries.

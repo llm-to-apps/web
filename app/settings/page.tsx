@@ -1,52 +1,48 @@
-'use client';
+'use client'
 
-import { FormEvent, useState } from 'react';
-import { Alert, Button, Group, Paper, Stack, Text, TextInput, Title } from '@mantine/core';
-import { useRouter } from 'next/navigation';
-import { Brain, Code2, UserRound } from 'lucide-react';
-import { AppLayout } from '../_components/app-layout';
-import { ExperienceField } from '../_components/experience-field';
-import { FormActions } from '../_components/form-actions';
-import { LanguageSwitcher } from '../_components/language-switcher';
-import { SessionGate } from '../_components/session-gate';
-import type { SessionData } from '../_components/session-provider';
-import { useI18n } from '../_components/i18n-provider';
+import { FormEvent, useState } from 'react'
+import { Alert, Button, Group, Paper, Stack, Text, TextInput, Title } from '@mantine/core'
+import { useRouter } from 'next/navigation'
+import { Brain, Code2, UserRound } from 'lucide-react'
+import { AppLayout } from '../_components/app-layout'
+import { ExperienceField } from '../_components/experience-field'
+import { FormActions } from '../_components/form-actions'
+import { LanguageSwitcher } from '../_components/language-switcher'
+import { SessionGate } from '../_components/session-gate'
+import type { SessionData } from '../_components/session-provider'
+import { useI18n } from '../_components/i18n-provider'
 
 type SaveResponse =
   | {
-      ok: true;
+      ok: true
     }
   | {
-      ok: false;
-      message: string;
-    };
+      ok: false
+      message: string
+    }
 
 export default function SettingsPage() {
-  return (
-    <SessionGate>
-      {(session) => <SettingsContent session={session} />}
-    </SessionGate>
-  );
+  return <SessionGate>{(session) => <SettingsContent session={session} />}</SessionGate>
 }
 
 function SettingsContent({ session }: { session: SessionData }) {
-  const router = useRouter();
-  const { t } = useI18n();
-  const [error, setError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const router = useRouter()
+  const { t } = useI18n()
+  const [error, setError] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
   const experienceOptionLabels = {
     advanced: t.profile.experienceAdvanced,
     beginner: t.profile.experienceBeginner,
     none: t.profile.experienceNone
-  };
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const name = String(formData.get('name') ?? '').trim();
+    event.preventDefault()
+    const formData = new FormData(event.currentTarget)
+    const name = String(formData.get('name') ?? '').trim()
 
-    setIsSaving(true);
-    setError(null);
+    setIsSaving(true)
+    setError(null)
 
     try {
       const response = await fetch('/api/settings/profile', {
@@ -59,22 +55,22 @@ function SettingsContent({ session }: { session: SessionData }) {
           name,
           vibeCodingExperienceLevel: formData.get('vibeCodingExperienceLevel')
         })
-      });
-      const data = (await response.json().catch(() => null)) as SaveResponse | null;
+      })
+      const data = (await response.json().catch(() => null)) as SaveResponse | null
 
       if (!response.ok || !data || !data.ok) {
         throw new Error(
           data && 'message' in data
             ? data.message
             : `Failed to save settings (${response.status})`
-        );
+        )
       }
 
-      router.push('/home');
+      router.push('/home')
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to save settings');
+      setError(error instanceof Error ? error.message : 'Failed to save settings')
     } finally {
-      setIsSaving(false);
+      setIsSaving(false)
     }
   }
 
@@ -135,5 +131,5 @@ function SettingsContent({ session }: { session: SessionData }) {
         </Paper>
       </Stack>
     </AppLayout>
-  );
+  )
 }

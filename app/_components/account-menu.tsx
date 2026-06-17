@@ -1,36 +1,37 @@
-'use client';
+'use client'
 
-import Link from 'next/link';
-import { useState } from 'react';
-import { Avatar, Button, Menu, Text } from '@mantine/core';
-import { ChevronDown, LogOut, Settings } from 'lucide-react';
-import type { CurrentUser } from '../../lib/auth';
-import { useI18n } from './i18n-provider';
+import Link from 'next/link'
+import { useState } from 'react'
+import { Avatar, Button, Menu, Text } from '@mantine/core'
+import { ChevronDown, LogOut, Settings } from 'lucide-react'
+import type { CurrentUser } from '@/server/auth'
+import { useI18n } from './i18n-provider'
 
 type AccountMenuProps = {
   usageSummary?: {
-    title: string;
-    total: string;
-  } | null;
-  user: CurrentUser;
-};
+    title: string
+    total: string
+  } | null
+  user: CurrentUser
+}
 
 export function AccountMenu({ usageSummary, user }: AccountMenuProps) {
-  const { t } = useI18n();
-  const [isSigningOut, setIsSigningOut] = useState(false);
-  const accountName = user.name || user.email;
-  const initials = accountName
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('') || 'U';
+  const { t } = useI18n()
+  const [isSigningOut, setIsSigningOut] = useState(false)
+  const accountName = user.name || user.email
+  const initials =
+    accountName
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join('') || 'U'
 
   async function signOut() {
-    setIsSigningOut(true);
-    await fetch('/api/auth/logout', { method: 'POST' });
-    window.location.reload();
+    setIsSigningOut(true)
+    await fetch('/api/auth/logout', { method: 'POST' })
+    window.location.reload()
   }
 
   return (
@@ -73,11 +74,7 @@ export function AccountMenu({ usageSummary, user }: AccountMenuProps) {
             <Menu.Divider />
           </>
         ) : null}
-        <Menu.Item
-          component={Link}
-          href="/settings"
-          leftSection={<Settings size={16} />}
-        >
+        <Menu.Item component={Link} href="/settings" leftSection={<Settings size={16} />}>
           {t.settings.title}
         </Menu.Item>
         <Menu.Item
@@ -90,5 +87,5 @@ export function AccountMenu({ usageSummary, user }: AccountMenuProps) {
         </Menu.Item>
       </Menu.Dropdown>
     </Menu>
-  );
+  )
 }

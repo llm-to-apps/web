@@ -1,12 +1,12 @@
-'use client';
+'use client'
 
-import { useEffect } from 'react';
-import { Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { AppLayout } from './_components/app-layout';
-import { SignedOutContent } from './_components/signed-out-content';
-import { useSession } from './_components/session-provider';
-import { safeRelativeRedirect } from '../lib/safe-redirect';
+import { useEffect } from 'react'
+import { Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { AppLayout } from './_components/app-layout'
+import { SignedOutContent } from './_components/signed-out-content'
+import { useSession } from './_components/session-provider'
+import { safeRelativeRedirect } from '@/shared/safe-redirect'
 
 export default function Home() {
   return (
@@ -19,26 +19,26 @@ export default function Home() {
     >
       <HomeContent />
     </Suspense>
-  );
+  )
 }
 
 function HomeContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const redirectTo = safeRelativeRedirect(searchParams.get('next'));
-  const session = useSession();
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectTo = safeRelativeRedirect(searchParams.get('next'))
+  const session = useSession()
 
   useEffect(() => {
     if (session.status !== 'authenticated') {
-      return;
+      return
     }
 
-    router.replace(session.data.user.onboarded ? redirectTo : '/welcome');
-  }, [redirectTo, router, session]);
+    router.replace(session.data.user.onboarded ? redirectTo : '/welcome')
+  }, [redirectTo, router, session])
 
   return (
     <AppLayout user={null}>
       <SignedOutContent redirectTo={redirectTo} />
     </AppLayout>
-  );
+  )
 }

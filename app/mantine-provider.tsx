@@ -1,8 +1,8 @@
-'use client';
+'use client'
 
-import { MantineProvider } from '@mantine/core';
-import { Notifications } from '@mantine/notifications';
-import { os7Theme } from '../ui-kit/src/os7-theme';
+import { MantineProvider } from '@mantine/core'
+import { Notifications } from '@mantine/notifications'
+import { os7Theme } from '../ui-kit/src/os7-theme'
 
 export function WebMantineProvider({ children }: { children: React.ReactNode }) {
   return (
@@ -10,5 +10,5 @@ export function WebMantineProvider({ children }: { children: React.ReactNode }) 
       <Notifications position="top-right" />
       {children}
     </MantineProvider>
-  );
+  )
 }

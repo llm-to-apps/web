@@ -6,7 +6,7 @@ on:
     branches:
       - main
     tags:
-      - "v*"
+      - 'v*'
 
 permissions:
   contents: read
@@ -29,7 +29,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: '22'
           cache: npm
 
       - name: Install dependencies
@@ -40,8 +40,17 @@ jobs:
         env:
           DATABASE_URL: postgresql://os7:password@localhost:5432/os7_platform
 
+      - name: Format check
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Worker build
+        run: npm run worker:build
 
       - name: Build
         run: npm run build

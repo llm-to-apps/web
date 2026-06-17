@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 export function GET() {
   return Response.json(
@@ -8,5 +8,5 @@ export function GET() {
         'Cache-Control': 'no-store'
       }
     }
-  );
+  )
 }
