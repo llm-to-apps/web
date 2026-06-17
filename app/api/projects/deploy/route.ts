@@ -288,7 +288,7 @@ async function deployProject(request: NextRequest) {
     ports: {
       app: template.appPort,
       agent: template.agentPort,
-      dev: manifest?.runtime.devPort ?? 8080
+      dev: manifest?.runtime.devPort ?? 4046
     }
   };
 

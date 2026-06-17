@@ -196,7 +196,7 @@ export async function GET(request: NextRequest, context: ProjectWorkspaceContext
 
 function createDevUrl(appUrl: string) {
   const url = new URL(appUrl);
-  url.port = '8080';
+  url.port = '4046';
   url.pathname = '/';
   url.search = '';
   url.hash = '';
