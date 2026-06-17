@@ -4,10 +4,13 @@ import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import nextEnv from '@next/env'
 
 import { writePrismaSchema } from './prisma-schema.mjs'
 
 const rootDir = dirname(dirname(fileURLToPath(import.meta.url)))
+const { loadEnvConfig } = nextEnv
+loadEnvConfig(rootDir)
 const prismaBin = join(
   rootDir,
   'node_modules',

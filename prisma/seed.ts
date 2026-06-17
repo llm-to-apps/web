@@ -1,6 +1,9 @@
 import { PrismaClient, type Prisma } from '@prisma/client'
+import { loadEnvConfig } from '@next/env'
 import fs from 'node:fs'
 import path from 'node:path'
+
+loadEnvConfig(process.cwd())
 
 type AppTemplateSeed = {
   id: string
