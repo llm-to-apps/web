@@ -36,7 +36,8 @@ type UsagePriceSeed = {
 };
 
 const prisma = new PrismaClient();
-const moneyTemplateManifestCommit = '9d1b0cb7587f15d788f402e3049ec76c841b5a5f';
+const moneyTemplateManifestCommit = '3ed36990277fab9129c461124b702c84670c89ab';
+const moneyTemplateImage = 'ghcr.io/llm-to-apps/money-template:sha-3ed3699';
 const moneyTemplateManifestBaseUrl = `https://cdn.jsdelivr.net/gh/llm-to-apps/money-template@${moneyTemplateManifestCommit}`;
 
 const staticAppTemplates: AppTemplateSeed[] = [
@@ -204,7 +205,9 @@ async function main() {
 async function seedAppTemplates() {
   const includeDevTemplates = process.env.NODE_ENV !== 'production';
   const appTemplates = [
-    await templateFromManifestUrl(`${moneyTemplateManifestBaseUrl}/manifest.json`),
+    await templateFromManifestUrl(`${moneyTemplateManifestBaseUrl}/manifest.json`, {
+      image: moneyTemplateImage
+    }),
     ...(includeDevTemplates
       ? [await templateFromManifestUrl(`${moneyTemplateManifestBaseUrl}/manifest.dev.json`)]
       : []),
@@ -300,7 +303,10 @@ async function seedUsagePrices() {
   }
 }
 
-async function templateFromManifestUrl(url: string): Promise<AppTemplateSeed> {
+async function templateFromManifestUrl(
+  url: string,
+  overrides: { image?: string } = {}
+): Promise<AppTemplateSeed> {
   const response = await fetch(url);
 
   if (!response.ok) {
@@ -326,6 +332,8 @@ async function templateFromManifestUrl(url: string): Promise<AppTemplateSeed> {
     };
   };
 
+  const image = overrides.image ?? manifest.image;
+
   return {
     id: manifest.id,
     slug: manifest.slug,
@@ -335,11 +343,14 @@ async function templateFromManifestUrl(url: string): Promise<AppTemplateSeed> {
     status: manifest.status,
     repository: manifest.source.repository,
     git: manifest.source.remote,
-    image: manifest.image,
+    image,
     appPort: manifest.runtime.appPort,
     agentPort: manifest.runtime.agentPort,
     sortOrder: manifest.sortOrder ?? 0,
     manifestUrl: url,
-    manifest: manifest as Prisma.InputJsonValue
+    manifest: {
+      ...manifest,
+      ...(image ? { image } : {})
+    } as Prisma.InputJsonValue
   };
 }
