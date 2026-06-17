@@ -19,7 +19,7 @@ import { Brain, Code2, Sparkles, UserRound } from 'lucide-react'
 import { ExperienceField } from '../_components/experience-field'
 import { FormActions } from '../_components/form-actions'
 import { SessionGate } from '../_components/session-gate'
-import type { SessionData } from '../_components/session-provider'
+import { useSession, type SessionData } from '../_components/session-provider'
 import { useI18n } from '../_components/i18n-provider'
 import { Os7Logo } from '../../ui-kit/src/os7-brand'
 import type { ApiResponse } from '@/shared/api'
@@ -36,6 +36,7 @@ export default function WelcomePage() {
 
 function WelcomeContent({ session }: { session: SessionData }) {
   const router = useRouter()
+  const sessionContext = useSession()
   const { t } = useI18n()
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -81,6 +82,7 @@ function WelcomeContent({ session }: { session: SessionData }) {
         )
       }
 
+      await sessionContext.refresh()
       router.push('/home')
     } catch (error) {
       setError(error instanceof Error ? error.message : t.welcome.nameRequired)

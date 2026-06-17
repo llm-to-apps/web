@@ -13,6 +13,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:sqlite": "npm run db:test:reset && RUN_DB_E2E=1 DATABASE_URL=file:$(pwd)/prisma/test-e2e.db REDIS_URL= RESEND_API_KEY= AUTH_SECRET=test-auth-secret AUTH_ACCEPT_ANY_EMAIL_CODE=true PLATFORM_BASE_URL=http://127.0.0.1:3107 PLATFORM_DOMAIN=localhost PROJECT_PUBLIC_SCHEME=http OAUTH_INTERNAL_BASE_URL=http://127.0.0.1:3107 PROJECT_USE_AGENT_MODEL=test PROJECT_DEV_AGENT_MODEL=test npm run test:e2e",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "node scripts/prisma.mjs generate",
     "prisma:migrate:dev": "node scripts/prisma.mjs migrate dev",
@@ -44,6 +47,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.0",
     "@types/node": "^22.13.14",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
@@ -51,6 +55,7 @@
     "eslint-config-next": "^16.2.9",
     "prettier": "^3.8.4",
     "tsx": "^4.22.4",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.9"
   }
 }
