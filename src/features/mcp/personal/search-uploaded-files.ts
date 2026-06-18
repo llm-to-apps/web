@@ -83,6 +83,7 @@ export async function searchUploadedFilesTool({
         AND f.scope = ${input.scope}
         AND (${input.scope} = 'user_agent' OR f."projectId" = ${input.projectId ?? ''})
         AND f.status = 'processed'
+        AND f."deletedAt" IS NULL
         AND f.id IN (${Prisma.join(input.attachedFileIds)})
         AND c.embedding IS NOT NULL
         AND c."embeddingDimensions" = ${agentEmbeddingDimensions()}

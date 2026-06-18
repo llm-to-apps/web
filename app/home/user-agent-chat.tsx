@@ -1,7 +1,6 @@
 'use client'
 
 import {
-  type ChangeEvent,
   FormEvent,
   KeyboardEvent,
   type ReactNode,
@@ -10,7 +9,7 @@ import {
   useRef,
   useState
 } from 'react'
-import { Bot, Check, CircleAlert, FileText, Paperclip, User, X } from 'lucide-react'
+import { Bot, Check, CircleAlert, FileText, User, X } from 'lucide-react'
 import {
   ActionIcon,
   Avatar,
@@ -32,6 +31,7 @@ import {
 } from '../_components/chat-progress'
 import { ChatOptionsMenu } from './chat-options-menu'
 import { useI18n } from '../_components/i18n-provider'
+import { AgentFilePicker } from '../_components/agent-file-picker'
 import type { ApiResponse } from '@/shared/api'
 
 type ChatMessage = {
@@ -125,7 +125,6 @@ export function UserAgentChat({
   const [attachedFiles, setAttachedFiles] = useState<UploadedChatFile[]>([])
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const shouldRestoreInputFocusRef = useRef(false)
   const activeRunRef = useRef<string | null>(null)
   const streamAgentRunRef = useRef<
@@ -343,18 +342,7 @@ export function UserAgentChat({
     }
   }
 
-  function openFilePicker() {
-    if (isUploadingFile) {
-      return
-    }
-
-    fileInputRef.current?.click()
-  }
-
-  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    event.target.value = ''
-
+  async function uploadAttachedFile(file: File) {
     if (!file || isUploadingFile) {
       return
     }
@@ -401,7 +389,19 @@ export function UserAgentChat({
       ])
     } finally {
       setIsUploadingFile(false)
+      restoreInputFocus()
     }
+  }
+
+  function attachExistingFile(file: UploadedChatFile) {
+    upsertAttachedFile(file)
+    restoreInputFocus()
+  }
+
+  function restoreInputFocus() {
+    window.requestAnimationFrame(() => {
+      inputRef.current?.focus({ preventScroll: true })
+    })
   }
 
   function upsertAttachedFile(file: UploadedChatFile) {
@@ -613,16 +613,10 @@ export function UserAgentChat({
 
         <form onSubmit={handleSubmit}>
           <Stack gap="xs">
-            <input
-              ref={fileInputRef}
-              accept=".txt,text/plain,image/png,image/jpeg,image/webp"
-              hidden
-              onChange={handleFileChange}
-              type="file"
-            />
             <Textarea
               ref={inputRef}
               aria-label={t.chat.messageAria}
+              autoFocus
               disabled={isSending}
               onKeyDown={handleInputKeyDown}
               onChange={(event) => setInput(event.target.value)}
@@ -632,18 +626,14 @@ export function UserAgentChat({
             />
             <Group align="center" gap="xs" justify="space-between">
               <Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
-                <Tooltip label="Upload text file">
-                  <ActionIcon
-                    aria-label="Upload text file"
-                    disabled={isUploadingFile}
-                    loading={isUploadingFile}
-                    onClick={openFilePicker}
-                    type="button"
-                    variant="subtle"
-                  >
-                    <Paperclip size={18} />
-                  </ActionIcon>
-                </Tooltip>
+                <AgentFilePicker
+                  attachedFileIds={attachedFiles.map((file) => file.id)}
+                  disabled={isSending}
+                  isUploading={isUploadingFile}
+                  onSelectFile={attachExistingFile}
+                  onUploadFile={uploadAttachedFile}
+                  scope="user_agent"
+                />
                 {attachedFiles.map((file) => (
                   <UploadedFileChip
                     key={file.id}
@@ -705,6 +695,7 @@ function UploadedFileChip({
 }) {
   const isActive = isActiveFileStatus(file)
   const isFailed = file.status === 'failed'
+  const isReady = file.status === 'processed'
 
   return (
     <Paper px={6} py={3} radius={8} withBorder>
@@ -715,7 +706,7 @@ function UploadedFileChip({
           </Tooltip>
         ) : isFailed ? (
           <CircleAlert color="var(--mantine-color-red-6)" size={12} />
-        ) : isActive ? (
+        ) : isActive || !isReady ? (
           <FileText color="var(--mantine-color-gray-6)" size={12} />
         ) : (
           <Check color="var(--mantine-color-green-7)" size={12} />

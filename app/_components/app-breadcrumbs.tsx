@@ -20,6 +20,7 @@ export function AppBreadcrumbs() {
   }
 
   const item = getBreadcrumbItem(pathname, {
+    files: t.files.title,
     home: t.tabs.apps,
     settings: t.settings.title,
     store: t.tabs.store
@@ -48,6 +49,7 @@ export function AppBreadcrumbs() {
 function getBreadcrumbItem(
   pathname: string,
   labels: {
+    files: string
     home: string
     settings: string
     store: string
@@ -55,6 +57,7 @@ function getBreadcrumbItem(
 ): BreadcrumbItem | null {
   const normalizedPathname = pathname.replace(/\/+$/, '') || '/home'
   const routeLabels: Record<string, string> = {
+    files: labels.files,
     home: labels.home,
     settings: labels.settings,
     store: labels.store

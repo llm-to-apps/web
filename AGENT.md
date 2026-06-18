@@ -98,6 +98,16 @@ Web uses Mantine as the UI framework.
 - Keep shared OS7 theme and brand helpers in `ui-kit/src`.
 - Keep `app/mantine-provider.tsx` as a thin Mantine provider wrapper.
 - Keep mobile behavior responsive through Mantine props before local media CSS.
+- Give primary input fields autofocus on interactive views when the next natural
+  action is typing, such as search fields, chat message boxes, command inputs,
+  and create/edit forms. Restore focus to that primary input after related
+  actions such as upload, select, submit, or modal close when it keeps the user
+  in the same workflow.
+- Use skeletons only for the first load or truly empty unstable content. During
+  search, filtering, sorting, pagination, or background refetches, preserve the
+  current layout and content, keep container dimensions stable, and show a
+  delayed subtle loading indicator instead of replacing populated UI with
+  skeletons.
 
 ## Verification
 

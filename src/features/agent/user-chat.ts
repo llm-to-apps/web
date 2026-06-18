@@ -37,6 +37,7 @@ export async function handleUserAgentChatPost(request: NextRequest) {
       userId: user.id
     },
     {
+      attachedFileCount: attachedFileIds.length,
       elapsedMs: elapsedSince(startedAt),
       messageLength: message.length
     }
@@ -45,6 +46,7 @@ export async function handleUserAgentChatPost(request: NextRequest) {
   if (attachedFileIds.length > 0) {
     const attachedFiles = await prisma.uploadedFile.findMany({
       where: {
+        deletedAt: null,
         id: {
           in: attachedFileIds
         },

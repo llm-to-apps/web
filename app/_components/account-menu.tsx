@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { Avatar, Button, Menu, Text } from '@mantine/core'
-import { ChevronDown, LogOut, Settings } from 'lucide-react'
+import { ChevronDown, FileText, LogOut, Settings } from 'lucide-react'
 import type { CurrentUser } from '@/server/auth'
 import { useI18n } from './i18n-provider'
 
@@ -76,6 +76,9 @@ export function AccountMenu({ usageSummary, user }: AccountMenuProps) {
         ) : null}
         <Menu.Item component={Link} href="/settings" leftSection={<Settings size={16} />}>
           {t.settings.title}
+        </Menu.Item>
+        <Menu.Item component={Link} href="/files" leftSection={<FileText size={16} />}>
+          {t.files.title}
         </Menu.Item>
         <Menu.Item
           color="red"

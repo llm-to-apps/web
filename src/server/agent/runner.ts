@@ -1,4 +1,4 @@
-import { type Prisma } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 
 import { prisma } from '../db'
 import { recordAgentRunEvent } from './run-events'
@@ -14,11 +14,13 @@ import { billAgentUsage } from '../billing'
 import { hasTokenUsage, readMastraStream } from './mastra-stream'
 import { publishProjectChatChanged } from './project-chat-events'
 import {
+  agentEmbeddingDimensions,
   agentRuntimeUrl,
   projectDevAgentModel,
   projectUseAgentModel,
   userAgentModel
 } from '../env'
+import { embedTexts } from '../files/embeddings'
 import { platformBaseUrl } from '../request-origin'
 import { getPlatformStorageObjectBuffer } from '../storage'
 import { projectAgentMemoryIds, userAgentMemoryIds } from './memory-ids'
@@ -51,6 +53,10 @@ type MastraUserContentPart =
       filename: string
       mimeType: string
     }
+
+const smallAttachedTextChars = 20_000
+const maxAttachedContextChars = 12_000
+const maxRetrievedAttachedChunks = 8
 
 class AgentUserFacingError extends Error {
   constructor(
@@ -189,7 +195,11 @@ async function executeUserAgentRun(run: AgentRunRecord) {
           }
         }
       },
-      instructions: userAgentInstructions(run.userId, run.user.email),
+      instructions: userAgentInstructions({
+        attachedFileCount: payload.attachedFileIds.length,
+        userEmail: run.user.email,
+        userId: run.userId
+      }),
       maxSteps: 20,
       modelSettings: {
         temperature: 0.2
@@ -276,6 +286,7 @@ async function executeProjectAgentRun(run: AgentRunRecord) {
         projectId: run.projectId ?? '',
         projectName: payload.projectName,
         status: payload.status,
+        attachedFileCount: payload.attachedFileIds.length,
         toolsUrl: payload.toolsUrl
       }),
       maxSteps: 50,
@@ -640,12 +651,13 @@ async function buildAgentUserMessageContent({
     return message
   }
 
-  const imageFiles = await prisma.uploadedFile.findMany({
+  const attachedFiles = await prisma.uploadedFile.findMany({
     where: {
       id: {
         in: attachedFileIds
       },
       ...(scope === 'project_agent' ? { projectId } : {}),
+      deletedAt: null,
       scope,
       status: 'processed',
       userId
@@ -654,6 +666,15 @@ async function buildAgentUserMessageContent({
       createdAt: 'asc'
     },
     select: {
+      chunks: {
+        orderBy: {
+          chunkIndex: 'asc'
+        },
+        select: {
+          chunkIndex: true,
+          content: true
+        }
+      },
       id: true,
       mimeType: true,
       originalName: true,
@@ -661,9 +682,17 @@ async function buildAgentUserMessageContent({
       storageKey: true
     }
   })
+  const textMessage = await buildAttachedFileTextMessage({
+    attachedFileIds,
+    files: attachedFiles,
+    message,
+    projectId,
+    scope,
+    userId
+  })
   const imageParts = []
 
-  for (const file of imageFiles) {
+  for (const file of attachedFiles) {
     if (!isSupportedVisionMimeType(file.mimeType)) {
       continue
     }
@@ -682,16 +711,229 @@ async function buildAgentUserMessageContent({
   }
 
   if (imageParts.length === 0) {
-    return message
+    return textMessage
   }
 
   return [
     {
       type: 'text',
-      text: message
+      text: textMessage
     },
     ...imageParts
   ]
+}
+
+async function buildAttachedFileTextMessage({
+  attachedFileIds,
+  files,
+  message,
+  projectId,
+  scope,
+  userId
+}: {
+  attachedFileIds: string[]
+  files: Array<{
+    chunks: Array<{
+      chunkIndex: number
+      content: string
+    }>
+    id: string
+    originalName: string
+  }>
+  message: string
+  projectId?: string | null
+  scope: 'project_agent' | 'user_agent'
+  userId: string
+}) {
+  const textFiles = files.filter((file) => file.chunks.length > 0)
+  const totalTextChars = textFiles.reduce(
+    (sum, file) =>
+      sum + file.chunks.reduce((fileSum, chunk) => fileSum + chunk.content.length, 0),
+    0
+  )
+
+  if (textFiles.length === 0) {
+    return message
+  }
+
+  const excerpts =
+    totalTextChars <= smallAttachedTextChars
+      ? buildSequentialAttachedFileExcerpts(textFiles)
+      : await buildRetrievedAttachedFileExcerpts({
+          attachedFileIds,
+          message,
+          projectId,
+          scope,
+          userId
+        })
+
+  if (excerpts.length === 0) {
+    return message
+  }
+
+  return [
+    'Attached file excerpts for this message:',
+    excerpts.join('\n\n---\n\n'),
+    '',
+    'User message:',
+    message
+  ].join('\n')
+}
+
+function buildSequentialAttachedFileExcerpts(
+  files: Array<{
+    chunks: Array<{
+      content: string
+    }>
+    originalName: string
+  }>
+) {
+  const excerpts = []
+  let remainingChars = maxAttachedContextChars
+
+  for (const file of files) {
+    const chunks = file.chunks
+
+    if (chunks.length === 0 || remainingChars <= 0) {
+      continue
+    }
+
+    const chunkText = chunks
+      .map((chunk) => chunk.content.trim())
+      .filter(Boolean)
+      .join('\n\n')
+      .slice(0, remainingChars)
+
+    if (!chunkText) {
+      continue
+    }
+
+    remainingChars -= chunkText.length
+    excerpts.push(`File: ${file.originalName}\n${chunkText}`)
+  }
+
+  return excerpts
+}
+
+async function buildRetrievedAttachedFileExcerpts({
+  attachedFileIds,
+  message,
+  projectId,
+  scope,
+  userId
+}: {
+  attachedFileIds: string[]
+  message: string
+  projectId?: string | null
+  scope: 'project_agent' | 'user_agent'
+  userId: string
+}) {
+  try {
+    const [queryEmbedding] = await embedTexts([message])
+    const results = await prisma.$queryRaw<
+      Array<{
+        content: string
+        fileId: string
+        fileName: string
+      }>
+    >(
+      Prisma.sql`
+        SELECT
+          c.content,
+          f.id AS "fileId",
+          f."originalName" AS "fileName"
+        FROM uploaded_file_chunks c
+        INNER JOIN uploaded_files f ON f.id = c."uploadedFileId"
+        WHERE
+          f."userId" = ${userId}
+          AND f.scope = ${scope}
+          AND (${scope} = 'user_agent' OR f."projectId" = ${projectId ?? ''})
+          AND f.status = 'processed'
+          AND f."deletedAt" IS NULL
+          AND f.id IN (${Prisma.join(attachedFileIds)})
+          AND c.embedding IS NOT NULL
+          AND c."embeddingDimensions" = ${agentEmbeddingDimensions()}
+        ORDER BY c.embedding <=> ${vectorLiteral(queryEmbedding.embedding)}::vector
+        LIMIT ${maxRetrievedAttachedChunks}
+      `
+    )
+
+    return buildSearchResultExcerpts(results)
+  } catch (error) {
+    logAgentRun(
+      'agent.attached_file_context.retrieval_failed',
+      {
+        projectId,
+        requestId: undefined,
+        scope,
+        userId
+      },
+      {
+        error: error instanceof Error ? error.message : String(error)
+      }
+    )
+
+    const fallbackFiles = await prisma.uploadedFile.findMany({
+      where: {
+        id: {
+          in: attachedFileIds
+        },
+        ...(scope === 'project_agent' ? { projectId } : {}),
+        deletedAt: null,
+        scope,
+        status: 'processed',
+        userId
+      },
+      orderBy: {
+        createdAt: 'asc'
+      },
+      select: {
+        chunks: {
+          orderBy: {
+            chunkIndex: 'asc'
+          },
+          select: {
+            content: true
+          },
+          take: maxRetrievedAttachedChunks
+        },
+        originalName: true
+      }
+    })
+
+    return buildSequentialAttachedFileExcerpts(fallbackFiles)
+  }
+}
+
+function buildSearchResultExcerpts(
+  results: Array<{
+    content: string
+    fileName: string
+  }>
+) {
+  const excerpts = []
+  let remainingChars = maxAttachedContextChars
+
+  for (const result of results) {
+    if (remainingChars <= 0) {
+      break
+    }
+
+    const content = result.content.trim().slice(0, remainingChars)
+
+    if (!content) {
+      continue
+    }
+
+    remainingChars -= content.length
+    excerpts.push(`File: ${result.fileName}\n${content}`)
+  }
+
+  return excerpts
+}
+
+function vectorLiteral(embedding: number[]) {
+  return `[${embedding.join(',')}]`
 }
 
 function requireAgentUrl() {
@@ -764,10 +1006,19 @@ function defaultPersonalMcpUrl() {
   return new URL('/api/mcp/personal', platformBaseUrl()).toString()
 }
 
-function userAgentInstructions(userId: string, userEmail: string) {
+function userAgentInstructions({
+  attachedFileCount,
+  userEmail,
+  userId
+}: {
+  attachedFileCount: number
+  userEmail: string
+  userId: string
+}) {
   return `
 You are working for user ${userId}.
 User email: ${userEmail}
+Current message attached files: ${attachedFileCount}
 
 Rules:
 - You are the os7 user agent for this signed-in user.
@@ -779,8 +1030,9 @@ Rules:
 - If a Personal OS MCP tool returns "I see these installed apps (N)" where N is greater than 0, copy that list to the user. Never say the app list is empty in that case.
 - Do not claim to know the user's current project list unless it is provided in this request or by a tool.
 - searchUploadedFiles only searches files attached to the current user message. If no files were attached, it returns no document passages.
-- If the user asks about an uploaded file, document, notes, text file, attachment, or says "in the file", call searchUploadedFiles before answering.
-- When answering from uploaded files, cite the file name when it is present in the search result.
+- Attached file excerpts may already be included in the user message. Answer from those excerpts when they contain enough evidence.
+- Call searchUploadedFiles only when attached file excerpts are missing, ambiguous, or insufficient for the user's question.
+- When answering from uploaded files or excerpts, cite the file name when it is present.
 - If the user asks for work inside a specific app, identify the target app and explain that the project agent should handle the app-specific work.
 - If the target app is unclear, ask one concise question.
 - If a requested platform action requires a missing tool, say which capability is not connected yet.
@@ -790,6 +1042,7 @@ Rules:
 
 function projectAgentInstructions({
   appMcpUrl,
+  attachedFileCount,
   domain,
   mode,
   projectId,
@@ -798,6 +1051,7 @@ function projectAgentInstructions({
   toolsUrl
 }: {
   appMcpUrl: string
+  attachedFileCount: number
   domain: string
   mode: AgentMode
   projectId: string
@@ -811,6 +1065,7 @@ Application: ${projectName}
 Domain: ${domain}
 Status: ${status}
 Mode: ${mode === 'dev' ? 'Dev' : 'Use'}
+Current message attached files: ${attachedFileCount}
 ${mode === 'dev' ? `Agent tools endpoint: ${toolsUrl}` : `Application MCP endpoint: ${appMcpUrl}`}
 
 Rules:
@@ -822,8 +1077,9 @@ ${mode === 'dev' ? devModeRules() : projectUseModeRules()}
 - Do not say "let me check" unless you actually call a tool.
 - Do not claim you changed files unless a tool call confirms it.
 - searchUploadedProjectFiles only searches files attached to the current project chat message. If no files were attached, it returns no document passages.
-- If the user asks about an uploaded file, document, notes, text file, attachment, or says "in the file", call searchUploadedProjectFiles before answering.
-- When answering from uploaded files, cite the file name when it is present in the search result.
+- Attached file excerpts may already be included in the user message. Answer from those excerpts when they contain enough evidence.
+- Call searchUploadedProjectFiles only when attached file excerpts are missing, ambiguous, or insufficient for the user's question.
+- When answering from uploaded files or excerpts, cite the file name when it is present.
 - When answering about application data, keep the answer concise and do not include internal IDs unless the user asks for them.
 - Mastra memory may provide prior conversation context. Treat it as helpful context, not proof of current files, runtime state, or app data. Verify current facts with tools.
 `

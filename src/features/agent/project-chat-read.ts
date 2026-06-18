@@ -53,6 +53,22 @@ export async function handleProjectAgentChatGet(
       },
       take: 100,
       select: {
+        attachments: {
+          orderBy: {
+            createdAt: 'asc'
+          },
+          select: {
+            uploadedFile: {
+              select: {
+                error: true,
+                id: true,
+                originalName: true,
+                sizeBytes: true,
+                status: true
+              }
+            }
+          }
+        },
         content: true,
         id: true,
         role: true,
@@ -134,6 +150,13 @@ export async function handleProjectAgentChatGet(
       id: message.id,
       role: message.role === 'user' ? 'user' : 'assistant',
       source: message.source,
+      attachments: message.attachments.map((attachment) => ({
+        error: attachment.uploadedFile.error,
+        id: attachment.uploadedFile.id,
+        name: attachment.uploadedFile.originalName,
+        sizeBytes: attachment.uploadedFile.sizeBytes,
+        status: attachment.uploadedFile.status
+      })),
       usage:
         message.role === 'assistant'
           ? formatInitialUsage(usageByAssistantMessageId.get(message.id))

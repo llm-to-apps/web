@@ -1,4 +1,9 @@
-import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client
+} from '@aws-sdk/client-s3'
 
 import {
   managerUrl,
@@ -162,6 +167,30 @@ export async function getPlatformStorageObjectBuffer({
   }
 
   return Buffer.from(await response.Body.transformToByteArray())
+}
+
+export async function deletePlatformStorageObject({
+  bucket,
+  key
+}: {
+  bucket: string
+  key: string
+}) {
+  const config = platformStorageConfig()
+  const s3 = new S3Client(storageAwsConfig(config))
+
+  try {
+    await s3.send(
+      new DeleteObjectCommand({
+        Bucket: bucket,
+        Key: key
+      })
+    )
+  } catch (error) {
+    throw new Error(`Failed to delete S3 object from ${config.endpoint}/${bucket}/${key}`, {
+      cause: error
+    })
+  }
 }
 
 export async function provisionProjectStorage(

@@ -1,7 +1,6 @@
 'use client'
 
 import {
-  type ChangeEvent,
   forwardRef,
   FormEvent,
   KeyboardEvent,
@@ -20,7 +19,6 @@ import {
   Code2,
   FileText,
   MousePointer2,
-  Paperclip,
   User,
   Workflow,
   X
@@ -36,14 +34,14 @@ import {
   SegmentedControl,
   Stack,
   Text,
-  Textarea,
-  Tooltip
+  Textarea
 } from '@mantine/core'
 import { useHover } from '@mantine/hooks'
 import {
   formatChatErrorMessage,
   formatChatProgressMessage
 } from '../../_components/chat-progress'
+import { AgentFilePicker } from '../../_components/agent-file-picker'
 import { useI18n } from '../../_components/i18n-provider'
 import type { ApiResponse } from '@/shared/api'
 
@@ -173,7 +171,6 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
     const [attachedFiles, setAttachedFiles] = useState<UploadedChatFile[]>([])
     const messagesEndRef = useRef<HTMLDivElement | null>(null)
     const inputRef = useRef<HTMLTextAreaElement | null>(null)
-    const fileInputRef = useRef<HTMLInputElement | null>(null)
     const activeRunRef = useRef<string | null>(null)
     const startRunStreamRef = useRef<(runId: string) => void>(() => undefined)
     const isClearingRef = useRef(false)
@@ -457,18 +454,7 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
       }
     }, [isClearing, isSending, mode, project.id, t.chat.clearFailed, welcomeMessage])
 
-    function openFilePicker() {
-      if (isUploadingFile) {
-        return
-      }
-
-      fileInputRef.current?.click()
-    }
-
-    async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-      const file = event.target.files?.[0]
-      event.target.value = ''
-
+    async function uploadAttachedFile(file: File) {
       if (!file || isUploadingFile) {
         return
       }
@@ -518,7 +504,19 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
         ])
       } finally {
         setIsUploadingFile(false)
+        restoreInputFocus()
       }
+    }
+
+    function attachExistingFile(file: UploadedChatFile) {
+      upsertAttachedFile(file)
+      restoreInputFocus()
+    }
+
+    function restoreInputFocus() {
+      window.requestAnimationFrame(() => {
+        inputRef.current?.focus({ preventScroll: true })
+      })
     }
 
     function upsertAttachedFile(file: UploadedChatFile) {
@@ -758,13 +756,6 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
 
         <form onSubmit={handleSubmit}>
           <Stack gap="sm">
-            <input
-              ref={fileInputRef}
-              accept=".txt,text/plain,image/png,image/jpeg,image/webp"
-              hidden
-              onChange={handleFileChange}
-              type="file"
-            />
             <SegmentedControl
               aria-label={t.chat.modeSwitcherLabel}
               data={[
@@ -794,6 +785,7 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
             <Textarea
               ref={inputRef}
               aria-label={t.chat.messageAria}
+              autoFocus
               disabled={isSending}
               onKeyDown={handleInputKeyDown}
               onChange={(event) => setInput(event.target.value)}
@@ -803,18 +795,15 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
             />
             <Group align="center" gap="xs" justify="space-between">
               <Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
-                <Tooltip label="Upload text file">
-                  <ActionIcon
-                    aria-label="Upload text file"
-                    disabled={isUploadingFile}
-                    loading={isUploadingFile}
-                    onClick={openFilePicker}
-                    type="button"
-                    variant="subtle"
-                  >
-                    <Paperclip size={18} />
-                  </ActionIcon>
-                </Tooltip>
+                <AgentFilePicker
+                  attachedFileIds={attachedFiles.map((file) => file.id)}
+                  disabled={isSending}
+                  isUploading={isUploadingFile}
+                  onSelectFile={attachExistingFile}
+                  onUploadFile={uploadAttachedFile}
+                  projectId={project.id}
+                  scope="project_agent"
+                />
                 {attachedFiles.map((file) => (
                   <UploadedFileChip
                     key={file.id}
@@ -928,13 +917,14 @@ function UploadedFileChip({
 }) {
   const isActive = isActiveFileStatus(file)
   const isFailed = file.status === 'failed'
+  const isReady = file.status === 'processed'
 
   return (
     <Paper px={6} py={3} radius={8} withBorder>
       <Group gap={6} wrap="nowrap">
         {isFailed ? (
           <CircleAlert color="var(--mantine-color-red-6)" size={14} />
-        ) : isActive ? (
+        ) : isActive || !isReady ? (
           <FileText color="var(--mantine-color-gray-6)" size={14} />
         ) : (
           <Check color="var(--mantine-color-green-7)" size={14} />
