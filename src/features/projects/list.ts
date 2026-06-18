@@ -2,10 +2,7 @@ import { getCurrentUser } from '@/server/auth'
 import { prisma } from '@/server/db'
 import { jsonErrorMessage, jsonOk } from '@/server/http'
 import { projectMemberWhere } from '@/server/project-members'
-import {
-  createTemplateImageMap,
-  getProjectTemplateUpdate
-} from './template-update'
+import { createTemplateImageMap, getProjectTemplateUpdate } from './template-update'
 
 export async function handleProjectsListGet() {
   const user = await getCurrentUser()

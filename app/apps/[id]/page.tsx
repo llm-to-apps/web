@@ -84,9 +84,7 @@ export default function ProjectPage() {
   const [error, setError] = useState<string | null>(null)
   const [devReadyUrl, setDevReadyUrl] = useState<string | null>(null)
   const [devError, setDevError] = useState<string | null>(null)
-  const [updatePreflight, setUpdatePreflight] = useState<UpdatePreflightData | null>(
-    null
-  )
+  const [updatePreflight, setUpdatePreflight] = useState<UpdatePreflightData | null>(null)
   const [updatePreflightError, setUpdatePreflightError] = useState<string | null>(null)
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
   const [isUpdatePreflightLoading, setIsUpdatePreflightLoading] = useState(false)
@@ -289,7 +287,9 @@ export default function ProjectPage() {
           method: 'POST'
         }
       )
-      const payload = (await response.json().catch(() => null)) as StartUpdateResponse | null
+      const payload = (await response
+        .json()
+        .catch(() => null)) as StartUpdateResponse | null
 
       if (!response.ok || !payload || !payload.ok) {
         setUpdatePreflightError(
@@ -376,11 +376,14 @@ export default function ProjectPage() {
               <Group gap="sm" justify="space-between">
                 <Group gap="xs">
                   <RefreshCw size={16} />
-                  <Text size="sm">
-                    A newer {data.project.name} version is available.
-                  </Text>
+                  <Text size="sm">A newer {data.project.name} version is available.</Text>
                 </Group>
-                <Button color="green" onClick={openUpdateModal} size="xs" variant="outline">
+                <Button
+                  color="green"
+                  onClick={openUpdateModal}
+                  size="xs"
+                  variant="outline"
+                >
                   Update
                 </Button>
               </Group>
