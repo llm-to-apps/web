@@ -4,10 +4,13 @@ import { useEffect, useState } from 'react'
 import type { ComponentProps } from 'react'
 import {
   Alert,
+  Button,
   Center,
   Grid,
   GridCol,
+  Group,
   Loader,
+  Modal,
   Paper,
   Skeleton,
   Stack,
@@ -15,6 +18,7 @@ import {
   Title
 } from '@mantine/core'
 import { useParams, useSearchParams } from 'next/navigation'
+import { RefreshCw } from 'lucide-react'
 import { formatMessage } from '@/shared/i18n/dictionaries'
 import { useI18n } from '../../_components/i18n-provider'
 import { ProjectAgentPanel } from './project-agent-panel'
@@ -28,6 +32,11 @@ type ProjectWorkspace = {
   project: ComponentProps<typeof ProjectAgentPanel>['project'] & {
     deployError: string | null
     devUrl: string
+    templateUpdate?: {
+      available: boolean
+      currentImage: string | null
+      latestImage: string | null
+    }
   }
   usageSummary: ComponentProps<typeof ProjectAgentPanel>['usageSummary']
 }
@@ -49,6 +58,24 @@ type ProjectStatusResponse = ApiResponse<{
   }
 }>
 
+type UpdatePreflightData = {
+  commits: Array<{
+    authorName: string | null
+    message: string
+    sha: string
+    url: string | null
+  }>
+  hasChanges: boolean
+}
+
+type UpdatePreflightResponse = ApiResponse<UpdatePreflightData>
+type StartUpdateResponse = ApiResponse<{
+  image: string
+  message: string
+}>
+
+const UI_DELAY_MS = 250
+
 export default function ProjectPage() {
   const params = useParams<{ id: string }>()
   const searchParams = useSearchParams()
@@ -57,6 +84,14 @@ export default function ProjectPage() {
   const [error, setError] = useState<string | null>(null)
   const [devReadyUrl, setDevReadyUrl] = useState<string | null>(null)
   const [devError, setDevError] = useState<string | null>(null)
+  const [updatePreflight, setUpdatePreflight] = useState<UpdatePreflightData | null>(
+    null
+  )
+  const [updatePreflightError, setUpdatePreflightError] = useState<string | null>(null)
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
+  const [isUpdatePreflightLoading, setIsUpdatePreflightLoading] = useState(false)
+  const [isProjectUpdating, setIsProjectUpdating] = useState(false)
+  const [updateStartedMessage, setUpdateStartedMessage] = useState<string | null>(null)
   const mode = searchParams.get('mode') === 'dev' ? 'dev' : 'use'
   const previewUrl = mode === 'dev' ? devReadyUrl : data?.project.appUrl
   const localizedPreviewUrl = previewUrl ? previewUrlWithLocale(previewUrl, locale) : null
@@ -206,6 +241,93 @@ export default function ProjectPage() {
     }
   }, [data?.project.status, mode, params.id])
 
+  async function openUpdateModal() {
+    setIsUpdateModalOpen(true)
+    setUpdatePreflight(null)
+    setUpdatePreflightError(null)
+    setIsUpdatePreflightLoading(true)
+    const uiDelay = waitForUiDelay()
+
+    try {
+      const response = await fetch(
+        `/api/projects/${encodeURIComponent(params.id)}/update-preflight`,
+        {
+          cache: 'no-store'
+        }
+      )
+      const payload = (await response
+        .json()
+        .catch(() => null)) as UpdatePreflightResponse | null
+
+      if (!response.ok || !payload || !payload.ok) {
+        setUpdatePreflightError(
+          payload && !payload.ok
+            ? payload.error.message
+            : `Failed to check application changes (${response.status})`
+        )
+        return
+      }
+
+      setUpdatePreflight(payload.data)
+    } catch {
+      setUpdatePreflightError('Failed to check application changes')
+    } finally {
+      await uiDelay
+      setIsUpdatePreflightLoading(false)
+    }
+  }
+
+  async function startProjectUpdate() {
+    setIsProjectUpdating(true)
+    setUpdatePreflightError(null)
+
+    try {
+      const response = await fetch(
+        `/api/projects/${encodeURIComponent(params.id)}/update`,
+        {
+          cache: 'no-store',
+          method: 'POST'
+        }
+      )
+      const payload = (await response.json().catch(() => null)) as StartUpdateResponse | null
+
+      if (!response.ok || !payload || !payload.ok) {
+        setUpdatePreflightError(
+          payload && !payload.ok
+            ? payload.error.message
+            : `Failed to start update (${response.status})`
+        )
+        return
+      }
+
+      setData((current) =>
+        current
+          ? {
+              ...current,
+              project: {
+                ...current.project,
+                templateUpdate: current.project.templateUpdate
+                  ? {
+                      ...current.project.templateUpdate,
+                      available: false,
+                      currentImage: payload.data.image
+                    }
+                  : current.project.templateUpdate
+              }
+            }
+          : current
+      )
+      setIsUpdateModalOpen(false)
+      setUpdateStartedMessage(
+        'Update started. The new version should be available in a couple of minutes.'
+      )
+    } catch {
+      setUpdatePreflightError('Failed to start update')
+    } finally {
+      setIsProjectUpdating(false)
+    }
+  }
+
   if (error) {
     return (
       <Center h="100vh" p="md">
@@ -249,6 +371,91 @@ export default function ProjectPage() {
 
       <GridCol display="flex" h={{ base: 'auto', lg: '100%' }} span={{ base: 12, lg: 8 }}>
         <Stack flex={1} gap="sm" h="100%" mih={0} w="100%">
+          {data.project.templateUpdate?.available ? (
+            <Alert color="green">
+              <Group gap="sm" justify="space-between">
+                <Group gap="xs">
+                  <RefreshCw size={16} />
+                  <Text size="sm">
+                    A newer {data.project.name} version is available.
+                  </Text>
+                </Group>
+                <Button color="green" onClick={openUpdateModal} size="xs" variant="outline">
+                  Update
+                </Button>
+              </Group>
+            </Alert>
+          ) : null}
+          {updateStartedMessage ? (
+            <Alert color="green">{updateStartedMessage}</Alert>
+          ) : null}
+          <Modal
+            centered
+            onClose={() => setIsUpdateModalOpen(false)}
+            opened={isUpdateModalOpen}
+            title={
+              <Group gap="xs">
+                <RefreshCw size={17} />
+                <Text fw={700}>Update app</Text>
+              </Group>
+            }
+          >
+            {isUpdatePreflightLoading ? (
+              <Center py="lg">
+                <Loader size="sm" />
+              </Center>
+            ) : updatePreflightError ? (
+              <Alert color="red">{updatePreflightError}</Alert>
+            ) : updatePreflight?.hasChanges ? (
+              <Stack gap="md">
+                <Text size="sm">
+                  You did some change in you app, thus, during update some changes could
+                  be lost
+                </Text>
+                <Stack gap="xs">
+                  {updatePreflight.commits.map((commit) => (
+                    <Paper key={commit.sha} p="sm" withBorder>
+                      <Text fw={700} size="sm">
+                        {commit.message || 'Untitled commit'}
+                      </Text>
+                      <Text c="dimmed" size="xs">
+                        {commit.sha.slice(0, 7)}
+                        {commit.authorName ? ` by ${commit.authorName}` : ''}
+                      </Text>
+                    </Paper>
+                  ))}
+                </Stack>
+                <Text fw={700} size="sm">
+                  Are you sure?
+                </Text>
+                <Group justify="flex-end">
+                  <Button
+                    color="green"
+                    loading={isProjectUpdating}
+                    onClick={startProjectUpdate}
+                  >
+                    Update
+                  </Button>
+                </Group>
+              </Stack>
+            ) : (
+              <Stack gap="md">
+                <Text size="sm">
+                  You can safety update you app, don&apos;t worry, all your data will
+                  therere.
+                </Text>
+                <Group justify="flex-end">
+                  <Button
+                    color="green"
+                    loading={isProjectUpdating}
+                    onClick={startProjectUpdate}
+                  >
+                    Update
+                  </Button>
+                </Group>
+              </Stack>
+            )}
+          </Modal>
           {data.project.status === 'ready' ? (
             <Paper flex={1} style={{ overflow: 'hidden' }} withBorder>
               {devError ? (
@@ -305,4 +512,10 @@ function previewUrlWithLocale(previewUrl: string, locale: string) {
   const url = new URL(previewUrl)
   url.searchParams.set('lang', locale)
   return url.toString()
+}
+
+function waitForUiDelay() {
+  return new Promise((resolve) => {
+    setTimeout(resolve, UI_DELAY_MS)
+  })
 }

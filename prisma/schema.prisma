@@ -48,6 +48,7 @@ model Project {
   userId          String
   templateId      String
   templateName    String
+  templateImage   String?   @db.VarChar(255)
   git             String    @db.VarChar(1024)
   slug            String    @unique @db.VarChar(64)
   domain          String    @db.VarChar(255)

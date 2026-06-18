@@ -26,7 +26,9 @@ export async function findWorkspaceProject({
     },
     select: {
       id: true,
+      templateId: true,
       templateName: true,
+      templateImage: true,
       slug: true,
       domain: true,
       devDomain: true,

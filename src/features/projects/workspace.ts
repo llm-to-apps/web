@@ -1,7 +1,9 @@
 import { NextRequest } from 'next/server'
 
 import { getCurrentUser } from '@/server/auth'
+import { prisma } from '@/server/db'
 import { jsonErrorMessage, jsonOk } from '@/server/http'
+import { getProjectTemplateUpdate } from './template-update'
 import {
   findWorkspaceProject,
   loadWorkspaceChat,
@@ -37,7 +39,7 @@ export async function handleProjectWorkspaceGet(
     return jsonErrorMessage('Application not found', 404)
   }
 
-  const [chat, usageSummary] = await Promise.all([
+  const [chat, usageSummary, template] = await Promise.all([
     loadWorkspaceChat({
       mode,
       projectId: project.id,
@@ -46,6 +48,14 @@ export async function handleProjectWorkspaceGet(
     loadWorkspaceUsageSummary({
       projectId: project.id,
       userId: user.id
+    }),
+    prisma.appTemplate.findUnique({
+      where: {
+        id: project.templateId
+      },
+      select: {
+        image: true
+      }
     })
   ])
   const appUrl = project.url.replace(/\/$/, '')
@@ -65,6 +75,10 @@ export async function handleProjectWorkspaceGet(
       id: project.id,
       name: project.templateName,
       status: project.status,
+      templateUpdate: getProjectTemplateUpdate(
+        project,
+        new Map([[project.templateId, template?.image ?? null]])
+      ),
       toolsUrl: `${appUrl}/agent-tools`
     },
     usageSummary

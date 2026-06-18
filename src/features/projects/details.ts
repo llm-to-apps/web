@@ -7,6 +7,7 @@ import { managerUrl as readManagerUrl } from '@/server/env'
 import { jsonErrorMessage, jsonOk } from '@/server/http'
 import { projectMemberWhere } from '@/server/project-members'
 import { parseProjectResources } from '@/server/deploy/project-resources'
+import { getProjectTemplateUpdate } from './template-update'
 
 type ProjectRouteContext = {
   params: Promise<{ id: string }> | { id: string }
@@ -32,6 +33,7 @@ export async function handleProjectGet(
       id: true,
       templateId: true,
       templateName: true,
+      templateImage: true,
       slug: true,
       domain: true,
       url: true,
@@ -44,9 +46,23 @@ export async function handleProjectGet(
   if (!project) {
     return jsonErrorMessage('Application not found', 404)
   }
+  const template = await prisma.appTemplate.findUnique({
+    where: {
+      id: project.templateId
+    },
+    select: {
+      image: true
+    }
+  })
 
   return jsonOk({
-    project
+    project: {
+      ...project,
+      templateUpdate: getProjectTemplateUpdate(
+        project,
+        new Map([[project.templateId, template?.image ?? null]])
+      )
+    }
   })
 }
 

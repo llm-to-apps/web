@@ -2,6 +2,10 @@ import { getCurrentUser } from '@/server/auth'
 import { prisma } from '@/server/db'
 import { jsonErrorMessage, jsonOk } from '@/server/http'
 import { projectMemberWhere } from '@/server/project-members'
+import {
+  createTemplateImageMap,
+  getProjectTemplateUpdate
+} from './template-update'
 
 export async function handleProjectsListGet() {
   const user = await getCurrentUser()
@@ -19,6 +23,7 @@ export async function handleProjectsListGet() {
       id: true,
       templateId: true,
       templateName: true,
+      templateImage: true,
       slug: true,
       domain: true,
       url: true,
@@ -27,8 +32,23 @@ export async function handleProjectsListGet() {
       deployError: true
     }
   })
+  const templates = await prisma.appTemplate.findMany({
+    where: {
+      id: {
+        in: [...new Set(projects.map((project) => project.templateId))]
+      }
+    },
+    select: {
+      id: true,
+      image: true
+    }
+  })
+  const latestImagesByTemplateId = createTemplateImageMap(templates)
 
   return jsonOk({
-    projects
+    projects: projects.map((project) => ({
+      ...project,
+      templateUpdate: getProjectTemplateUpdate(project, latestImagesByTemplateId)
+    }))
   })
 }

@@ -30,6 +30,12 @@ export type DesktopProject = {
   status: string
   deletedAt?: string | null
   deployError: string | null
+  templateImage?: string | null
+  templateUpdate?: {
+    available: boolean
+    currentImage: string | null
+    latestImage: string | null
+  }
   usage?: {
     creditsUsed: number
   } | null
@@ -122,6 +128,7 @@ export function AppDesktop({ initialProjects }: AppDesktopProps) {
             const isDeleted = project.status === 'deleted' || Boolean(project.deletedAt)
             const isDisabled = isBusy || isDeleted
             const usageSummary = formatProjectUsageSummary(project.usage, locale)
+            const hasTemplateUpdate = project.templateUpdate?.available ?? false
             const appTileContent = (
               <Stack align="center" gap="xs">
                 <Box pos="relative">
@@ -157,6 +164,18 @@ export function AppDesktop({ initialProjects }: AppDesktopProps) {
                   <Text c="red" size="xs" ta="center">
                     {project.deployError}
                   </Text>
+                ) : null}
+                {hasTemplateUpdate ? (
+                  <Box
+                    aria-label="Update available"
+                    bg="green"
+                    h={9}
+                    left={12}
+                    pos="absolute"
+                    style={{ borderRadius: 999 }}
+                    top={12}
+                    w={9}
+                  />
                 ) : null}
               </AppTileCard>
             )

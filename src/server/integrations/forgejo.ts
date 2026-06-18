@@ -12,6 +12,13 @@ type ForgejoToken = {
   token?: string
 }
 
+export type ForgejoCommit = {
+  authorName: string | null
+  message: string
+  sha: string
+  url: string | null
+}
+
 export type ProjectRepository = {
   owner: string
   name: string
@@ -83,6 +90,50 @@ export async function deleteProjectRepository(
   return {
     deleted: true
   }
+}
+
+export async function listRepositoryCommits({
+  limit = 5,
+  owner,
+  repository
+}: {
+  limit?: number
+  owner: string
+  repository: string
+}): Promise<ForgejoCommit[]> {
+  const response = await forgejoFetch(
+    `/api/v1/repos/${encodeURIComponent(owner)}/${encodeURIComponent(
+      repository
+    )}/commits?limit=${encodeURIComponent(String(limit))}`
+  )
+
+  if (response.status === 404 || response.status === 409) {
+    return []
+  }
+
+  if (!response.ok) {
+    throw new Error(`Forgejo commit lookup failed: ${response.status}`)
+  }
+
+  const payload = (await response.json()) as Array<{
+    html_url?: string
+    sha?: string
+    commit?: {
+      author?: {
+        name?: string
+      }
+      message?: string
+    }
+  }>
+
+  return payload
+    .filter((commit) => commit.sha)
+    .map((commit) => ({
+      authorName: commit.commit?.author?.name ?? null,
+      message: commit.commit?.message?.split('\n')[0] ?? '',
+      sha: commit.sha ?? '',
+      url: commit.html_url ?? null
+    }))
 }
 
 async function ensureProjectUser(username: string, password: string) {

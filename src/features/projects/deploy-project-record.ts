@@ -33,6 +33,7 @@ export async function createQueuedProjectRecord({
       userId: user.id,
       templateId: template.id,
       templateName: template.name,
+      templateImage: template.image,
       git: projectRepositoryUrl,
       slug,
       domain,
