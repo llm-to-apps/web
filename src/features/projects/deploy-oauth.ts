@@ -4,6 +4,7 @@ import { ensureAuthToken } from '@/server/auth/tokens'
 import { type ProjectResources } from '@/server/deploy/project-resources'
 import { prisma } from '@/server/db'
 import { ensureProjectOAuthClient, oauthUrls } from '@/server/oauth'
+import { type ProjectStorageCredentials } from '@/server/storage'
 import { renderTemplateEnv, type TemplateManifest } from '@/shared/templates/manifest'
 
 import { type InstallableAppTemplate } from './deploy-template'
@@ -55,6 +56,7 @@ export async function createDeployTemplateEnv({
   oauthClient,
   project,
   publicScheme,
+  storageCredentials,
   template
 }: {
   credentials: {
@@ -71,6 +73,7 @@ export async function createDeployTemplateEnv({
   } | null
   project: Project
   publicScheme: string
+  storageCredentials: ProjectStorageCredentials | null
   template: InstallableAppTemplate
 }) {
   const urls = oauthUrls()
@@ -95,6 +98,19 @@ export async function createDeployTemplateEnv({
                   database: credentials.dbName,
                   user: credentials.dbUser,
                   password: credentials.dbPassword
+                }
+              }
+            : {}),
+          ...(storageCredentials
+            ? {
+                storage: {
+                  accessKeyId: storageCredentials.accessKeyId,
+                  bucket: storageCredentials.bucket,
+                  endpoint: storageCredentials.endpoint,
+                  forcePathStyle: storageCredentials.forcePathStyle,
+                  internalEndpoint: storageCredentials.internalEndpoint,
+                  region: storageCredentials.region,
+                  secretAccessKey: storageCredentials.secretAccessKey
                 }
               }
             : {}),

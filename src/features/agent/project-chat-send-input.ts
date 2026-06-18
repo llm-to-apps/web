@@ -7,6 +7,7 @@ export async function parseProjectChatSendInput(request: NextRequest) {
   const body = await parseJsonRequest(request, projectAgentChatRequestSchema)
 
   return {
+    attachedFileIds: body.attachedFileIds,
     message: body.message,
     mode: body.mode
   }

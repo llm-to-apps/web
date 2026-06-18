@@ -52,13 +52,16 @@ type ProjectStatusResponse = ApiResponse<{
 export default function ProjectPage() {
   const params = useParams<{ id: string }>()
   const searchParams = useSearchParams()
-  const { t } = useI18n()
+  const { locale, t } = useI18n()
   const [data, setData] = useState<ProjectWorkspace | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [devReadyUrl, setDevReadyUrl] = useState<string | null>(null)
   const [devError, setDevError] = useState<string | null>(null)
   const mode = searchParams.get('mode') === 'dev' ? 'dev' : 'use'
   const previewUrl = mode === 'dev' ? devReadyUrl : data?.project.appUrl
+  const localizedPreviewUrl = previewUrl
+    ? previewUrlWithLocale(previewUrl, locale)
+    : null
 
   useEffect(() => {
     let isCurrent = true
@@ -256,7 +259,7 @@ export default function ProjectPage() {
                 </Center>
               ) : previewUrl ? (
                 <iframe
-                  src={previewUrl}
+                  src={localizedPreviewUrl ?? previewUrl}
                   style={{
                     border: 0,
                     display: 'block',
@@ -298,4 +301,10 @@ export default function ProjectPage() {
       </GridCol>
     </Grid>
   )
+}
+
+function previewUrlWithLocale(previewUrl: string, locale: string) {
+  const url = new URL(previewUrl)
+  url.searchParams.set('lang', locale)
+  return url.toString()
 }

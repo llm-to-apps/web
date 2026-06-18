@@ -20,6 +20,7 @@ import {
   userAgentModel
 } from '../env'
 import { platformBaseUrl } from '../request-origin'
+import { getPlatformStorageObjectBuffer } from '../storage'
 import { projectAgentMemoryIds, userAgentMemoryIds } from './memory-ids'
 import { elapsedSince, errorAgentRun, logAgentRun, truncateForLog } from './run-logger'
 
@@ -38,6 +39,18 @@ type AgentRunRecord = {
   }
   userId: string
 }
+
+type MastraUserContentPart =
+  | {
+      type: 'text'
+      text: string
+    }
+  | {
+      type: 'file'
+      data: string
+      filename: string
+      mimeType: string
+    }
 
 class AgentUserFacingError extends Error {
   constructor(
@@ -144,9 +157,16 @@ async function executeUserAgentRun(run: AgentRunRecord) {
     name: 'Personal OS MCP'
   })
   logAgentRun('user_agent.prepared', runLogContext(run), {
+    attachedFileCount: payload.attachedFileIds.length,
     elapsedMs: elapsedSince(startedAt),
     messageLength: payload.message.length,
     model: agentModel
+  })
+  const userContent = await buildAgentUserMessageContent({
+    attachedFileIds: payload.attachedFileIds,
+    message: payload.message,
+    scope: 'user_agent',
+    userId: run.userId
   })
 
   await runMastraStream({
@@ -154,7 +174,7 @@ async function executeUserAgentRun(run: AgentRunRecord) {
       messages: [
         {
           role: 'user',
-          content: payload.message
+          content: userContent
         }
       ],
       sendUsage: true,
@@ -179,6 +199,7 @@ async function executeUserAgentRun(run: AgentRunRecord) {
         personalMcpToken: personalMcpToken.token,
         personalMcpUrl: payload.personalMcpUrl,
         requestId: run.requestId,
+        attachedFileIds: payload.attachedFileIds,
         userEmail: run.user.email,
         userId: run.userId
       }
@@ -203,7 +224,14 @@ async function executeProjectAgentRun(run: AgentRunRecord) {
     run.projectId ?? '',
     mode
   )
+  const personalMcpToken = await ensureAuthToken({
+    userId: run.userId,
+    subjectType: 'user',
+    scope: 'personal:mcp',
+    name: 'Personal OS MCP'
+  })
   logAgentRun('project_agent.prepared', runLogContext(run), {
+    attachedFileCount: payload.attachedFileIds.length,
     elapsedMs: elapsedSince(startedAt),
     messageLength: payload.message.length,
     mode,
@@ -211,13 +239,20 @@ async function executeProjectAgentRun(run: AgentRunRecord) {
     mastraAgentId: agentId,
     projectStatus: payload.status
   })
+  const userContent = await buildAgentUserMessageContent({
+    attachedFileIds: payload.attachedFileIds,
+    message: payload.message,
+    projectId: run.projectId,
+    scope: 'project_agent',
+    userId: run.userId
+  })
 
   await runMastraStream({
     body: {
       messages: [
         {
           role: 'user',
-          content: payload.message
+          content: userContent
         }
       ],
       sendUsage: true,
@@ -250,9 +285,12 @@ async function executeProjectAgentRun(run: AgentRunRecord) {
       requestContext: {
         agentToolsToken: mode === 'dev' ? payload.agentToolsToken : undefined,
         appMcpUrl: mode === 'use' ? payload.appMcpUrl : undefined,
+        attachedFileIds: payload.attachedFileIds,
         mode,
         model: agentModel,
         mastraAgentId: agentId,
+        personalMcpToken: personalMcpToken.token,
+        personalMcpUrl: defaultPersonalMcpUrl(),
         projectDomain: payload.domain,
         projectId: run.projectId,
         projectStatus: payload.status,
@@ -585,6 +623,77 @@ function runLogContext(run: AgentRunRecord) {
   }
 }
 
+async function buildAgentUserMessageContent({
+  attachedFileIds,
+  message,
+  projectId,
+  scope,
+  userId
+}: {
+  attachedFileIds: string[]
+  message: string
+  projectId?: string | null
+  scope: 'project_agent' | 'user_agent'
+  userId: string
+}): Promise<string | MastraUserContentPart[]> {
+  if (attachedFileIds.length === 0) {
+    return message
+  }
+
+  const imageFiles = await prisma.uploadedFile.findMany({
+    where: {
+      id: {
+        in: attachedFileIds
+      },
+      ...(scope === 'project_agent' ? { projectId } : {}),
+      scope,
+      status: 'processed',
+      userId
+    },
+    orderBy: {
+      createdAt: 'asc'
+    },
+    select: {
+      id: true,
+      mimeType: true,
+      originalName: true,
+      storageBucket: true,
+      storageKey: true
+    }
+  })
+  const imageParts = []
+
+  for (const file of imageFiles) {
+    if (!isSupportedVisionMimeType(file.mimeType)) {
+      continue
+    }
+
+    const buffer = await getPlatformStorageObjectBuffer({
+      bucket: file.storageBucket,
+      key: file.storageKey
+    })
+
+    imageParts.push({
+      type: 'file' as const,
+      data: buffer.toString('base64'),
+      filename: file.originalName,
+      mimeType: file.mimeType
+    })
+  }
+
+  if (imageParts.length === 0) {
+    return message
+  }
+
+  return [
+    {
+      type: 'text',
+      text: message
+    },
+    ...imageParts
+  ]
+}
+
 function requireAgentUrl() {
   const agentUrl = agentRuntimeUrl()
 
@@ -593,6 +702,10 @@ function requireAgentUrl() {
   }
 
   return agentUrl
+}
+
+function isSupportedVisionMimeType(mimeType: string) {
+  return mimeType === 'image/png' || mimeType === 'image/jpeg' || mimeType === 'image/webp'
 }
 
 function normalizeMode(mode: string): AgentMode {
@@ -605,6 +718,9 @@ function readUserAgentPayload(payload: Prisma.JsonValue): UserAgentRunPayload {
   }
 
   return {
+    attachedFileIds: Array.isArray(payload.attachedFileIds)
+      ? payload.attachedFileIds.filter((fileId): fileId is string => typeof fileId === 'string')
+      : [],
     message: payload.message,
     personalMcpUrl:
       typeof payload.personalMcpUrl === 'string'
@@ -631,6 +747,9 @@ function readProjectAgentPayload(payload: Prisma.JsonValue): ProjectAgentRunPayl
     agentToolsToken:
       typeof payload.agentToolsToken === 'string' ? payload.agentToolsToken : null,
     appMcpUrl: payload.appMcpUrl,
+    attachedFileIds: Array.isArray(payload.attachedFileIds)
+      ? payload.attachedFileIds.filter((fileId): fileId is string => typeof fileId === 'string')
+      : [],
     domain: payload.domain,
     message: payload.message,
     projectUserToken:
@@ -659,6 +778,9 @@ Rules:
 - Use Personal OS MCP tools to list apps, inspect usage, and delegate app-specific Use mode work to app agents.
 - If a Personal OS MCP tool returns "I see these installed apps (N)" where N is greater than 0, copy that list to the user. Never say the app list is empty in that case.
 - Do not claim to know the user's current project list unless it is provided in this request or by a tool.
+- searchUploadedFiles only searches files attached to the current user message. If no files were attached, it returns no document passages.
+- If the user asks about an uploaded file, document, notes, text file, attachment, or says "in the file", call searchUploadedFiles before answering.
+- When answering from uploaded files, cite the file name when it is present in the search result.
 - If the user asks for work inside a specific app, identify the target app and explain that the project agent should handle the app-specific work.
 - If the target app is unclear, ask one concise question.
 - If a requested platform action requires a missing tool, say which capability is not connected yet.
@@ -699,6 +821,9 @@ ${mode === 'dev' ? devModeRules() : projectUseModeRules()}
 - After a tool result, answer with the result. Do not call the same tool twice with the same arguments.
 - Do not say "let me check" unless you actually call a tool.
 - Do not claim you changed files unless a tool call confirms it.
+- searchUploadedProjectFiles only searches files attached to the current project chat message. If no files were attached, it returns no document passages.
+- If the user asks about an uploaded file, document, notes, text file, attachment, or says "in the file", call searchUploadedProjectFiles before answering.
+- When answering from uploaded files, cite the file name when it is present in the search result.
 - When answering about application data, keep the answer concise and do not include internal IDs unless the user asks for them.
 - Mastra memory may provide prior conversation context. Treat it as helpful context, not proof of current files, runtime state, or app data. Verify current facts with tools.
 `

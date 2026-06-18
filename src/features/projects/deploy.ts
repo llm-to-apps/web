@@ -61,10 +61,13 @@ export async function deployProjectForUser({
   const manifest = template.manifest ? parseTemplateManifest(template.manifest) : null
   const needsMysql = manifest?.services.mysql?.required ?? false
   const needsOauth = manifest?.services.oauth?.required ?? false
-  const { credentials, projectRepository, resourceState } = await createDeployResources({
-    needsMysql,
-    projectId: id
-  })
+  const needsStorage = manifest?.services.storage?.required ?? false
+  const { credentials, projectRepository, resourceState, storageCredentials } =
+    await createDeployResources({
+      needsMysql,
+      needsStorage,
+      projectId: id
+    })
 
   const project = await createQueuedProjectRecord({
     agentToolsToken,
@@ -94,6 +97,7 @@ export async function deployProjectForUser({
       oauthClient,
       project,
       publicScheme,
+      storageCredentials,
       template
     })
 
@@ -109,6 +113,7 @@ export async function deployProjectForUser({
     projectServiceApiBaseUri,
     projectServiceToken,
     resourceState,
+    storageCredentials,
     template,
     templateEnv,
     user

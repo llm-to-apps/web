@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  type ChangeEvent,
   forwardRef,
   FormEvent,
   KeyboardEvent,
@@ -12,8 +13,20 @@ import {
   useRef,
   useState
 } from 'react'
-import { Bot, Code2, MousePointer2, User, Workflow } from 'lucide-react'
 import {
+  Bot,
+  Check,
+  CircleAlert,
+  Code2,
+  FileText,
+  MousePointer2,
+  Paperclip,
+  User,
+  Workflow,
+  X
+} from 'lucide-react'
+import {
+  ActionIcon,
   Avatar,
   Badge,
   Group,
@@ -23,7 +36,8 @@ import {
   SegmentedControl,
   Stack,
   Text,
-  Textarea
+  Textarea,
+  Tooltip
 } from '@mantine/core'
 import { useHover } from '@mantine/hooks'
 import {
@@ -53,6 +67,13 @@ export type ProjectAgentChatHandle = {
 }
 
 type AgentRunResponse = ApiResponse<{ runId: string }>
+type FileUploadResponse = ApiResponse<{
+  file: {
+    id: string
+    name: string
+    status: string
+  }
+}>
 
 type ProjectChatStateResponse = ApiResponse<{
   activeRunId: string | null
@@ -60,6 +81,7 @@ type ProjectChatStateResponse = ApiResponse<{
 }>
 
 type ChatMessage = {
+  attachments?: UploadedChatFile[]
   id: string
   role: 'assistant' | 'user'
   source?: string | null
@@ -67,6 +89,18 @@ type ChatMessage = {
   kind?: 'message' | 'progress' | 'error'
   usage?: CreditUsage | null
 }
+
+type UploadedChatFile = {
+  error: string | null
+  id: string
+  name: string
+  sizeBytes: number
+  status: string
+}
+
+type FilesResponse = ApiResponse<{
+  files: UploadedChatFile[]
+}>
 
 type TokenUsage = {
   completionTokens?: number
@@ -135,17 +169,69 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
     const [input, setInput] = useState('')
     const [isClearing, setIsClearing] = useState(false)
     const [isSending, setIsSending] = useState(false)
+    const [isUploadingFile, setIsUploadingFile] = useState(false)
+    const [attachedFiles, setAttachedFiles] = useState<UploadedChatFile[]>([])
     const messagesEndRef = useRef<HTMLDivElement | null>(null)
+    const inputRef = useRef<HTMLTextAreaElement | null>(null)
+    const fileInputRef = useRef<HTMLInputElement | null>(null)
     const activeRunRef = useRef<string | null>(null)
     const startRunStreamRef = useRef<(runId: string) => void>(() => undefined)
     const isClearingRef = useRef(false)
     const isSendingRef = useRef(false)
+    const shouldRestoreInputFocusRef = useRef(false)
     const previousModeRef = useRef<AgentMode>(mode)
+    const hasUnreadyFiles = attachedFiles.some((file) => file.status !== 'processed')
+
+    const refreshAttachedFiles = useCallback(
+      async (fileIds: string[]) => {
+        if (fileIds.length === 0) {
+          return
+        }
+
+        const params = new URLSearchParams()
+        for (const fileId of fileIds) {
+          params.append('ids', fileId)
+        }
+
+        const response = await fetch(
+          `/api/projects/${encodeURIComponent(project.id)}/agent/files?${params.toString()}`
+        )
+        const data = (await response.json().catch(() => null)) as FilesResponse | null
+
+        if (response.ok && data?.ok) {
+          const refreshedFiles = new Map(
+            data.data.files.map((file) => [file.id, file])
+          )
+          setAttachedFiles((currentFiles) =>
+            currentFiles.map((file) => refreshedFiles.get(file.id) ?? file)
+          )
+        }
+      },
+      [project.id]
+    )
 
     useEffect(() => {
       onSendingChange?.(isSending)
       isSendingRef.current = isSending
     }, [isSending, onSendingChange])
+
+    useEffect(() => {
+      if (isSending || !shouldRestoreInputFocusRef.current) {
+        return
+      }
+
+      const activeElement = document.activeElement
+      const canRestoreFocus =
+        !activeElement ||
+        activeElement === document.body ||
+        activeElement === document.documentElement
+
+      shouldRestoreInputFocusRef.current = false
+
+      if (canRestoreFocus) {
+        inputRef.current?.focus({ preventScroll: true })
+      }
+    }, [isSending])
 
     useEffect(() => {
       isClearingRef.current = isClearing
@@ -168,8 +254,25 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
 
       previousModeRef.current = mode
       activeRunRef.current = null
+      setAttachedFiles([])
       setMessages([welcomeMessage])
     }, [mode, welcomeMessage])
+
+    useEffect(() => {
+      const activeFileIds = attachedFiles
+        .filter(isActiveFileStatus)
+        .map((file) => file.id)
+
+      if (activeFileIds.length === 0) {
+        return
+      }
+
+      const interval = window.setInterval(() => {
+        void refreshAttachedFiles(activeFileIds)
+      }, 1500)
+
+      return () => window.clearInterval(interval)
+    }, [attachedFiles, refreshAttachedFiles])
 
     useEffect(() => {
       if (!activeRunId || activeRunRef.current === activeRunId) {
@@ -245,16 +348,22 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
     async function sendMessage() {
       const content = input.trim()
 
-      if (!content || isSending) {
+      if (!content || isSending || hasUnreadyFiles) {
         return
       }
 
       const userMessage: ChatMessage = {
+        attachments: attachedFiles.filter((file) => file.status === 'processed'),
         id: crypto.randomUUID(),
         role: 'user',
         content
       }
       const assistantMessageId = crypto.randomUUID()
+      const attachedFileIds = attachedFiles
+        .filter((file) => file.status === 'processed')
+        .map((file) => file.id)
+
+      shouldRestoreInputFocusRef.current = document.activeElement === inputRef.current
 
       setMessages((currentMessages) => [...currentMessages, userMessage])
       setMessages((currentMessages) => [
@@ -278,6 +387,7 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
+              attachedFileIds,
               message: content,
               mode
             })
@@ -295,6 +405,7 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
         }
 
         activeRunRef.current = data.data.runId
+        setAttachedFiles([])
         await streamAgentRun(data.data.runId, assistantMessageId)
         ensureAssistantMessage(assistantMessageId, t.chat.done)
       } catch (error) {
@@ -345,6 +456,86 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
         setIsClearing(false)
       }
     }, [isClearing, isSending, mode, project.id, t.chat.clearFailed, welcomeMessage])
+
+    function openFilePicker() {
+      if (isUploadingFile) {
+        return
+      }
+
+      fileInputRef.current?.click()
+    }
+
+    async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+      const file = event.target.files?.[0]
+      event.target.value = ''
+
+      if (!file || isUploadingFile) {
+        return
+      }
+
+      setIsUploadingFile(true)
+
+      try {
+        const formData = new FormData()
+        formData.append('file', file)
+
+        const response = await fetch(
+          `/api/projects/${encodeURIComponent(project.id)}/agent/files`,
+          {
+            body: formData,
+            method: 'POST'
+          }
+        )
+        const data = (await response.json().catch(() => null)) as FileUploadResponse | null
+
+        if (!response.ok || !data || !data.ok) {
+          throw new Error(
+            data && !data.ok
+              ? data.error.message
+              : `File upload failed (${response.status})`
+          )
+        }
+
+        upsertAttachedFile({
+          error: null,
+          id: data.data.file.id,
+          name: data.data.file.name,
+          sizeBytes: file.size,
+          status: data.data.file.status
+        })
+        void refreshAttachedFiles([data.data.file.id])
+      } catch (error) {
+        setMessages((currentMessages) => [
+          ...currentMessages,
+          {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            content: formatChatErrorMessage(
+              error instanceof Error ? error.message : 'File upload failed'
+            ),
+            kind: 'error'
+          }
+        ])
+      } finally {
+        setIsUploadingFile(false)
+      }
+    }
+
+    function upsertAttachedFile(file: UploadedChatFile) {
+      setAttachedFiles((currentFiles) =>
+        currentFiles.some((currentFile) => currentFile.id === file.id)
+          ? currentFiles.map((currentFile) =>
+              currentFile.id === file.id ? file : currentFile
+            )
+          : [...currentFiles, file]
+      )
+    }
+
+    function removeAttachedFile(fileId: string) {
+      setAttachedFiles((currentFiles) =>
+        currentFiles.filter((currentFile) => currentFile.id !== fileId)
+      )
+    }
 
     useImperativeHandle(
       ref,
@@ -550,6 +741,13 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
                         message.content
                       )}
                     </MessageText>
+                    {message.attachments && message.attachments.length > 0 ? (
+                      <Group gap="xs">
+                        {message.attachments.map((file) => (
+                          <UploadedFileChip key={file.id} file={file} />
+                        ))}
+                      </Group>
+                    ) : null}
                   </Stack>
                 </Group>
               </MessageBubble>
@@ -560,6 +758,13 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
 
         <form onSubmit={handleSubmit}>
           <Stack gap="sm">
+            <input
+              ref={fileInputRef}
+              accept=".txt,text/plain,image/png,image/jpeg,image/webp"
+              hidden
+              onChange={handleFileChange}
+              type="file"
+            />
             <SegmentedControl
               aria-label={t.chat.modeSwitcherLabel}
               data={[
@@ -587,6 +792,7 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
               value={mode}
             />
             <Textarea
+              ref={inputRef}
               aria-label={t.chat.messageAria}
               disabled={isSending}
               onKeyDown={handleInputKeyDown}
@@ -595,6 +801,32 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
               rows={3}
               value={input}
             />
+            <Group align="center" gap="xs" justify="space-between">
+              <Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
+                <Tooltip label="Upload text file">
+                  <ActionIcon
+                    aria-label="Upload text file"
+                    disabled={isUploadingFile}
+                    loading={isUploadingFile}
+                    onClick={openFilePicker}
+                    type="button"
+                    variant="subtle"
+                  >
+                    <Paperclip size={18} />
+                  </ActionIcon>
+                </Tooltip>
+                {attachedFiles.map((file) => (
+                  <UploadedFileChip
+                    key={file.id}
+                    file={file}
+                    onRemove={() => removeAttachedFile(file.id)}
+                  />
+                ))}
+              </Group>
+              <Text c="dimmed" size="xs">
+                PDF, TXT, Images
+              </Text>
+            </Group>
           </Stack>
         </form>
       </Stack>
@@ -687,11 +919,68 @@ function CreditUsageBadge({ usage }: { usage: CreditUsage }) {
   )
 }
 
+function UploadedFileChip({
+  file,
+  onRemove
+}: {
+  file: UploadedChatFile
+  onRemove?: () => void
+}) {
+  const isActive = isActiveFileStatus(file)
+  const isFailed = file.status === 'failed'
+
+  return (
+    <Paper px={6} py={3} radius={8} withBorder>
+      <Group gap={6} wrap="nowrap">
+        {isFailed ? (
+          <CircleAlert color="var(--mantine-color-red-6)" size={14} />
+        ) : isActive ? (
+          <FileText color="var(--mantine-color-gray-6)" size={14} />
+        ) : (
+          <Check color="var(--mantine-color-green-7)" size={14} />
+        )}
+        <Text maw={180} size="xs" truncate>
+          {file.name}
+        </Text>
+        {isActive ? <FileProcessingDots /> : null}
+        {onRemove ? (
+          <ActionIcon
+            aria-label={`Remove ${file.name}`}
+            onClick={onRemove}
+            size="xs"
+            type="button"
+            variant="subtle"
+          >
+            <X size={12} />
+          </ActionIcon>
+        ) : null}
+      </Group>
+      {isFailed && file.error ? (
+        <Text c="red" mt={4} size="xs">
+          {file.error}
+        </Text>
+      ) : null}
+    </Paper>
+  )
+}
+
+function FileProcessingDots() {
+  return <Loader aria-label="File is processing" size="xs" type="dots" />
+}
+
 function MessageText({ children }: { children: ReactNode }) {
   return (
     <Text component="pre" ff="inherit" lh="md" m={0} pt={4} textWrap="wrap">
       {children}
     </Text>
+  )
+}
+
+function isActiveFileStatus(file: UploadedChatFile) {
+  return (
+    file.status === 'uploading' ||
+    file.status === 'queued' ||
+    file.status === 'processing'
   )
 }
 

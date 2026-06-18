@@ -28,6 +28,7 @@ export async function handleUserAgentChatPost(request: NextRequest) {
   }
 
   const message = body.message
+  const attachedFileIds = Array.from(new Set(body.attachedFileIds))
   logAgentRun(
     'api.chat.received',
     {
@@ -40,6 +41,38 @@ export async function handleUserAgentChatPost(request: NextRequest) {
       messageLength: message.length
     }
   )
+
+  if (attachedFileIds.length > 0) {
+    const attachedFiles = await prisma.uploadedFile.findMany({
+      where: {
+        id: {
+          in: attachedFileIds
+        },
+        scope: 'user_agent',
+        userId: user.id
+      },
+      select: {
+        id: true,
+        status: true
+      }
+    })
+    const attachedFileStatuses = new Map(
+      attachedFiles.map((file) => [file.id, file.status])
+    )
+    const invalidFileId = attachedFileIds.find((fileId) => !attachedFileStatuses.has(fileId))
+
+    if (invalidFileId) {
+      return jsonErrorMessage('Attached file is unavailable', 400)
+    }
+
+    const pendingFileId = attachedFileIds.find(
+      (fileId) => attachedFileStatuses.get(fileId) !== 'processed'
+    )
+
+    if (pendingFileId) {
+      return jsonErrorMessage('Wait for attached file indexing to finish', 409)
+    }
+  }
 
   const activeRun = await prisma.agentRun.findFirst({
     where: {
@@ -76,31 +109,53 @@ export async function handleUserAgentChatPost(request: NextRequest) {
     })
   }
 
-  const userMessage = await prisma.userAgentChatMessage.create({
-    data: {
-      content: message,
-      role: 'user',
-      userId: user.id
-    }
-  })
   const personalMcpUrl = new URL('/api/mcp/personal', platformBaseUrl()).toString()
-  const run = await prisma.agentRun.create({
-    data: {
-      inputMessageId: userMessage.id,
-      mode: 'use',
-      model: userAgentModel(),
-      payload: {
-        message,
-        personalMcpUrl,
-        userEmail: user.email
+  const { run, userMessage } = await prisma.$transaction(async (tx) => {
+    const userMessage = await tx.userAgentChatMessage.create({
+      data: {
+        content: message,
+        role: 'user',
+        userId: user.id
       },
-      requestId,
-      scope: 'user_agent',
-      status: 'queued',
-      userId: user.id
-    },
-    select: {
-      id: true
+      select: {
+        id: true
+      }
+    })
+
+    if (attachedFileIds.length > 0) {
+      await tx.userAgentChatMessageAttachment.createMany({
+        data: attachedFileIds.map((uploadedFileId) => ({
+          messageId: userMessage.id,
+          uploadedFileId,
+          userId: user.id
+        }))
+      })
+    }
+
+    const run = await tx.agentRun.create({
+      data: {
+        inputMessageId: userMessage.id,
+        mode: 'use',
+        model: userAgentModel(),
+        payload: {
+          attachedFileIds,
+          message,
+          personalMcpUrl,
+          userEmail: user.email
+        },
+        requestId,
+        scope: 'user_agent',
+        status: 'queued',
+        userId: user.id
+      },
+      select: {
+        id: true
+      }
+    })
+
+    return {
+      run,
+      userMessage
     }
   })
   logAgentRun(

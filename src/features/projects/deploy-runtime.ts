@@ -1,5 +1,9 @@
 import { type ManagerDeployAppPayload } from '@/server/deploy/manager-client'
 import { type ProjectResources } from '@/server/deploy/project-resources'
+import {
+  createProjectStorageEnv,
+  type ProjectStorageCredentials
+} from '@/server/storage'
 import { type TemplateManifest } from '@/shared/templates/manifest'
 
 type DeployTemplate = {
@@ -38,6 +42,7 @@ export function buildManagerDeployPayload({
   projectServiceApiBaseUri,
   projectServiceToken,
   resourceState,
+  storageCredentials,
   template,
   templateEnv,
   user
@@ -57,6 +62,7 @@ export function buildManagerDeployPayload({
     token: string
   }
   resourceState: ProjectResources
+  storageCredentials: ProjectStorageCredentials | null
   template: DeployTemplate
   templateEnv: Record<string, string>
   user: {
@@ -85,6 +91,7 @@ export function buildManagerDeployPayload({
       PROJECT_SERVICE_API_BASE_URI: projectServiceApiBaseUri,
       USER_ID: user.id,
       USER_EMAIL: user.email,
+      ...(storageCredentials ? createProjectStorageEnv(storageCredentials) : {}),
       ...templateEnv,
       ...(credentials
         ? {

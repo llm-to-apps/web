@@ -58,6 +58,9 @@ export type TemplateManifest = {
     oauth?: {
       required: boolean
     }
+    storage?: {
+      required: boolean
+    }
   }
   env: {
     template: Record<string, string>
@@ -90,6 +93,15 @@ export type TemplateEnvContext = {
       projectServiceApiToken: string
       projectServiceApiBaseUri: string
       requestHost: string
+    }
+    storage?: {
+      accessKeyId: string
+      bucket: string
+      endpoint: string
+      forcePathStyle: string
+      internalEndpoint: string
+      region: string
+      secretAccessKey: string
     }
   }
 }

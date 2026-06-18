@@ -15,6 +15,7 @@ import { appReadyBaseUrl, envNumber } from '../src/server/env'
 import { deleteProjectRepository } from '../src/server/integrations/forgejo'
 import { logError, logInfo, logWarn, type LogContext } from '../src/server/logger'
 import { startAgentRunWorker } from './agent-run-worker'
+import { startUploadedFileWorker } from './uploaded-file-worker'
 
 type ProjectServiceStatus = {
   ok: true
@@ -79,6 +80,7 @@ const worker = new Worker(
   }
 )
 const agentRunWorker = startAgentRunWorker()
+const uploadedFileWorker = startUploadedFileWorker()
 
 worker.on('active', (job) => {
   logInfo('deployment.job.started', jobLogContext(job))
@@ -147,7 +149,8 @@ async function shutdown(signal: NodeJS.Signals) {
   })
   await Promise.all([
     closeWorkerGracefully('deploy worker', worker),
-    closeWorkerGracefully('agent run worker', agentRunWorker)
+    closeWorkerGracefully('agent run worker', agentRunWorker),
+    closeWorkerGracefully('uploaded file worker', uploadedFileWorker)
   ])
   await prisma.$disconnect()
 }

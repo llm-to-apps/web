@@ -234,6 +234,16 @@
               "type": "boolean"
             }
           }
+        },
+        "storage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["required"],
+          "properties": {
+            "required": {
+              "type": "boolean"
+            }
+          }
         }
       }
     },

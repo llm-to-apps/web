@@ -11,6 +11,22 @@ export async function loadHomeUserAgentChat(userId: string) {
     },
     take: 50,
     select: {
+      attachments: {
+        orderBy: {
+          createdAt: 'asc'
+        },
+        select: {
+          uploadedFile: {
+            select: {
+              error: true,
+              id: true,
+              originalName: true,
+              sizeBytes: true,
+              status: true
+            }
+          }
+        }
+      },
       id: true,
       role: true,
       content: true
@@ -93,6 +109,13 @@ export async function loadHomeUserAgentChat(userId: string) {
     messages: orderedUserAgentMessages.map((message) => ({
       id: message.id,
       role: message.role as 'assistant' | 'user',
+      attachments: message.attachments.map((attachment) => ({
+        error: attachment.uploadedFile.error,
+        id: attachment.uploadedFile.id,
+        name: attachment.uploadedFile.originalName,
+        sizeBytes: attachment.uploadedFile.sizeBytes,
+        status: attachment.uploadedFile.status
+      })),
       content: message.content,
       usage:
         message.role === 'assistant'

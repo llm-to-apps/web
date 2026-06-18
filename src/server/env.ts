@@ -74,6 +74,22 @@ export function userAgentModel() {
   return optionalEnv('USER_AGENT_MODEL') ?? projectDevAgentModel()
 }
 
+export function openRouterApiKey() {
+  return requiredEnv('OPENROUTER_API_KEY')
+}
+
+export function openRouterBaseUrl() {
+  return optionalTrimmedUrlEnv('OPENROUTER_BASE_URL') ?? 'https://openrouter.ai/api/v1'
+}
+
+export function agentEmbeddingModel() {
+  return optionalEnv('AGENT_EMBEDDING_MODEL') ?? 'openai/text-embedding-3-small'
+}
+
+export function agentEmbeddingDimensions() {
+  return envNumber('AGENT_EMBEDDING_DIMENSIONS', 1536)
+}
+
 export function resendApiKey() {
   return optionalEnv('RESEND_API_KEY')
 }
@@ -136,4 +152,36 @@ export function forgejoAdminPassword() {
 
 export function appReadyBaseUrl() {
   return requiredTrimmedUrlEnv('APP_READY_BASE_URL')
+}
+
+export function storageS3Endpoint() {
+  return requiredTrimmedUrlEnv('STORAGE_S3_ENDPOINT')
+}
+
+export function storageS3InternalEndpoint() {
+  return optionalTrimmedUrlEnv('STORAGE_S3_INTERNAL_ENDPOINT') ?? storageS3Endpoint()
+}
+
+export function storageS3Region() {
+  return optionalEnv('STORAGE_S3_REGION') ?? 'us-east-1'
+}
+
+export function storageS3AccessKeyId() {
+  return requiredEnv('STORAGE_S3_ACCESS_KEY_ID')
+}
+
+export function storageS3SecretAccessKey() {
+  return requiredEnv('STORAGE_S3_SECRET_ACCESS_KEY')
+}
+
+export function storageS3BucketPrefix() {
+  return optionalEnv('STORAGE_S3_BUCKET_PREFIX') ?? 'os7'
+}
+
+export function storageS3Bucket() {
+  return optionalEnv('STORAGE_S3_BUCKET') ?? `${storageS3BucketPrefix()}-web`
+}
+
+export function storageS3ForcePathStyle() {
+  return optionalEnv('STORAGE_S3_FORCE_PATH_STYLE') ?? 'true'
 }

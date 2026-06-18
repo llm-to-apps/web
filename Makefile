@@ -10,6 +10,7 @@ dev:
 	docker run --rm \
 		-v "$(PWD):/app" \
 		-w /app \
+		--env-file .env \
 		-p 3000:3000 \
 		-e DATABASE_URL="postgresql://os7:change-me-platform-password@host.docker.internal:8082/os7_platform" \
 		-e AUTH_SECRET="change-me-local-auth-secret" \
@@ -28,6 +29,7 @@ worker:
 	docker run --rm \
 		-v "$(PWD):/app" \
 		-w /app \
+		--env-file .env \
 		-e DATABASE_URL="postgresql://os7:change-me-platform-password@host.docker.internal:8082/os7_platform" \
 		-e MANAGER_URL="http://host.docker.internal:8080" \
 		-e PROJECT_USE_AGENT_MODEL="x-ai/grok-4.3" \

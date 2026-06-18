@@ -30,6 +30,7 @@
     "slugs:build": "node scripts/build-slug-words.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1071.0",
     "@mantine/core": "^9.3.1",
     "@mantine/hooks": "^9.3.1",
     "@mantine/notifications": "^9.3.1",

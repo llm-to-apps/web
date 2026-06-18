@@ -1,4 +1,5 @@
 import { Command } from 'commander'
+import { ensureWebBucketCommand } from './storage/ensure-web-bucket'
 import { addTemplateCommand } from './templates/add'
 import { checkTemplateUpdatesCommand, updateTemplateCommand } from './templates/updates'
 
@@ -7,6 +8,12 @@ const program = new Command()
 program.name('os7').description('OS7 platform CLI').version('0.1.0')
 
 const templates = program.command('templates').description('Manage application templates')
+const storage = program.command('storage').description('Manage platform object storage')
+
+storage
+  .command('ensure-web-bucket')
+  .description('Create the shared web storage bucket if it does not exist')
+  .action(ensureWebBucketCommand)
 
 templates
   .command('add')

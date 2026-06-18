@@ -7,6 +7,11 @@ export type ProjectResources = {
     clientId: string
     redirectUri: string
   }
+  storage?: {
+    bucket: string
+    user: string
+    accessKeyId: string
+  }
   git?: {
     owner: string
     name: string

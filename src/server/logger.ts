@@ -56,11 +56,21 @@ export function elapsedSince(startedAt: number) {
 
 export function serializeError(error: unknown) {
   if (error instanceof Error) {
-    return {
+    const serialized: Record<string, unknown> = {
       message: error.message,
       name: error.name,
       stack: process.env.NODE_ENV === 'production' ? undefined : error.stack
     }
+
+    if ('cause' in error && error.cause) {
+      serialized.cause = sanitizeValue(error.cause)
+    }
+
+    if (error instanceof AggregateError) {
+      serialized.errors = error.errors.map((item) => sanitizeValue(item))
+    }
+
+    return serialized
   }
 
   return sanitizeValue(error)

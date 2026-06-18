@@ -39,6 +39,7 @@ export type AgentStreamEvent =
     }
 
 export type UserAgentRunPayload = {
+  attachedFileIds: string[]
   message: string
   personalMcpUrl: string
   userEmail: string
@@ -47,6 +48,7 @@ export type UserAgentRunPayload = {
 export type ProjectAgentRunPayload = {
   appMcpUrl: string
   agentToolsToken: string | null
+  attachedFileIds: string[]
   domain: string
   message: string
   projectUserToken: string | null

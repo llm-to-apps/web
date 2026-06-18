@@ -8,6 +8,7 @@ import {
   type ToolCallParams
 } from './schema'
 import { listPersonalAppsTool } from './list-apps'
+import { searchUploadedFilesTool } from './search-uploaded-files'
 import { personalOsTools, toolJson } from './tools'
 import { getUsageSummaryTool } from './usage-summary'
 
@@ -183,6 +184,16 @@ async function callTool(
 
   if (params.name === 'get_usage_summary') {
     return getUsageSummaryTool({
+      context,
+      requestId,
+      startedAt,
+      toolName: params.name
+    })
+  }
+
+  if (params.name === 'search_uploaded_files') {
+    return searchUploadedFilesTool({
+      args: params.arguments,
       context,
       requestId,
       startedAt,

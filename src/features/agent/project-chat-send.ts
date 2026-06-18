@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 
 import { elapsedSince, logAgentRun } from '@/server/agent/run-logger'
 import { getCurrentUser } from '@/server/auth'
+import { prisma } from '@/server/db'
 import { jsonErrorMessage, jsonOk, jsonValidationError } from '@/server/http'
 
 import { type AgentChatContext } from './project-chat-shared'
@@ -32,7 +33,10 @@ export async function handleProjectAgentChatPost(
     return jsonValidationError(input)
   }
 
-  const { message, mode } = input
+  const { attachedFileIds: rawAttachedFileIds, message, mode } = input
+  const attachedFileIds = Array.from(new Set(rawAttachedFileIds)).filter(
+    (fileId): fileId is string => typeof fileId === 'string'
+  )
   logAgentRun(
     'api.chat.received',
     {
@@ -62,6 +66,40 @@ export async function handleProjectAgentChatPost(
   }
 
   const { project } = projectAccess
+
+  if (attachedFileIds.length > 0) {
+    const attachedFiles = await prisma.uploadedFile.findMany({
+      where: {
+        id: {
+          in: attachedFileIds
+        },
+        projectId: project.id,
+        scope: 'project_agent',
+        userId: user.id
+      },
+      select: {
+        id: true,
+        status: true
+      }
+    })
+    const attachedFileStatuses = new Map(
+      attachedFiles.map((file) => [file.id, file.status])
+    )
+    const invalidFileId = attachedFileIds.find((fileId) => !attachedFileStatuses.has(fileId))
+
+    if (invalidFileId) {
+      return jsonErrorMessage('Attached file is unavailable', 400)
+    }
+
+    const pendingFileId = attachedFileIds.find(
+      (fileId) => attachedFileStatuses.get(fileId) !== 'processed'
+    )
+
+    if (pendingFileId) {
+      return jsonErrorMessage('Wait for attached file indexing to finish', 409)
+    }
+  }
+
   const activeRun = await findActiveProjectAgentRun({
     mode,
     projectId: project.id,
@@ -95,6 +133,7 @@ export async function handleProjectAgentChatPost(
   } = await createQueuedProjectAgentRun({
     message,
     mode,
+    attachedFileIds,
     project,
     requestId,
     user
