@@ -164,9 +164,7 @@ export function UserAgentChat({
   })
 
   useEffect(() => {
-    const activeFileIds = attachedFiles
-      .filter(isActiveFileStatus)
-      .map((file) => file.id)
+    const activeFileIds = attachedFiles.filter(isActiveFileStatus).map((file) => file.id)
 
     if (activeFileIds.length === 0) {
       return

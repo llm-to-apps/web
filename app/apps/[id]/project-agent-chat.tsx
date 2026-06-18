@@ -196,9 +196,7 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
         const data = (await response.json().catch(() => null)) as FilesResponse | null
 
         if (response.ok && data?.ok) {
-          const refreshedFiles = new Map(
-            data.data.files.map((file) => [file.id, file])
-          )
+          const refreshedFiles = new Map(data.data.files.map((file) => [file.id, file]))
           setAttachedFiles((currentFiles) =>
             currentFiles.map((file) => refreshedFiles.get(file.id) ?? file)
           )
@@ -472,7 +470,9 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
             method: 'POST'
           }
         )
-        const data = (await response.json().catch(() => null)) as FileUploadResponse | null
+        const data = (await response
+          .json()
+          .catch(() => null)) as FileUploadResponse | null
 
         if (!response.ok || !data || !data.ok) {
           throw new Error(

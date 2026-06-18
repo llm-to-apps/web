@@ -947,7 +947,9 @@ function requireAgentUrl() {
 }
 
 function isSupportedVisionMimeType(mimeType: string) {
-  return mimeType === 'image/png' || mimeType === 'image/jpeg' || mimeType === 'image/webp'
+  return (
+    mimeType === 'image/png' || mimeType === 'image/jpeg' || mimeType === 'image/webp'
+  )
 }
 
 function normalizeMode(mode: string): AgentMode {
@@ -961,7 +963,9 @@ function readUserAgentPayload(payload: Prisma.JsonValue): UserAgentRunPayload {
 
   return {
     attachedFileIds: Array.isArray(payload.attachedFileIds)
-      ? payload.attachedFileIds.filter((fileId): fileId is string => typeof fileId === 'string')
+      ? payload.attachedFileIds.filter(
+          (fileId): fileId is string => typeof fileId === 'string'
+        )
       : [],
     message: payload.message,
     personalMcpUrl:
@@ -990,7 +994,9 @@ function readProjectAgentPayload(payload: Prisma.JsonValue): ProjectAgentRunPayl
       typeof payload.agentToolsToken === 'string' ? payload.agentToolsToken : null,
     appMcpUrl: payload.appMcpUrl,
     attachedFileIds: Array.isArray(payload.attachedFileIds)
-      ? payload.attachedFileIds.filter((fileId): fileId is string => typeof fileId === 'string')
+      ? payload.attachedFileIds.filter(
+          (fileId): fileId is string => typeof fileId === 'string'
+        )
       : [],
     domain: payload.domain,
     message: payload.message,

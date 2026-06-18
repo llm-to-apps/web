@@ -161,5 +161,7 @@ async function markFailed(uploadedFileId: string, message: string) {
 }
 
 function isSupportedVisionMimeType(mimeType: string) {
-  return mimeType === 'image/png' || mimeType === 'image/jpeg' || mimeType === 'image/webp'
+  return (
+    mimeType === 'image/png' || mimeType === 'image/jpeg' || mimeType === 'image/webp'
+  )
 }

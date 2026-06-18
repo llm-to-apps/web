@@ -1,9 +1,6 @@
 import { type ManagerDeployAppPayload } from '@/server/deploy/manager-client'
 import { type ProjectResources } from '@/server/deploy/project-resources'
-import {
-  createProjectStorageEnv,
-  type ProjectStorageCredentials
-} from '@/server/storage'
+import { createProjectStorageEnv, type ProjectStorageCredentials } from '@/server/storage'
 import { type TemplateManifest } from '@/shared/templates/manifest'
 
 type DeployTemplate = {

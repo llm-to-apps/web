@@ -59,9 +59,7 @@ export default function ProjectPage() {
   const [devError, setDevError] = useState<string | null>(null)
   const mode = searchParams.get('mode') === 'dev' ? 'dev' : 'use'
   const previewUrl = mode === 'dev' ? devReadyUrl : data?.project.appUrl
-  const localizedPreviewUrl = previewUrl
-    ? previewUrlWithLocale(previewUrl, locale)
-    : null
+  const localizedPreviewUrl = previewUrl ? previewUrlWithLocale(previewUrl, locale) : null
 
   useEffect(() => {
     let isCurrent = true

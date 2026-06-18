@@ -61,7 +61,9 @@ export async function handleUserAgentChatPost(request: NextRequest) {
     const attachedFileStatuses = new Map(
       attachedFiles.map((file) => [file.id, file.status])
     )
-    const invalidFileId = attachedFileIds.find((fileId) => !attachedFileStatuses.has(fileId))
+    const invalidFileId = attachedFileIds.find(
+      (fileId) => !attachedFileStatuses.has(fileId)
+    )
 
     if (invalidFileId) {
       return jsonErrorMessage('Attached file is unavailable', 400)

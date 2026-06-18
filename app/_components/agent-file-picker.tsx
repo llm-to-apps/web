@@ -104,9 +104,12 @@ export function AgentFilePicker({
   }, [isSelectOpen, projectId, query, scope, t.files.loadFailed])
 
   useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      void loadFiles()
-    }, query ? 180 : 0)
+    const timeout = window.setTimeout(
+      () => {
+        void loadFiles()
+      },
+      query ? 180 : 0
+    )
 
     return () => window.clearTimeout(timeout)
   }, [loadFiles, query])

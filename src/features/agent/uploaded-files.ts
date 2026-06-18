@@ -80,7 +80,7 @@ export async function handleUserAgentFilesGet(request: NextRequest) {
       originalName: true,
       sizeBytes: true,
       status: true
-    },
+    }
   })
 
   return jsonOk({
@@ -621,7 +621,9 @@ function isSupportedAgentFileMimeType(mimeType: string) {
 }
 
 function isImageMimeType(mimeType: string) {
-  return mimeType === 'image/png' || mimeType === 'image/jpeg' || mimeType === 'image/webp'
+  return (
+    mimeType === 'image/png' || mimeType === 'image/jpeg' || mimeType === 'image/webp'
+  )
 }
 
 function parseFilesLimit(value: string | null) {

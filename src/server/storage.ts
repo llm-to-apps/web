@@ -187,9 +187,12 @@ export async function deletePlatformStorageObject({
       })
     )
   } catch (error) {
-    throw new Error(`Failed to delete S3 object from ${config.endpoint}/${bucket}/${key}`, {
-      cause: error
-    })
+    throw new Error(
+      `Failed to delete S3 object from ${config.endpoint}/${bucket}/${key}`,
+      {
+        cause: error
+      }
+    )
   }
 }
 

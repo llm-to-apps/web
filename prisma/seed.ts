@@ -3,7 +3,9 @@ import * as nextEnv from '@next/env'
 import fs from 'node:fs'
 import path from 'node:path'
 
-const { loadEnvConfig } = ('default' in nextEnv ? nextEnv.default : nextEnv) as typeof nextEnv
+const { loadEnvConfig } = (
+  'default' in nextEnv ? nextEnv.default : nextEnv
+) as typeof nextEnv
 loadEnvConfig(process.cwd())
 
 type AppTemplateSeed = {

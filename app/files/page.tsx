@@ -127,9 +127,12 @@ function FilesContent({ session }: { session: SessionData }) {
   }, [query, t.files.loadFailed])
 
   useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      void loadFiles()
-    }, query ? 180 : 0)
+    const timeout = window.setTimeout(
+      () => {
+        void loadFiles()
+      },
+      query ? 180 : 0
+    )
 
     return () => window.clearTimeout(timeout)
   }, [loadFiles, query])
@@ -319,7 +322,9 @@ function FilesContent({ session }: { session: SessionData }) {
                           <Table.Td>
                             {formatFileSize(file.sizeBytes, fileSizeFormatter)}
                           </Table.Td>
-                          <Table.Td>{dateFormatter.format(new Date(file.createdAt))}</Table.Td>
+                          <Table.Td>
+                            {dateFormatter.format(new Date(file.createdAt))}
+                          </Table.Td>
                           <Table.Td>
                             <FileActions
                               deleting={deletingFileId === file.id}
@@ -429,7 +434,11 @@ function FilesContent({ session }: { session: SessionData }) {
 }
 
 function FileTitle({ file }: { file: UploadedFile }) {
-  const icon = file.mimeType.startsWith('image/') ? <ImageIcon size={16} /> : <File size={16} />
+  const icon = file.mimeType.startsWith('image/') ? (
+    <ImageIcon size={16} />
+  ) : (
+    <File size={16} />
+  )
 
   return (
     <Group gap="sm" wrap="nowrap">
