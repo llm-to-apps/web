@@ -10,6 +10,7 @@ import {
   type DeleteProjectJob,
   type DeployProjectJob
 } from '../src/server/deploy/queue'
+import { publishHomeChanged } from '../src/server/agent/home-events'
 import { prisma } from '../src/server/db'
 import { appReadyBaseUrl, envNumber } from '../src/server/env'
 import { deleteProjectRepository } from '../src/server/integrations/forgejo'
@@ -135,6 +136,9 @@ worker.on('failed', async (job, error) => {
         deployError: error.message
       }
     })
+    .then((project) => {
+      notifyHomeChanged(project.userId)
+    })
     .catch((updateError) => {
       logError('deployment.project.mark_failed_failed', jobLogContext(job), {
         error: updateError
@@ -231,7 +235,7 @@ async function deployProject(job: Job<DeployProjectJob>) {
         notIn: ['deleting', 'deleted']
       }
     },
-    select: { id: true }
+    select: { id: true, userId: true }
   })
 
   if (!project) {
@@ -246,6 +250,7 @@ async function deployProject(job: Job<DeployProjectJob>) {
       deployError: null
     }
   })
+  notifyHomeChanged(project.userId)
   logInfo('deployment.project.marked_deploying', jobLogContext(job))
 
   logInfo('deployment.project.manager_request.started', jobLogContext(job), {
@@ -287,6 +292,7 @@ async function deployProject(job: Job<DeployProjectJob>) {
       deployError: null
     }
   })
+  notifyHomeChanged(project.userId)
   logInfo('deployment.project.marked_starting', jobLogContext(job))
 
   await getDeployQueue().add(
@@ -330,7 +336,7 @@ async function checkProjectReady(job: Job<CheckProjectReadyJob>) {
         notIn: ['deleting', 'deleted']
       }
     },
-    select: { id: true }
+    select: { id: true, userId: true }
   })
 
   if (!project) {
@@ -350,6 +356,7 @@ async function checkProjectReady(job: Job<CheckProjectReadyJob>) {
         deployError: message
       }
     })
+    notifyHomeChanged(project.userId)
 
     logError('deployment.project.readiness_probe.timed_out', jobLogContext(job), {
       domain,
@@ -378,6 +385,7 @@ async function checkProjectReady(job: Job<CheckProjectReadyJob>) {
       managerJobId: String(job.id ?? '')
     }
   })
+  notifyHomeChanged(project.userId)
 
   logInfo('deployment.project.ready', jobLogContext(job), {
     domain,
@@ -473,6 +481,7 @@ async function deleteProject(job: Job<DeleteProjectJob>) {
       managerJobId: String(job.id ?? '')
     }
   })
+  await notifyProjectHomeChanged(projectId)
   logInfo('deployment.project.delete.marked_deleted', jobLogContext(job))
 
   return {
@@ -527,6 +536,23 @@ async function waitForProjectServiceReady(managerUrl: string, projectId: string)
       lastStatus
     )}`
   )
+}
+
+async function notifyProjectHomeChanged(projectId: string) {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: {
+      userId: true
+    }
+  })
+
+  if (project) {
+    notifyHomeChanged(project.userId)
+  }
+}
+
+function notifyHomeChanged(userId: string) {
+  publishHomeChanged(userId).catch(() => undefined)
 }
 
 async function fetchProjectApp(domain: string) {

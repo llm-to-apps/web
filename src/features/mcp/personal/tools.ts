@@ -10,6 +10,91 @@ export function personalOsTools() {
       }
     },
     {
+      name: 'apps_search',
+      description:
+        'Search installable OS7 app templates by user intent, category, or free-text query.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description: 'Free-text app search query, such as "money" or "finance".'
+          },
+          category: {
+            type: 'string',
+            description: 'Optional app category, such as "finance" or "productivity".'
+          },
+          intent: {
+            type: 'string',
+            description:
+              'Optional user intent in natural language, such as "organize my finances".'
+          }
+        },
+        additionalProperties: false
+      }
+    },
+    {
+      name: 'apps_get',
+      description: 'Get one OS7 app template from the catalog by app id.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          appId: {
+            type: 'string',
+            description: 'The app template id returned by apps_search, such as "money".'
+          }
+        },
+        required: ['appId'],
+        additionalProperties: false
+      }
+    },
+    {
+      name: 'apps_request_install',
+      description:
+        'Request installation of an OS7 app template for the current user. Returns an installed app id and deployment status.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          appId: {
+            type: 'string',
+            description: 'The app template id returned by apps_search, such as "money".'
+          },
+          reason: {
+            type: 'string',
+            description: 'Short user-facing reason for installing this app.'
+          }
+        },
+        required: ['appId'],
+        additionalProperties: false
+      }
+    },
+    {
+      name: 'apps_list_installed',
+      description: 'List applications already installed for the current OS7 user.',
+      inputSchema: {
+        type: 'object',
+        properties: {},
+        additionalProperties: false
+      }
+    },
+    {
+      name: 'apps_get_install_status',
+      description:
+        'Check installation/deployment status by installed app id or app template id.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          appId: {
+            type: 'string',
+            description:
+              'Installed app project id returned by apps_request_install, or a template id such as "money".'
+          }
+        },
+        required: ['appId'],
+        additionalProperties: false
+      }
+    },
+    {
       name: 'get_usage_summary',
       description: 'Return total agent credit usage for the current OS7 user.',
       inputSchema: {

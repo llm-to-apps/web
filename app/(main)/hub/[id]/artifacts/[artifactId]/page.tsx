@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
@@ -8,7 +7,6 @@ import {
   ActionIcon,
   Badge,
   Box,
-  Breadcrumbs,
   Button,
   Grid,
   GridCol,
@@ -23,21 +21,20 @@ import {
 import {
   ChevronDown,
   ChevronUp,
-  ChevronRight,
   ExternalLink,
   FileText,
   MessageSquare,
-  MessagesSquare,
   MoreHorizontal,
   Trash2
 } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
-import { useAuthModal } from '@/app/_components/auth-modal-provider'
-import { BreadcrumbLabel } from '@/app/_components/breadcrumb-label'
+import { useAppBreadcrumbItems } from '@/app/_components/app-breadcrumbs'
+import { useAuthFlow } from '@/app/_components/auth-flow-provider'
 import { useI18n } from '@/app/_components/i18n-provider'
 import { MarkdownContent } from '@/app/_components/markdown-content'
 import { ArtifactStatusIcon } from '@/app/hub/_components/artifact-status-icon'
 import { formatFileSize } from '@/app/hub/_utils/format-file-size'
+import { localizeHubArtifact } from '@/app/hub/_utils/localize-artifact'
 import { localizeHubComment } from '@/app/hub/_utils/localize-comment'
 import { localizeHubTopic } from '@/app/hub/_utils/localize-topic'
 import { waitForHubUiDelay } from '@/app/hub/_utils/ui-delay'
@@ -55,7 +52,7 @@ export default function HubArtifactPage() {
   const params = useParams<{ artifactId: string; id: string }>()
   const router = useRouter()
   const session = useSession()
-  const { openAuthModal } = useAuthModal()
+  const { openAuthFlow } = useAuthFlow()
   const { locale, t } = useI18n()
   const hub = t.hub
   const canVote = session.status === 'authenticated' && session.data.user.onboarded
@@ -147,7 +144,7 @@ export default function HubArtifactPage() {
   const addComment = useCallback(
     async (body: string, parentId: string | null = null) => {
       if (!canVote) {
-        openAuthModal()
+        openAuthFlow()
         return false
       }
 
@@ -197,7 +194,7 @@ export default function HubArtifactPage() {
       hub.addCommentFailed,
       isCommenting,
       loadArtifact,
-      openAuthModal,
+      openAuthFlow,
       params.artifactId,
       params.id
     ]
@@ -244,6 +241,46 @@ export default function HubArtifactPage() {
     : null
   const isImageArtifact = artifact?.file?.mimeType.startsWith('image/') ?? false
   const localizedTopic = topic ? localizeHubTopic(topic, locale) : null
+  const localizedArtifact = artifact ? localizeHubArtifact(artifact, locale) : null
+  const topicBreadcrumbHref = topic ? `/hub/${topic.slug ?? params.id}` : null
+  const topicBreadcrumbTitle = localizedTopic?.title
+  const artifactBreadcrumbHref =
+    topic && artifact
+      ? `/hub/${topic.slug ?? params.id}/artifacts/${artifact.slug ?? artifact.id}`
+      : null
+  const artifactBreadcrumbTitle = artifact
+    ? (localizedArtifact?.title ?? artifact.title)
+    : null
+  const breadcrumbItems = useMemo(
+    () =>
+      topicBreadcrumbHref &&
+      topicBreadcrumbTitle &&
+      artifactBreadcrumbHref &&
+      artifactBreadcrumbTitle
+        ? [
+            {
+              href: '/hub',
+              label: hub.title
+            },
+            {
+              href: topicBreadcrumbHref,
+              label: topicBreadcrumbTitle
+            },
+            {
+              href: artifactBreadcrumbHref,
+              label: artifactBreadcrumbTitle
+            }
+          ]
+        : null,
+    [
+      artifactBreadcrumbHref,
+      artifactBreadcrumbTitle,
+      hub.title,
+      topicBreadcrumbHref,
+      topicBreadcrumbTitle
+    ]
+  )
+  useAppBreadcrumbItems(breadcrumbItems)
   const canDeleteArtifact =
     session.status === 'authenticated' && topic?.author.id === session.data.user.id
 
@@ -286,34 +323,6 @@ export default function HubArtifactPage() {
 
   return (
     <Stack gap="md">
-      <Breadcrumbs separator={<ChevronRight size={14} />}>
-        <Button
-          component={Link}
-          href="/hub"
-          leftSection={<MessagesSquare size={15} />}
-          size="compact-sm"
-          variant="subtle"
-        >
-          {hub.title}
-        </Button>
-        {localizedTopic ? (
-          <Button
-            component={Link}
-            href={`/hub/${topic?.slug ?? params.id}`}
-            size="compact-sm"
-            variant="subtle"
-          >
-            {localizedTopic.title}
-          </Button>
-        ) : (
-          <Skeleton height={24} radius="sm" w={120} />
-        )}
-        {artifact ? (
-          <BreadcrumbLabel>{artifact.title}</BreadcrumbLabel>
-        ) : (
-          <Skeleton height={18} radius="sm" w={140} />
-        )}
-      </Breadcrumbs>
       {error ? <Alert color="red">{error}</Alert> : null}
       {!artifact ? <Skeleton height={280} radius="md" /> : null}
       {artifact ? (
@@ -324,7 +333,7 @@ export default function HubArtifactPage() {
                 <Group justify="space-between">
                   <Group gap="xs">
                     <FileText size={18} />
-                    <Text fw={700}>{artifact.title}</Text>
+                    <Text fw={700}>{localizedArtifact?.title ?? artifact.title}</Text>
                   </Group>
                   <Group gap="xs">
                     {canDeleteArtifact ? (
@@ -375,7 +384,7 @@ export default function HubArtifactPage() {
                       <Stack gap="sm">
                         {(isImageArtifact && artifactFileUrl) || artifactThumbnailUrl ? (
                           <Box
-                            alt={artifact.title}
+                            alt={localizedArtifact?.title ?? artifact.title}
                             component="img"
                             src={
                               isImageArtifact && artifactFileUrl
@@ -439,30 +448,22 @@ export default function HubArtifactPage() {
                     onAddReply={addReply}
                     onCommentChanged={updateComment}
                     onError={setError}
-                    onSignIn={openAuthModal}
+                    onSignIn={openAuthFlow}
                     topicId={params.id}
                   />
                 </Stack>
               </Paper>
               <Stack gap="sm">
-                {canVote ? (
-                  <>
-                    <Textarea
-                      autosize
-                      minRows={3}
-                      onChange={(event) => setCommentBody(event.currentTarget.value)}
-                      placeholder={hub.commentPlaceholder}
-                      value={commentBody}
-                    />
-                    <Group justify="flex-end">
-                      <Button loading={isCommenting} onClick={saveComment}>
-                        {hub.addComment}
-                      </Button>
-                    </Group>
-                  </>
-                ) : (
-                  <SignInPanel onSignIn={openAuthModal} text={hub.signInToDiscuss} />
-                )}
+                <Textarea
+                  onChange={(event) => setCommentBody(event.currentTarget.value)}
+                  placeholder={hub.commentPlaceholder}
+                  value={commentBody}
+                />
+                <Group justify="flex-end">
+                  <Button loading={isCommenting} onClick={saveComment}>
+                    {hub.addComment}
+                  </Button>
+                </Group>
               </Stack>
             </Stack>
           </GridCol>
@@ -496,11 +497,7 @@ function CommentList({
   const rootComments = comments.filter((comment) => !comment.parentId)
 
   if (rootComments.length === 0) {
-    return (
-      <Text c="dimmed" size="sm">
-        {hub.noComments}
-      </Text>
-    )
+    return <Text c="dimmed">{hub.noComments}</Text>
   }
 
   return (
@@ -642,37 +639,41 @@ function CommentItem({
             </ActionIcon>
           </Stack>
         )}
-        <Paper bg="gray.0" p="sm" radius="md" style={{ flex: 1, minWidth: 0 }}>
-          <Stack gap={6} style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ whiteSpace: 'pre-wrap' }}>
-              {localizeHubComment(comment, locale).body}
-            </Text>
-            <Group justify="space-between">
-              <Button
-                onClick={() => {
-                  if (!canVote) {
-                    onSignIn()
-                    return
-                  }
-
-                  setIsReplyOpen((isOpen) => !isOpen)
-                }}
-                size="compact-xs"
-                variant="subtle"
-              >
-                {hub.reply}
-              </Button>
+        <Stack gap={4} style={{ flex: 1, minWidth: 0 }}>
+          <Paper bg="gray.0" p="sm" radius="md">
+            <Stack gap={6}>
+              <Text style={{ whiteSpace: 'pre-wrap' }}>
+                {localizeHubComment(comment, locale).body}
+              </Text>
               <Text c="dimmed" size="xs">
                 {comment.author.name}
               </Text>
-            </Group>
-          </Stack>
-        </Paper>
+            </Stack>
+          </Paper>
+          <Group justify="flex-start">
+            <Button
+              onClick={() => {
+                if (!canVote) {
+                  onSignIn()
+                  return
+                }
+
+                setIsReplyOpen((isOpen) => !isOpen)
+              }}
+              rightSection={
+                isReplyOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+              }
+              size="compact-xs"
+              variant="subtle"
+            >
+              {hub.reply}
+            </Button>
+          </Group>
+        </Stack>
       </Group>
       {isReplyOpen ? (
         <Stack gap="xs" pl={38}>
           <Textarea
-            autosize
             minRows={2}
             onChange={(event) => setReplyBody(event.currentTarget.value)}
             placeholder={hub.replyPlaceholder}
@@ -680,9 +681,6 @@ function CommentItem({
             value={replyBody}
           />
           <Group justify="flex-end">
-            <Button onClick={() => setIsReplyOpen(false)} size="xs" variant="default">
-              {hub.cancel}
-            </Button>
             <Button disabled={isReplying} onClick={saveReply} size="xs">
               {hub.reply}
             </Button>
@@ -738,20 +736,4 @@ function applyCommentVote(comment: HubComment, kind: VoteKind): HubComment {
     viewerHasDownvoted: true,
     viewerHasUpvoted: false
   }
-}
-
-function SignInPanel({ onSignIn, text }: { onSignIn: () => void; text: string }) {
-  const { t } = useI18n()
-  return (
-    <Paper bg="gray.0" p="md" radius="md">
-      <Group justify="space-between">
-        <Text c="dimmed" size="sm">
-          {text}
-        </Text>
-        <Button onClick={onSignIn} size="xs" variant="light">
-          {t.hub.signIn}
-        </Button>
-      </Group>
-    </Paper>
-  )
 }

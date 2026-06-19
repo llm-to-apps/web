@@ -134,7 +134,7 @@ export function AuthPanel({
           {variant === 'card' ? (
             <Stack align="center" gap="xs">
               <Os7Logo href="/" w={88} />
-              <Title order={3} ta="center">
+              <Title order={4} ta="center">
                 {step === 'email' ? t.auth.emailTitle : t.auth.codeTitle}
               </Title>
             </Stack>
@@ -182,7 +182,7 @@ export function AuthPanel({
             <Alert color="green">{format(t.auth.codeSent, { email })}</Alert>
           ) : null}
           {isSubmitting && step === 'code' ? (
-            <Text c="dimmed" size="sm" ta="center">
+            <Text c="dimmed" ta="center">
               Checking code...
             </Text>
           ) : null}

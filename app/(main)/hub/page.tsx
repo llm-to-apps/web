@@ -15,14 +15,23 @@ import {
   Skeleton,
   Stack,
   Text,
+  TextInput,
   Title
 } from '@mantine/core'
-import { ChevronDown, ChevronUp, FileText, MessageSquare, Plus } from 'lucide-react'
-import { useAuthModal } from '../_components/auth-modal-provider'
-import { useI18n } from '../_components/i18n-provider'
-import { useSession } from '../_components/session-provider'
-import { localizeHubTopic } from './_utils/localize-topic'
-import { waitForHubUiDelay } from './_utils/ui-delay'
+import {
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  MessageSquare,
+  Plus,
+  Search
+} from 'lucide-react'
+import { useAuthFlow } from '@/app/_components/auth-flow-provider'
+import { useI18n } from '@/app/_components/i18n-provider'
+import { useSession } from '@/app/_components/session-provider'
+import { TopicStatusBadge } from '@/app/hub/_components/topic-status-badge'
+import { localizeHubTopic } from '@/app/hub/_utils/localize-topic'
+import { waitForHubUiDelay } from '@/app/hub/_utils/ui-delay'
 import styles from './page.module.css'
 import type { ApiResponse } from '@/shared/api'
 import type { HubTag, HubTopicListItem } from '@/app/hub/types'
@@ -55,6 +64,7 @@ export default function HubPage() {
   const [error, setError] = useState<string | null>(null)
   const [isUrlFilterReady, setIsUrlFilterReady] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState(allHubStatusFilter)
   const [tagFilter, setTagFilter] = useState<string | null>(null)
   const [hubTags, setHubTags] = useState<HubTag[]>([])
@@ -66,7 +76,7 @@ export default function HubPage() {
   const session = useSession()
   const { locale, t } = useI18n()
   const hub = t.hub
-  const { openAuthModal } = useAuthModal()
+  const { openAuthFlow } = useAuthFlow()
   const canCreateTopic = session.status === 'authenticated' && session.data.user.onboarded
   const canVote = canCreateTopic
   const queryString = searchParams.toString()
@@ -226,12 +236,16 @@ export default function HubPage() {
         continue
       }
 
+      if (!topicMatchesSearch(topic, { locale, query: searchQuery, tagLabels })) {
+        continue
+      }
+
       counts.set(allHubStatusFilter, (counts.get(allHubStatusFilter) ?? 0) + 1)
       counts.set(topic.status, (counts.get(topic.status) ?? 0) + 1)
     }
 
     return counts
-  }, [categoryFilter, tagFilter, topics])
+  }, [categoryFilter, locale, searchQuery, tagFilter, tagLabels, topics])
   const statusFilterOptions = useMemo(
     () => [
       {
@@ -277,10 +291,15 @@ export default function HubPage() {
         const matchesTag = !tagFilter || topic.tags.includes(tagFilter)
         const matchesStatus =
           statusFilter === allHubStatusFilter || topic.status === statusFilter
+        const matchesSearch = topicMatchesSearch(topic, {
+          locale,
+          query: searchQuery,
+          tagLabels
+        })
 
-        return matchesCategory && matchesTag && matchesStatus
+        return matchesCategory && matchesTag && matchesStatus && matchesSearch
       }),
-    [categoryFilter, statusFilter, tagFilter, topics]
+    [categoryFilter, locale, searchQuery, statusFilter, tagFilter, tagLabels, topics]
   )
 
   return (
@@ -293,32 +312,45 @@ export default function HubPage() {
         <NewTopicButton
           canCreateTopic={canCreateTopic}
           label={hub.newTopic}
-          onSignIn={openAuthModal}
+          onSignIn={openAuthFlow}
         />
       </Group>
 
-      <Group align="flex-end" gap="sm" wrap="nowrap">
+      <Group align="flex-end" gap="sm" justify="space-between" wrap="wrap" w="100%">
         <SegmentedControl
           data={categoryFilterOptions}
           onChange={setCategoryFilter}
-          size="sm"
           value={categoryFilter}
         />
-        <div
-          style={{ display: 'flex', flex: 1, justifyContent: 'flex-end', minWidth: 0 }}
-        >
-          <StatusFilterTabs
-            onChange={setStatusFilter}
-            options={statusFilterOptions}
-            value={statusFilter}
-          />
-        </div>
+        <TextInput
+          aria-label={hub.searchAria}
+          leftSection={<Search size={16} />}
+          onChange={(event) => setSearchQuery(event.currentTarget.value)}
+          placeholder={hub.searchPlaceholder}
+          value={searchQuery}
+          w={{ base: '100%', sm: 320 }}
+        />
+      </Group>
+
+      <Group justify="flex-start" w="100%">
+        <StatusFilterTabs
+          onChange={setStatusFilter}
+          options={statusFilterOptions}
+          value={statusFilter}
+        />
       </Group>
 
       <Group align="center" gap={6}>
         <Group gap={6} style={{ flex: 1, minWidth: 180 }}>
-          {availableTags.length === 0 ? (
-            <Text c="dimmed" size="xs">
+          {isLoading && hubTags.length === 0 ? (
+            <>
+              <Skeleton height={22} radius="xl" width={72} />
+              <Skeleton height={22} radius="xl" width={88} />
+              <Skeleton height={22} radius="xl" width={64} />
+              <Skeleton height={22} radius="xl" width={96} />
+            </>
+          ) : availableTags.length === 0 ? (
+            <Text c="dimmed">
               {hub.noTags}
             </Text>
           ) : (
@@ -330,10 +362,8 @@ export default function HubPage() {
                   component="button"
                   key={`${tag.category}:${tag.slug}`}
                   onClick={() => toggleTagFilter(tag.slug)}
-                  size="sm"
                   style={{
                     cursor: 'pointer',
-                    fontSize: 11,
                     height: 22,
                     paddingInline: 8
                   }}
@@ -374,7 +404,7 @@ export default function HubPage() {
           canVote={canVote}
           key={topic.id}
           onError={setError}
-          onSignIn={openAuthModal}
+          onSignIn={openAuthFlow}
           onTopicChanged={updateTopic}
           tagLabels={tagLabels}
           labels={{
@@ -528,9 +558,7 @@ const TopicCard = memo(function TopicCard({
         >
           <ChevronUp size={20} />
         </ActionIcon>
-        <Text fw={700} size="sm">
-          {score}
-        </Text>
+        <Text fw={700}>{score}</Text>
         <ActionIcon
           aria-disabled={topic.viewerHasDownvoted}
           aria-label={labels.downvote}
@@ -554,13 +582,13 @@ const TopicCard = memo(function TopicCard({
         <Stack gap="sm" style={{ flex: 1, minWidth: 0 }}>
           <Group justify="space-between" wrap="nowrap">
             <Stack gap={2} style={{ minWidth: 0 }}>
-              <Text fw={800} lineClamp={1} size="lg">
+              <Text fw={800} lineClamp={1}>
                 {localizedTopic.title}
               </Text>
             </Stack>
-            <Badge variant="light">{topicStatusLabel(topic.status, labels.status)}</Badge>
+            <TopicStatusBadge labels={labels.status} status={topic.status} />
           </Group>
-          <Text c="dimmed" lineClamp={3} size="sm">
+          <Text c="dimmed" lineClamp={3}>
             {localizedTopic.description || localizedTopic.intent}
           </Text>
           <Group gap="xs">
@@ -580,16 +608,14 @@ const TopicCard = memo(function TopicCard({
             <Group c="dimmed" gap="md">
               <Group gap={6}>
                 <FileText size={16} />
-                <Text size="sm">{topic.artifactCount}</Text>
+                <Text>{topic.artifactCount}</Text>
               </Group>
               <Group gap={6}>
                 <MessageSquare size={16} />
-                <Text size="sm">{topic.commentCount}</Text>
+                <Text>{topic.commentCount}</Text>
               </Group>
             </Group>
-            <Text c="dimmed" size="sm">
-              {topic.author.name}
-            </Text>
+            <Text c="dimmed">{topic.author.name}</Text>
           </Group>
         </Stack>
       </Card>
@@ -671,6 +697,54 @@ function hubTagLabel(tag: HubTag, locale: string) {
   return tag.labels[locale] ?? tag.labels.en ?? tag.slug
 }
 
+function topicMatchesSearch(
+  topic: HubTopicListItem,
+  {
+    locale,
+    query,
+    tagLabels
+  }: {
+    locale: string
+    query: string
+    tagLabels: Map<string, string>
+  }
+) {
+  const normalizedQuery = normalizeSearchText(query)
+
+  if (!normalizedQuery) {
+    return true
+  }
+
+  const localizedTopic = localizeHubTopic(topic, locale)
+  const searchText = normalizeSearchText(
+    [
+      topic.id,
+      topic.slug,
+      topic.title,
+      topic.description,
+      topic.intent,
+      localizedTopic.title,
+      localizedTopic.description,
+      localizedTopic.intent,
+      ...Object.values(topic.translations).flatMap((translation) => [
+        translation.title,
+        translation.description,
+        translation.intent
+      ]),
+      ...topic.tags,
+      ...topic.tags.map((tag) => tagLabels.get(tag) ?? '')
+    ]
+      .filter(Boolean)
+      .join(' ')
+  )
+
+  return searchText.includes(normalizedQuery)
+}
+
+function normalizeSearchText(value: string) {
+  return value.trim().toLocaleLowerCase()
+}
+
 function NewTopicButton({
   canCreateTopic,
   label,
@@ -743,10 +817,6 @@ function categoryFilterToUrl(category: string) {
     return 'company'
   }
 
-  if (category === 'personal') {
-    return 'personal'
-  }
-
   return null
 }
 
@@ -763,27 +833,4 @@ function tagFilterFromUrl(searchParams: URLSearchParams) {
   const tag = value?.trim()
 
   return tag || null
-}
-
-function topicStatusLabel(
-  status: string,
-  labels: {
-    analyzing: string
-    inDevelopment: string
-    discussing: string
-    developed: string
-  }
-) {
-  switch (status) {
-    case 'analyzing':
-      return labels.analyzing
-    case 'discussing':
-      return labels.discussing
-    case 'in_development':
-      return labels.inDevelopment
-    case 'developed':
-      return labels.developed
-    default:
-      return status
-  }
 }

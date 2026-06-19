@@ -1,6 +1,6 @@
 .root {
   color: var(--mantine-color-text);
-  font-size: var(--markdown-font-size, var(--mantine-font-size-sm));
+  font-size: var(--markdown-font-size, inherit);
   line-height: 1.6;
   overflow-wrap: anywhere;
 }

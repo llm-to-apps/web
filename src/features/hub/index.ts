@@ -3,6 +3,10 @@ import { Prisma } from '@prisma/client'
 
 import { getCurrentUser, type CurrentUser } from '@/server/auth'
 import { prisma } from '@/server/db'
+import {
+  deleteUploadedFileStorageObjects,
+  markUploadedFileDeleted
+} from '@/server/files/delete-uploaded-file'
 import { enqueueHubArtifactAnalysis } from '@/server/hub/artifact-analysis-queue'
 import { enqueueHubArtifactScreenshot } from '@/server/hub/artifact-screenshot-queue'
 import { enqueueHubTopicEnrichment } from '@/server/hub/topic-enrichment-queue'
@@ -13,11 +17,7 @@ import {
 import { getUploadedFileQueue } from '@/server/files/queue'
 import { enqueueUploadedFileThumbnail } from '@/server/files/thumbnail-queue'
 import { jsonErrorMessage, jsonOk, jsonValidationError } from '@/server/http'
-import {
-  deletePlatformStorageObject,
-  getPlatformStorageObjectBuffer,
-  putPlatformStorageObject
-} from '@/server/storage'
+import { getPlatformStorageObjectBuffer, putPlatformStorageObject } from '@/server/storage'
 import { parseJsonRequest } from '@/shared/schema'
 import {
   createHubCommentSchema,
@@ -796,77 +796,6 @@ export async function handleHubArtifactDelete(
   return jsonOk({})
 }
 
-type DeletedUploadedFile = {
-  id: string
-  storageBucket: string
-  storageKey: string
-  thumbnail: {
-    id: string
-    storageBucket: string
-    storageKey: string
-  } | null
-}
-
-async function deleteUploadedFileStorageObjects(file: DeletedUploadedFile) {
-  if (file.storageBucket && file.storageKey) {
-    await deletePlatformStorageObject({
-      bucket: file.storageBucket,
-      key: file.storageKey
-    })
-  }
-
-  if (file.thumbnail?.storageBucket && file.thumbnail.storageKey) {
-    await deletePlatformStorageObject({
-      bucket: file.thumbnail.storageBucket,
-      key: file.thumbnail.storageKey
-    })
-  }
-}
-
-async function markUploadedFileDeleted(
-  tx: Prisma.TransactionClient,
-  file: DeletedUploadedFile
-) {
-  if (file.thumbnail) {
-    await tx.uploadedFileChunk.deleteMany({
-      where: {
-        uploadedFileId: file.thumbnail.id
-      }
-    })
-    await tx.uploadedFile.update({
-      where: {
-        id: file.thumbnail.id
-      },
-      data: {
-        deletedAt: new Date(),
-        error: null,
-        status: 'deleted',
-        storageBucket: '',
-        storageKey: ''
-      }
-    })
-  }
-
-  await tx.uploadedFileChunk.deleteMany({
-    where: {
-      uploadedFileId: file.id
-    }
-  })
-  await tx.uploadedFile.update({
-    where: {
-      id: file.id
-    },
-    data: {
-      deletedAt: new Date(),
-      error: null,
-      status: 'deleted',
-      storageBucket: '',
-      storageKey: '',
-      thumbnailId: null
-    }
-  })
-}
-
 export async function handleHubCommentsPost(request: NextRequest, context: TopicContext) {
   const user = await requireHubUser('Sign in before commenting')
 
@@ -1363,6 +1292,12 @@ async function findHubTopic(reference: string, userId: string) {
           status: true,
           textContent: true,
           title: true,
+          translations: {
+            select: {
+              locale: true,
+              title: true
+            }
+          },
           type: true,
           uploadedFile: {
             select: {
@@ -1742,6 +1677,7 @@ function serializeTopicDetail(
       tags: serializeArtifactTags(artifact.artifactTags),
       textContent: artifact.textContent,
       title: artifact.title,
+      translations: serializeArtifactTranslations(artifact.translations),
       type: artifact.type
     })),
     author: serializeAuthor(topic.author),
@@ -1800,6 +1736,11 @@ type HubCommentTranslationRecord = {
   locale: string
 }
 
+type HubArtifactTranslationRecord = {
+  locale: string
+  title: string
+}
+
 function serializeCommentTranslations(translations: HubCommentTranslationRecord[]) {
   return Object.fromEntries(
     translations.map((translation) => [
@@ -1818,6 +1759,17 @@ function serializeTopicTranslations(translations: HubTopicTranslationRecord[]) {
       {
         description: translation.description,
         intent: translation.intent,
+        title: translation.title
+      }
+    ])
+  )
+}
+
+function serializeArtifactTranslations(translations: HubArtifactTranslationRecord[]) {
+  return Object.fromEntries(
+    translations.map((translation) => [
+      translation.locale,
+      {
         title: translation.title
       }
     ])

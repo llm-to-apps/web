@@ -7,6 +7,7 @@ import {
   clearEmailLoginCode,
   createEmailLoginCode
 } from '@/server/auth/email-login-codes'
+import { withAvailableUsernameRetry } from '@/server/auth/username'
 import { jsonErrorMessage, jsonOk, jsonValidationError } from '@/server/http'
 import { logError } from '@/server/logger'
 import { parseJsonRequest } from '@/shared/schema'
@@ -27,13 +28,16 @@ export async function handleEmailStartPost(request: NextRequest) {
     return jsonErrorMessage('A valid email is required', 400)
   }
 
-  await prisma.user.upsert({
-    where: { email },
-    update: {},
-    create: {
-      email
-    }
-  })
+  await withAvailableUsernameRetry(email, (username) =>
+    prisma.user.upsert({
+      where: { email },
+      update: {},
+      create: {
+        email,
+        username
+      }
+    })
+  )
 
   let loginCode: Awaited<ReturnType<typeof createEmailLoginCode>>
 

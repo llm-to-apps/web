@@ -8,6 +8,7 @@ import {
 } from '@/server/auth'
 import { prisma } from '@/server/db'
 import { verifyEmailLoginCode } from '@/server/auth/email-login-codes'
+import { withAvailableUsernameRetry } from '@/server/auth/username'
 import { jsonErrorMessage, jsonOk, jsonValidationError } from '@/server/http'
 import { logError } from '@/server/logger'
 import { parseJsonRequest } from '@/shared/schema'
@@ -45,22 +46,26 @@ export async function handleEmailVerifyPost(request: NextRequest) {
     return jsonErrorMessage('Invalid or expired code', 400)
   }
 
-  const user = await prisma.user.upsert({
-    where: { email },
-    update: {},
-    create: {
-      email
-    },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      onboarded: true,
-      aiExperienceLevel: true,
-      vibeCodingExperienceLevel: true,
-      onboardingGoal: true
-    }
-  })
+  const user = await withAvailableUsernameRetry(email, (username) =>
+    prisma.user.upsert({
+      where: { email },
+      update: {},
+      create: {
+        email,
+        username
+      },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        name: true,
+        onboarded: true,
+        aiExperienceLevel: true,
+        vibeCodingExperienceLevel: true,
+        onboardingGoal: true
+      }
+    })
+  )
 
   await createSession(user)
 

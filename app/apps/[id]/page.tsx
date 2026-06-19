@@ -377,7 +377,7 @@ export default function ProjectPage() {
               <Group gap="sm" justify="space-between">
                 <Group gap="xs">
                   <RefreshCw size={16} />
-                  <Text size="sm">A newer {data.project.name} version is available.</Text>
+                  <Text>A newer {data.project.name} version is available.</Text>
                 </Group>
                 <Button
                   color="green"
@@ -408,16 +408,14 @@ export default function ProjectPage() {
               <Alert color="red">{updatePreflightError}</Alert>
             ) : updatePreflight?.hasChanges ? (
               <Stack gap="md">
-                <Text size="sm">
+                <Text>
                   You did some change in you app, thus, during update some changes could
                   be lost
                 </Text>
                 <Stack gap="xs">
                   {updatePreflight.commits.map((commit) => (
                     <Paper key={commit.sha} p="sm" withBorder>
-                      <Text fw={700} size="sm">
-                        {commit.message || 'Untitled commit'}
-                      </Text>
+                      <Text fw={700}>{commit.message || 'Untitled commit'}</Text>
                       <Text c="dimmed" size="xs">
                         {commit.sha.slice(0, 7)}
                         {commit.authorName ? ` by ${commit.authorName}` : ''}
@@ -425,9 +423,7 @@ export default function ProjectPage() {
                     </Paper>
                   ))}
                 </Stack>
-                <Text fw={700} size="sm">
-                  Are you sure?
-                </Text>
+                <Text fw={700}>Are you sure?</Text>
                 <Group justify="flex-end">
                   <Button
                     color="green"
@@ -440,7 +436,7 @@ export default function ProjectPage() {
               </Stack>
             ) : (
               <Stack gap="md">
-                <Text size="sm">
+                <Text>
                   You can safety update you app, don&apos;t worry, all your data will
                   therere.
                 </Text>
@@ -479,9 +475,7 @@ export default function ProjectPage() {
                 <Center h="100%" p="md">
                   <Stack align="center" gap="sm">
                     <Loader size="sm" />
-                    <Text c="dimmed" size="sm">
-                      Starting development preview...
-                    </Text>
+                    <Text c="dimmed">Starting development preview...</Text>
                   </Stack>
                 </Center>
               )}

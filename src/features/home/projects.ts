@@ -5,8 +5,9 @@ import {
   createTemplateImageMap,
   getProjectTemplateUpdate
 } from '@/features/projects/template-update'
+import type { Locale } from '@/shared/i18n/config'
 
-export async function loadHomeProjects(userId: string) {
+export async function loadHomeProjects(userId: string, locale: Locale) {
   const projects = await prisma.project.findMany({
     where: {
       members: projectMemberWhere(userId)
@@ -33,7 +34,15 @@ export async function loadHomeProjects(userId: string) {
     },
     select: {
       id: true,
-      image: true
+      image: true,
+      translations: {
+        where: {
+          locale
+        },
+        select: {
+          name: true
+        }
+      }
     }
   })
   const projectUsageSummaries =
@@ -59,10 +68,14 @@ export async function loadHomeProjects(userId: string) {
     ])
   )
   const latestImagesByTemplateId = createTemplateImageMap(templates)
+  const localizedTemplateNames = new Map(
+    templates.map((template) => [template.id, template.translations[0]?.name ?? null])
+  )
 
   return projects.map((project) => ({
     ...project,
     deletedAt: project.deletedAt?.toISOString() ?? null,
+    templateName: localizedTemplateNames.get(project.templateId) ?? project.templateName,
     templateUpdate: getProjectTemplateUpdate(project, latestImagesByTemplateId),
     usage: formatInitialUsage({
       creditsUsed: usageByProjectId.get(project.id) ?? 0

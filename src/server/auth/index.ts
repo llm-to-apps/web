@@ -11,6 +11,7 @@ const sessionTtlSeconds = 60 * 60 * 24 * 30
 export type CurrentUser = {
   id: string
   email: string
+  username: string
   name: string | null
   onboarded: boolean
   aiExperienceLevel: UserExperienceLevel | null
@@ -84,6 +85,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
         select: {
           id: true,
           email: true,
+          username: true,
           name: true,
           onboarded: true,
           aiExperienceLevel: true,

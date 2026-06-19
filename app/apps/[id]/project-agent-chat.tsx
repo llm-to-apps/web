@@ -40,7 +40,7 @@ import { useHover } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import {
   formatChatErrorMessage,
-  formatChatProgressMessage
+  formatLocalizedChatProgressMessage
 } from '../../_components/chat-progress'
 import { AgentFilePicker } from '../../_components/agent-file-picker'
 import { useI18n } from '../../_components/i18n-provider'
@@ -623,7 +623,11 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
     function formatProgressMessage(
       event: Extract<AgentStreamEvent, { type: 'progress' }>
     ) {
-      return formatChatProgressMessage(event, t.chat.working)
+      return formatLocalizedChatProgressMessage(
+        event,
+        t.chat.working,
+        t.chat.toolProgress
+      )
     }
 
     function startRunStream(runId: string) {

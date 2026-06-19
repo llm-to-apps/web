@@ -143,6 +143,7 @@ export async function authenticateAuthToken({
         select: {
           id: true,
           email: true,
+          username: true,
           name: true
         }
       }

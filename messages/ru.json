@@ -23,7 +23,7 @@
     "signInTitle": "Войти",
     "signInDescription": "Введи email и начни собирать софт вокруг своей жизни или компании.",
     "storeTitle": "Магазин",
-    "storeDescription": "Устанавливай новые шаблоны в свой workspace."
+    "storeDescription": "Подключи новое приложение к агенту, чтобы управлять им через чат или голосовые команды."
   },
   "settings": {
     "title": "Настройки",
@@ -50,8 +50,8 @@
     "uploaded": "Загружен",
     "actions": "Действия",
     "attach": "Прикрепить файл",
-    "uploadNew": "Upload",
-    "chooseUploaded": "Choose",
+    "uploadNew": "Загрузить",
+    "chooseUploaded": "Выбрать",
     "search": "Поиск по загруженным файлам",
     "loading": "Загружаю файлы",
     "noReadyFiles": "Готовых файлов не найдено",
@@ -66,6 +66,14 @@
   "profile": {
     "nameLabel": "Ваше имя",
     "namePlaceholder": "Alexander",
+    "setupProfile": "Настроить профиль",
+    "usernameLabel": "Логин",
+    "usernamePlaceholder": "alexander",
+    "usernameDescription": "Английские буквы, цифры, точки и подчеркивания. До 18 символов.",
+    "usernameAvailable": "Логин свободен",
+    "usernameUnavailable": "Логин недоступен",
+    "usernameRequired": "Логин обязателен",
+    "usernameCheckFailed": "Не удалось проверить логин",
     "aiExperienceLabel": "Опыт работы с ИИ",
     "vibeCodingExperienceLabel": "Опыт вайб-кодинга",
     "experienceNone": "Нет",
@@ -73,7 +81,7 @@
     "experienceAdvanced": "Продвинутый"
   },
   "welcome": {
-    "title": "Welcome",
+    "title": "Добро пожаловать",
     "description": "Расскажи немного о себе, чтобы агент мог подстроить тон и предположения.",
     "continue": "Продолжить",
     "saving": "Сохраняю...",
@@ -91,16 +99,24 @@
     "working": "Работаю",
     "continue": "Продолжить",
     "signIn": "Войти",
+    "signInToContinue": "Войдите, чтобы продолжить",
     "authenticationFailed": "Не удалось войти"
   },
   "tabs": {
     "ariaLabel": "Разделы приложений",
     "apps": "Агент",
-    "hub": "Хаб",
+    "hub": "Идеи",
     "store": "Приложения"
   },
   "store": {
     "comingSoon": "Разрабатывается ИИ",
+    "personal": "Для тебя",
+    "company": "Для компании",
+    "searchPlaceholder": "Поиск приложений",
+    "searchAria": "Поиск приложений",
+    "noResultsTitle": "Не можешь найти приложение?",
+    "askDevelopIn": "Попроси AI разработать его в",
+    "hubLink": "Идеях",
     "install": "Установить",
     "installing": "Устанавливаю",
     "installFailed": "Не удалось установить",
@@ -108,30 +124,31 @@
     "emptyResponse": "Установка вернула пустой ответ ({status})"
   },
   "hub": {
-    "title": "Хаб",
-    "description": "Собирай идеи приложений, артефакты, комментарии и голоса.",
+    "title": "Идеи",
+    "description": "Преврати идею в агентное приложение всего за 24 часа",
     "personal": "Для тебя",
     "company": "Для компании",
+    "searchPlaceholder": "Поиск в Идеях",
+    "searchAria": "Поиск идей",
     "noTags": "Тегов нет",
     "newTopic": "Новый запрос",
-    "noTopicsTitle": "Топиков пока нет",
-    "noTopicsDescription": "Создай первый запрос на приложение.",
-    "noTopicsMatch": "Под эти фильтры топиков нет.",
+    "noTopicsTitle": "Идей пока нет",
+    "noTopicsDescription": "Создай первую идею для приложения.",
+    "noTopicsMatch": "Под эти фильтры идей нет.",
     "allStatuses": "Все",
     "upvote": "Апвоут",
     "downvote": "Даунвоут",
     "upvoteComment": "Апвоут комментария",
     "downvoteComment": "Даунвоут комментария",
-    "topic": "Топик",
+    "topic": "Идея",
     "artifact": "Артефакт",
     "comments": "Комментарии",
     "noComments": "Комментариев пока нет.",
     "commentPlaceholder": "Добавь контекст, вопросы или заметки по реализации",
     "addComment": "Добавить комментарий",
     "signIn": "Войти",
-    "signInToCreateTopic": "Войди, чтобы создать топик в Хабе.",
+    "signInToCreateTopic": "Войди, чтобы создать идею.",
     "signInToDiscuss": "Войди, чтобы присоединиться к обсуждению.",
-    "signInToInteract": "Войди, чтобы добавлять артефакты, комментарии и голосовать.",
     "addArtifact": "Добавить артефакт",
     "addArtifacts": "Добавить артефакты",
     "artifactsHelp": "Артефакты помогают ИИ собрать контекст требований и создать именно то, что тебе нужно.",
@@ -156,25 +173,25 @@
     "removeFile": "Удалить {name}",
     "tooManyInitialFiles": "Можно прикрепить до 10 файлов.",
     "createTopic": "Продолжить",
-    "topicCreated": "Топик создан",
+    "topicCreated": "Идея создана",
     "artifactAdded": "Артефакт добавлен",
     "artifactsAdded": "Артефакты добавлены",
     "artifactDeleted": "Артефакт удален",
-    "topicActions": "Действия с топиком",
+    "topicActions": "Действия с идеей",
     "enrichTopic": "Обогатить",
     "enrichTopicStarted": "Обогащение запущено",
     "enrichTopicStartedMessage": "Топик обрабатывается.",
-    "deleteTopic": "Удалить топик",
+    "deleteTopic": "Удалить идею",
     "deleteArtifact": "Удалить артефакт",
     "deleteArtifactDescription": "{name} будет удален из этого топика.",
-    "loadFailed": "Не удалось загрузить Хаб",
-    "loadTopicFailed": "Не удалось загрузить топик",
+    "loadFailed": "Не удалось загрузить Идеи",
+    "loadTopicFailed": "Не удалось загрузить идею",
     "loadArtifactFailed": "Не удалось загрузить артефакт",
     "artifactNotFound": "Артефакт не найден",
-    "createTopicFailed": "Не удалось создать топик",
+    "createTopicFailed": "Не удалось создать идею",
     "saveArtifactFailed": "Не удалось сохранить артефакт",
-    "enrichTopicFailed": "Не удалось обогатить топик",
-    "deleteTopicFailed": "Не удалось удалить топик",
+    "enrichTopicFailed": "Не удалось обогатить идею",
+    "deleteTopicFailed": "Не удалось удалить идею",
     "deleteArtifactFailed": "Не удалось удалить артефакт",
     "addCommentFailed": "Не удалось добавить комментарий",
     "updateVoteFailed": "Не удалось обновить голос",
@@ -201,7 +218,6 @@
     "openStore": "Открыть магазин",
     "deleteTitle": "Удалить {name}?",
     "deleteDescription": "Это навсегда удалит сервис приложения и все связанные ресурсы.",
-    "deleteBody": "Мы удалим базы данных, Git-репозиторий, исходный код и все данные приложения для {domain}.",
     "confirmDatabase": "Я понимаю, что базы данных будут удалены.",
     "confirmCode": "Я понимаю, что код и Git-репозиторий будут удалены.",
     "confirmData": "Я понимаю, что все данные приложения будут потеряны навсегда.",
@@ -242,7 +258,36 @@
     "optionsAria": "Настройки чата",
     "clearAria": "Очистить историю чата",
     "clearFailed": "Не удалось очистить историю чата",
-    "usageBreakdown": "{input} вход / {output} выход"
+    "usageBreakdown": "{input} вход / {output} выход",
+    "toolProgress": {
+      "askAppAgent": "Спросить приложение",
+      "buildProjectApp": "Собрать приложение",
+      "callAppMcpTool": "Вызвать инструмент приложения",
+      "getApp": "Получить приложение",
+      "getInstallStatus": "Проверить статус установки",
+      "getPersonalUsageSummary": "Получить сводку расходов",
+      "getProjectAppLogs": "Получить логи приложения",
+      "getProjectAppStatus": "Проверить статус приложения",
+      "getProjectDiff": "Получить изменения проекта",
+      "getProjectGitStatus": "Проверить Git-статус",
+      "listAppMcpTools": "Показать инструменты приложения",
+      "listInstalledApps": "Показать установленные приложения",
+      "listPersonalApps": "Показать приложения",
+      "listProjectFiles": "Показать файлы проекта",
+      "patchProjectFiles": "Изменить файлы проекта",
+      "readProjectFile": "Прочитать файл проекта",
+      "replaceTextInFile": "Заменить текст в файле",
+      "requestInstallApp": "Установить приложение",
+      "restartProjectProdServer": "Перезапустить production",
+      "runProjectCommand": "Запустить команду проекта",
+      "runtimeStatus": "Проверить runtime",
+      "saveProjectChanges": "Сохранить изменения проекта",
+      "searchApps": "Найти приложения",
+      "searchProjectFiles": "Найти файлы проекта",
+      "startProjectDevServer": "Запустить dev-сервер",
+      "stopProjectDevServer": "Остановить dev-сервер",
+      "writeProjectFile": "Записать файл проекта"
+    }
   },
   "mcp": {
     "buttonLabel": "Подключить MCP",
@@ -264,55 +309,5 @@
   },
   "logout": {
     "signOut": "Выйти"
-  },
-  "templates": {
-    "money": {
-      "name": "Финансы",
-      "description": "Персональный финансовый дашборд с собственной базой данных."
-    },
-    "kanban": {
-      "name": "Kanban",
-      "description": "Визуальная доска задач для проектов, карточек, приоритетов и процессов."
-    },
-    "personalCrm": {
-      "name": "Личный CRM",
-      "description": "Легкий менеджер контактов с заметками, follow-up и историей отношений."
-    },
-    "habitTracker": {
-      "name": "Привычки",
-      "description": "Трекер ежедневных привычек со streaks, целями и прогрессом."
-    },
-    "pomodoro": {
-      "name": "Pomodoro",
-      "description": "Фокус-таймер с сессиями, перерывами, задачами и статистикой продуктивности."
-    },
-    "notes": {
-      "name": "Заметки",
-      "description": "Личная база знаний с тегами, поиском и связанными заметками."
-    },
-    "mealPlanner": {
-      "name": "Питание",
-      "description": "Планирование еды на неделю, рецепты, ингредиенты и список покупок."
-    },
-    "workoutTracker": {
-      "name": "Тренировки",
-      "description": "Планы упражнений, подходы, история прогресса и личные рекорды."
-    },
-    "subscriptionTracker": {
-      "name": "Подписки",
-      "description": "Отслеживание регулярных платежей, продлений и месячных расходов."
-    },
-    "jobSearchCrm": {
-      "name": "Поиск работы",
-      "description": "Управление вакансиями, компаниями, интервью, офферами и follow-up."
-    },
-    "moodJournal": {
-      "name": "Настроение",
-      "description": "Трекер настроения, заметок, триггеров, привычек и эмоциональных паттернов."
-    },
-    "bookingCalendar": {
-      "name": "Календарь бронирований",
-      "description": "Приложение как Calendly, где люди могут бронировать свободное время."
-    }
   }
 }

@@ -28,7 +28,7 @@ import { useHover } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import {
   formatChatErrorMessage,
-  formatChatProgressMessage
+  formatLocalizedChatProgressMessage
 } from '../_components/chat-progress'
 import { ChatOptionsMenu } from './chat-options-menu'
 import { useI18n } from '../_components/i18n-provider'
@@ -475,7 +475,7 @@ export function UserAgentChat({
   }
 
   function formatProgressMessage(event: Extract<AgentStreamEvent, { type: 'progress' }>) {
-    return formatChatProgressMessage(event, t.chat.working)
+    return formatLocalizedChatProgressMessage(event, t.chat.working, t.chat.toolProgress)
   }
 
   async function streamAgentRun(runId: string, assistantMessageId: string) {

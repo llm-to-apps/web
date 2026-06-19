@@ -133,7 +133,6 @@ export function ProjectSettingsMenu({
         size="sm"
         title={
           <ModalTitle
-            description={t.desktop.deleteDescription}
             icon={<AlertTriangle color="var(--mantine-color-red-6)" size={18} />}
           >
             {format(t.desktop.deleteTitle, { name: project.templateName })}
@@ -141,9 +140,7 @@ export function ProjectSettingsMenu({
         }
       >
         <Stack>
-          <Text c="dimmed">
-            {format(t.desktop.deleteBody, { domain: project.domain })}
-          </Text>
+          <Text c="dimmed">{t.desktop.deleteDescription}</Text>
 
           <Checkbox
             checked={deleteConfirmations.database}

@@ -1,11 +1,9 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Alert,
-  Breadcrumbs,
   Button,
   Grid,
   GridCol,
@@ -14,9 +12,8 @@ import {
   Text,
   Textarea
 } from '@mantine/core'
-import { ChevronRight, MessagesSquare } from 'lucide-react'
-import { BreadcrumbLabel } from '@/app/_components/breadcrumb-label'
-import { useAuthModal } from '@/app/_components/auth-modal-provider'
+import { ChevronRight } from 'lucide-react'
+import { useAuthFlow } from '@/app/_components/auth-flow-provider'
 import { useI18n } from '@/app/_components/i18n-provider'
 import { useSession } from '@/app/_components/session-provider'
 import { HubFilePicker } from '@/app/hub/_components/hub-file-picker'
@@ -30,7 +27,7 @@ export default function NewHubTopicPage() {
   const session = useSession()
   const { format, locale, t } = useI18n()
   const hub = t.hub
-  const { openAuthModal } = useAuthModal()
+  const { openAuthFlow } = useAuthFlow()
   const [error, setError] = useState<string | null>(null)
   const [files, setFiles] = useState<File[]>([])
   const [intent, setIntent] = useState('')
@@ -44,13 +41,13 @@ export default function NewHubTopicPage() {
 
   useEffect(() => {
     if (session.status === 'unauthenticated') {
-      openAuthModal()
+      openAuthFlow()
     }
-  }, [openAuthModal, session.status])
+  }, [openAuthFlow, session.status])
 
   async function createTopic() {
     if (!canCreateTopic) {
-      openAuthModal()
+      openAuthFlow()
       return
     }
 
@@ -105,19 +102,6 @@ export default function NewHubTopicPage() {
 
   return (
     <Stack gap="md">
-      <Breadcrumbs separator={<ChevronRight size={14} />}>
-        <Button
-          component={Link}
-          href="/hub"
-          leftSection={<MessagesSquare size={15} />}
-          size="compact-sm"
-          variant="subtle"
-        >
-          {hub.title}
-        </Button>
-        <BreadcrumbLabel>{hub.newTopic}</BreadcrumbLabel>
-      </Breadcrumbs>
-
       <Grid align="start" gap="lg">
         {!canCreateTopic ? (
           <GridCol span={12}>
@@ -132,7 +116,6 @@ export default function NewHubTopicPage() {
         <GridCol span={{ base: 12, md: 9 }}>
           <Stack gap="md">
             <Textarea
-              autosize
               disabled={!canCreateTopic}
               minRows={10}
               onChange={(event) => setIntent(event.currentTarget.value)}
@@ -166,7 +149,6 @@ export default function NewHubTopicPage() {
               disabled={!canCreateTopic}
               files={files}
               fullWidth
-              label={hub.initialFiles}
               locale={locale}
               onChange={setFiles}
               removeFileLabel={(name) => format(hub.removeFile, { name })}

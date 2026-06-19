@@ -14,9 +14,9 @@ const sizeVars: Record<NonNullable<MarkdownContentProps['size']>, CSSProperties>
   sm: { '--markdown-font-size': 'var(--mantine-font-size-sm)' } as CSSProperties
 }
 
-export function MarkdownContent({ content, size = 'sm' }: MarkdownContentProps) {
+export function MarkdownContent({ content, size }: MarkdownContentProps) {
   return (
-    <Box className={styles.root} style={sizeVars[size]}>
+    <Box className={styles.root} style={size ? sizeVars[size] : undefined}>
       <ReactMarkdown
         components={{
           a: ({ children, href }) => (

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Group, NavLink, Stack } from '@mantine/core'
-import { Bot, MessagesSquare, PanelsTopLeft } from 'lucide-react'
+import { Bot, Lightbulb, PanelsTopLeft } from 'lucide-react'
 import { useI18n } from './i18n-provider'
 
 type HeaderNavProps = {
@@ -36,7 +36,7 @@ export function HeaderNav({
     },
     {
       href: '/hub',
-      icon: <MessagesSquare size={16} />,
+      icon: <Lightbulb size={16} />,
       isActive: pathname === '/hub' || pathname.startsWith('/hub/'),
       label: t.tabs.hub,
       requiresAuth: false

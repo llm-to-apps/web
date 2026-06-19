@@ -225,20 +225,12 @@ export function AgentFilePicker({
               {isLoading && !hasLoaded ? (
                 <Group gap="xs" p="xs">
                   <Loader size="xs" type="dots" />
-                  <Text c="dimmed" size="sm">
-                    {t.files.loading}
-                  </Text>
+                  <Text c="dimmed">{t.files.loading}</Text>
                 </Group>
               ) : null}
-              {error ? (
-                <Text c="red" size="sm">
-                  {error}
-                </Text>
-              ) : null}
+              {error ? <Text c="red">{error}</Text> : null}
               {!isLoading && !error && files.length === 0 ? (
-                <Text c="dimmed" size="sm">
-                  {t.files.noReadyFiles}
-                </Text>
+                <Text c="dimmed">{t.files.noReadyFiles}</Text>
               ) : null}
               {files.map((file) => {
                 const isAttached = attachedFileIdSet.has(file.id)
@@ -261,9 +253,7 @@ export function AgentFilePicker({
                         <FileText color="var(--mantine-color-gray-6)" size={16} />
                       )}
                       <Stack gap={0} style={{ minWidth: 0 }}>
-                        <Text size="sm" truncate>
-                          {file.name}
-                        </Text>
+                        <Text truncate>{file.name}</Text>
                         <Text c="dimmed" size="xs">
                           {formatFileSize(file.sizeBytes)}
                         </Text>

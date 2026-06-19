@@ -16,7 +16,11 @@ import {
 import { logError, logInfo, logWarn } from '../src/server/logger'
 
 const maxClassifierContentChars = 40_000
+const maxGeneratedTitleChars = 64
+const artifactLocales = ['en', 'ru', 'de'] as const
 const artifactTagSlugs = ['ui', 'logic', 'db', 'data', 'spec'] as const
+
+type ArtifactLocale = (typeof artifactLocales)[number]
 
 export function startHubArtifactWorker() {
   const concurrency = envNumber('HUB_ARTIFACT_WORKER_CONCURRENCY', 2)
@@ -53,16 +57,16 @@ export function startHubArtifactWorker() {
       }
 
       const content = await readArtifactContent(artifact.id)
-      const tagSlugs = content
-        ? await classifyArtifactTags({
+      const analysis = content
+        ? await analyzeArtifact({
             content,
             title: artifact.title
           })
-        : []
+        : { tags: [], title: null }
       const tagRecords = await prisma.hubArtifactTag.findMany({
         where: {
           slug: {
-            in: tagSlugs
+            in: analysis.tags
           }
         },
         select: {
@@ -77,12 +81,40 @@ export function startHubArtifactWorker() {
             id: artifact.id
           },
           data: {
+            ...(analysis.title?.en ? { title: analysis.title.en } : {}),
             status: 'checked'
           }
         })
 
         if (updateResult.count === 0) {
           return false
+        }
+
+        if (analysis.title) {
+          for (const locale of artifactLocales) {
+            const title = analysis.title[locale]
+
+            if (!title) {
+              continue
+            }
+
+            await tx.hubArtifactTranslation.upsert({
+              where: {
+                artifactId_locale: {
+                  artifactId: artifact.id,
+                  locale
+                }
+              },
+              update: {
+                title
+              },
+              create: {
+                artifactId: artifact.id,
+                locale,
+                title
+              }
+            })
+          }
         }
 
         await tx.hubArtifactTagAssignment.deleteMany({
@@ -182,13 +214,7 @@ async function readArtifactContent(artifactId: string) {
     .slice(0, maxClassifierContentChars)
 }
 
-async function classifyArtifactTags({
-  content,
-  title
-}: {
-  content: string
-  title: string
-}) {
+async function analyzeArtifact({ content, title }: { content: string; title: string }) {
   const model = hubArtifactClassifierModel()
   const response = await fetch(`${openRouterBaseUrl()}/chat/completions`, {
     body: JSON.stringify({
@@ -199,8 +225,10 @@ async function classifyArtifactTags({
           content: [
             'You classify app-development artifacts.',
             `Allowed tags: ${artifactTagSlugs.join(', ')}.`,
-            'Return strict JSON only: {"tags":["ui"],"confidence":0.8,"reason":"short reason"}.',
+            'Also write short, attractive artifact titles in English, Russian, and German.',
+            'Return strict JSON only: {"tags":["ui"],"title":{"en":"Short title","ru":"Короткое название","de":"Kurzer Titel"},"confidence":0.8,"reason":"short reason"}.',
             'Choose 1 to 3 tags.',
+            'Each title must be 2 to 6 words, no trailing period, no quotes, no markdown.',
             'Use ui for screens, layouts, screenshots, forms, visual UX.',
             'Use logic for workflows, business rules, algorithms, behavior.',
             'Use db for entities, tables, schemas, persistence, relationships.',
@@ -230,7 +258,7 @@ async function classifyArtifactTags({
     logWarn('hub_artifact.classifier.request_failed', {
       status: response.status
     })
-    return []
+    return { tags: [], title: null }
   }
 
   const body = (await response.json().catch(() => null)) as {
@@ -247,23 +275,87 @@ async function classifyArtifactTags({
     )
     .slice(0, 3)
 
-  return tags
+  return {
+    tags,
+    title: cleanGeneratedTitles(parsed.title)
+  }
 }
 
-function parseClassifierJson(content: unknown): { tags: string[] } {
+function parseClassifierJson(content: unknown): {
+  tags: string[]
+  title: Partial<Record<ArtifactLocale, string>> | null
+} {
   if (typeof content !== 'string') {
-    return { tags: [] }
+    return { tags: [], title: null }
   }
 
   try {
-    const parsed = JSON.parse(content) as { tags?: unknown }
+    const parsed = JSON.parse(content) as { tags?: unknown; title?: unknown }
+    const title =
+      parsed.title && typeof parsed.title === 'object' && !Array.isArray(parsed.title)
+        ? Object.fromEntries(
+            artifactLocales
+              .map((locale) => [
+                locale,
+                (parsed.title as Record<string, unknown>)[locale]
+              ])
+              .filter(
+                (entry): entry is [ArtifactLocale, string] => typeof entry[1] === 'string'
+              )
+          )
+        : typeof parsed.title === 'string'
+          ? { en: parsed.title }
+          : null
 
     return {
       tags: Array.isArray(parsed.tags)
         ? parsed.tags.filter((tag): tag is string => typeof tag === 'string')
-        : []
+        : [],
+      title
     }
   } catch {
-    return { tags: [] }
+    return { tags: [], title: null }
   }
+}
+
+function cleanGeneratedTitles(value: Partial<Record<ArtifactLocale, string>> | null) {
+  if (!value) {
+    return null
+  }
+
+  const titles = Object.fromEntries(
+    artifactLocales
+      .map((locale) => [locale, cleanGeneratedTitle(value[locale] ?? null)] as const)
+      .filter((entry): entry is [ArtifactLocale, string] => Boolean(entry[1]))
+  ) as Partial<Record<ArtifactLocale, string>>
+
+  if (!titles.en) {
+    return null
+  }
+
+  return Object.fromEntries(
+    artifactLocales.map((locale) => [locale, titles[locale] ?? titles.en])
+  ) as Record<ArtifactLocale, string>
+}
+
+function cleanGeneratedTitle(value: string | null) {
+  const title = value
+    ?.trim()
+    .replace(/^["'`]+|["'`.]+$/g, '')
+    .replace(/\s+/g, ' ')
+
+  if (!title) {
+    return null
+  }
+
+  if (title.length > maxGeneratedTitleChars) {
+    return (
+      title
+        .slice(0, maxGeneratedTitleChars)
+        .replace(/\s+\S*$/, '')
+        .trim() || null
+    )
+  }
+
+  return title
 }

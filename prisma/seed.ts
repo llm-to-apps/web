@@ -13,6 +13,7 @@ type AppTemplateSeed = {
   slug: string
   name: string
   description: string
+  translations?: TemplateTranslationSeed
   icon: string
   status: 'available' | 'coming_soon'
   repository?: string
@@ -24,6 +25,14 @@ type AppTemplateSeed = {
   manifestUrl?: string
   manifest?: Prisma.InputJsonValue
 }
+
+type TemplateTranslationSeed = Record<
+  'de' | 'en' | 'ru',
+  {
+    description: string
+    name: string
+  }
+>
 
 type UsagePriceSeed = {
   id: string
@@ -67,6 +76,187 @@ const prisma = new PrismaClient()
 const moneyTemplateManifestCommit = 'f67b4176d813dc0abe8854be70b700fe83247f9e'
 const moneyTemplateImage = 'ghcr.io/llm-to-apps/money-template:sha-f67b417'
 const moneyTemplateManifestBaseUrl = `https://cdn.jsdelivr.net/gh/llm-to-apps/money-template@${moneyTemplateManifestCommit}`
+
+const appTemplateTranslations: Record<string, TemplateTranslationSeed> = {
+  bookingCalendar: {
+    de: {
+      name: 'Buchungskalender',
+      description: 'Calendly-ähnliche Terminplanung, bei der Personen freie Slots buchen.'
+    },
+    en: {
+      name: 'Booking Calendar',
+      description:
+        'Calendly-style scheduling app where people can book available time slots.'
+    },
+    ru: {
+      name: 'Календарь бронирований',
+      description: 'Приложение как Calendly, где люди могут бронировать свободное время.'
+    }
+  },
+  habitTracker: {
+    de: {
+      name: 'Gewohnheiten',
+      description: 'Tägliches Habit-Tracking mit Serien, Zielen und Fortschrittsanalysen.'
+    },
+    en: {
+      name: 'Habit Tracker',
+      description: 'Daily habit tracking with streaks, goals, and progress insights.'
+    },
+    ru: {
+      name: 'Привычки',
+      description: 'Трекер ежедневных привычек со streaks, целями и прогрессом.'
+    }
+  },
+  jobSearchCrm: {
+    de: {
+      name: 'Jobsuche CRM',
+      description: 'Verwalte Stellen, Unternehmen, Interviews, Angebote und Follow-ups.'
+    },
+    en: {
+      name: 'Job Search CRM',
+      description: 'Manage vacancies, companies, interviews, offers, and follow-ups.'
+    },
+    ru: {
+      name: 'Поиск работы',
+      description: 'Управление вакансиями, компаниями, интервью, офферами и follow-up.'
+    }
+  },
+  kanban: {
+    de: {
+      name: 'Kanban',
+      description: 'Visuelles Taskboard für Projekte, Karten, Prioritäten und Workflows.'
+    },
+    en: {
+      name: 'Kanban',
+      description: 'Visual task board for projects, cards, priorities, and workflows.'
+    },
+    ru: {
+      name: 'Kanban',
+      description:
+        'Визуальная доска задач для проектов, карточек, приоритетов и процессов.'
+    }
+  },
+  mealPlanner: {
+    de: {
+      name: 'Essensplaner',
+      description: 'Wochenmahlzeiten, Rezepte, Zutaten und Einkaufsplanung.'
+    },
+    en: {
+      name: 'Meal Planner',
+      description: 'Weekly meals, recipes, ingredients, and grocery planning.'
+    },
+    ru: {
+      name: 'Питание',
+      description: 'Планирование еды на неделю, рецепты, ингредиенты и список покупок.'
+    }
+  },
+  money: {
+    de: {
+      name: 'Finanzen',
+      description: 'Persönliches Finanz-Dashboard mit eigener Datenbank.'
+    },
+    en: {
+      name: 'Money',
+      description: 'Personal finance dashboard with own database.'
+    },
+    ru: {
+      name: 'Финансы',
+      description: 'Персональный финансовый дашборд с собственной базой данных.'
+    }
+  },
+  moodJournal: {
+    de: {
+      name: 'Stimmungstagebuch',
+      description:
+        'Stimmung, Notizen, Auslöser, Gewohnheiten und emotionale Muster verfolgen.'
+    },
+    en: {
+      name: 'Mood Journal',
+      description: 'Track mood, notes, triggers, habits, and emotional patterns.'
+    },
+    ru: {
+      name: 'Настроение',
+      description:
+        'Трекер настроения, заметок, триггеров, привычек и эмоциональных паттернов.'
+    }
+  },
+  notes: {
+    de: {
+      name: 'Notizen',
+      description: 'Persönliche Wissensbasis mit Tags, Suche und verknüpften Notizen.'
+    },
+    en: {
+      name: 'Notes',
+      description: 'Personal knowledge base with tags, search, and linked notes.'
+    },
+    ru: {
+      name: 'Заметки',
+      description: 'Личная база знаний с тегами, поиском и связанными заметками.'
+    }
+  },
+  personalCrm: {
+    de: {
+      name: 'Persönliches CRM',
+      description:
+        'Leichte Kontaktverwaltung mit Notizen, Follow-ups und Beziehungshistorie.'
+    },
+    en: {
+      name: 'Personal CRM',
+      description:
+        'Lightweight contact manager with notes, follow-ups, and relationship history.'
+    },
+    ru: {
+      name: 'Личный CRM',
+      description:
+        'Легкий менеджер контактов с заметками, follow-up и историей отношений.'
+    }
+  },
+  pomodoro: {
+    de: {
+      name: 'Pomodoro',
+      description:
+        'Fokus-Timer mit Sessions, Pausen, Aufgaben und Produktivitätsstatistiken.'
+    },
+    en: {
+      name: 'Pomodoro',
+      description: 'Focus timer with sessions, breaks, tasks, and productivity stats.'
+    },
+    ru: {
+      name: 'Pomodoro',
+      description:
+        'Фокус-таймер с сессиями, перерывами, задачами и статистикой продуктивности.'
+    }
+  },
+  subscriptionTracker: {
+    de: {
+      name: 'Abos',
+      description:
+        'Wiederkehrende Zahlungen, Verlängerungen und monatliche Ausgaben verfolgen.'
+    },
+    en: {
+      name: 'Subscription Tracker',
+      description: 'Track recurring payments, renewal dates, and monthly spending.'
+    },
+    ru: {
+      name: 'Подписки',
+      description: 'Отслеживание регулярных платежей, продлений и месячных расходов.'
+    }
+  },
+  workoutTracker: {
+    de: {
+      name: 'Training',
+      description: 'Trainingspläne, Sätze, Fortschrittshistorie und persönliche Rekorde.'
+    },
+    en: {
+      name: 'Workout Tracker',
+      description: 'Exercise plans, sets, progress history, and personal records.'
+    },
+    ru: {
+      name: 'Тренировки',
+      description: 'Планы упражнений, подходы, история прогресса и личные рекорды.'
+    }
+  }
+}
 
 const staticAppTemplates: AppTemplateSeed[] = [
   {
@@ -544,7 +734,7 @@ async function seedAppTemplates() {
   }
 
   for (const template of appTemplates) {
-    await prisma.appTemplate.upsert({
+    const templateRecord = await prisma.appTemplate.upsert({
       where: {
         id: template.id
       },
@@ -580,6 +770,35 @@ async function seedAppTemplates() {
         status: template.status
       }
     })
+
+    const translations = template.translations ??
+      appTemplateTranslations[template.id] ?? {
+        en: {
+          description: template.description,
+          name: template.name
+        }
+      }
+
+    for (const [locale, translation] of Object.entries(translations)) {
+      await prisma.appTemplateTranslation.upsert({
+        where: {
+          templateId_locale: {
+            locale,
+            templateId: templateRecord.id
+          }
+        },
+        update: {
+          description: translation.description,
+          name: translation.name
+        },
+        create: {
+          description: translation.description,
+          locale,
+          name: translation.name,
+          templateId: templateRecord.id
+        }
+      })
+    }
   }
 }
 

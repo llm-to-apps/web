@@ -23,7 +23,7 @@
     "signInTitle": "Sign in",
     "signInDescription": "Enter your email and start building software around your life or company.",
     "storeTitle": "Store",
-    "storeDescription": "Install new templates into your workspace."
+    "storeDescription": "Connect a new app to your agent to control it through chat or voice commands."
   },
   "settings": {
     "title": "Settings",
@@ -66,6 +66,14 @@
   "profile": {
     "nameLabel": "Your name",
     "namePlaceholder": "Alexander",
+    "setupProfile": "Set up profile",
+    "usernameLabel": "Username",
+    "usernamePlaceholder": "alexander",
+    "usernameDescription": "English letters, numbers, dots, and underscores. Up to 18 characters.",
+    "usernameAvailable": "Username is available",
+    "usernameUnavailable": "Username is unavailable",
+    "usernameRequired": "Username is required",
+    "usernameCheckFailed": "Failed to check username",
     "aiExperienceLabel": "Experience working with AI",
     "vibeCodingExperienceLabel": "Vibe-coding experience",
     "experienceNone": "No",
@@ -91,16 +99,24 @@
     "working": "Working",
     "continue": "Continue",
     "signIn": "Sign in",
+    "signInToContinue": "Sign in to continue",
     "authenticationFailed": "Authentication failed"
   },
   "tabs": {
     "ariaLabel": "Application sections",
     "apps": "Agent",
-    "hub": "Hub",
+    "hub": "Ideas",
     "store": "Apps"
   },
   "store": {
     "comingSoon": "Developing by AI",
+    "personal": "For you",
+    "company": "For your company",
+    "searchPlaceholder": "Search apps",
+    "searchAria": "Search apps",
+    "noResultsTitle": "Can't find an app?",
+    "askDevelopIn": "Ask to develop AI in",
+    "hubLink": "Ideas",
     "install": "Install",
     "installing": "Installing",
     "installFailed": "Install failed",
@@ -108,30 +124,31 @@
     "emptyResponse": "Install failed with empty response ({status})"
   },
   "hub": {
-    "title": "Hub",
-    "description": "Collect app ideas, artifacts, comments, and votes.",
+    "title": "Ideas",
+    "description": "Turn an Idea into an Agentic App in Just 24 Hours.",
     "personal": "For you",
     "company": "For your company",
+    "searchPlaceholder": "Search Ideas",
+    "searchAria": "Search ideas",
     "noTags": "No tags",
     "newTopic": "New request",
-    "noTopicsTitle": "No topics yet",
-    "noTopicsDescription": "Create the first request for an app.",
-    "noTopicsMatch": "No topics match these filters.",
+    "noTopicsTitle": "No ideas yet",
+    "noTopicsDescription": "Create the first idea for an app.",
+    "noTopicsMatch": "No ideas match these filters.",
     "allStatuses": "All",
     "upvote": "Upvote",
     "downvote": "Downvote",
     "upvoteComment": "Upvote comment",
     "downvoteComment": "Downvote comment",
-    "topic": "Topic",
+    "topic": "Idea",
     "artifact": "Artifact",
     "comments": "Comments",
     "noComments": "No comments yet.",
     "commentPlaceholder": "Add context, questions, or implementation notes",
     "addComment": "Add comment",
     "signIn": "Sign in",
-    "signInToCreateTopic": "Sign in to create a Hub topic.",
+    "signInToCreateTopic": "Sign in to create an idea.",
     "signInToDiscuss": "Sign in to join the discussion.",
-    "signInToInteract": "Sign in to add artifacts, comments, and votes.",
     "addArtifact": "Add artifact",
     "addArtifacts": "Add artifacts",
     "artifactsHelp": "Artifacts help AI build context of requirements and build what you exactly want.",
@@ -156,25 +173,25 @@
     "removeFile": "Remove {name}",
     "tooManyInitialFiles": "Attach up to 10 files.",
     "createTopic": "Continue",
-    "topicCreated": "Topic created",
+    "topicCreated": "Idea created",
     "artifactAdded": "Artifact added",
     "artifactsAdded": "Artifacts added",
     "artifactDeleted": "Artifact deleted",
-    "topicActions": "Topic actions",
+    "topicActions": "Idea actions",
     "enrichTopic": "Enrich",
     "enrichTopicStarted": "Enrichment started",
     "enrichTopicStartedMessage": "The topic is being processed.",
-    "deleteTopic": "Delete topic",
+    "deleteTopic": "Delete idea",
     "deleteArtifact": "Delete artifact",
     "deleteArtifactDescription": "{name} will be removed from this topic.",
-    "loadFailed": "Failed to load Hub",
-    "loadTopicFailed": "Failed to load topic",
+    "loadFailed": "Failed to load Ideas",
+    "loadTopicFailed": "Failed to load idea",
     "loadArtifactFailed": "Failed to load artifact",
     "artifactNotFound": "Artifact not found",
-    "createTopicFailed": "Failed to create topic",
+    "createTopicFailed": "Failed to create idea",
     "saveArtifactFailed": "Failed to save artifact",
-    "enrichTopicFailed": "Failed to enrich topic",
-    "deleteTopicFailed": "Failed to delete topic",
+    "enrichTopicFailed": "Failed to enrich idea",
+    "deleteTopicFailed": "Failed to delete idea",
     "deleteArtifactFailed": "Failed to delete artifact",
     "addCommentFailed": "Failed to add comment",
     "updateVoteFailed": "Failed to update vote",
@@ -201,7 +218,6 @@
     "openStore": "Open Store",
     "deleteTitle": "Delete {name}?",
     "deleteDescription": "This permanently removes the application service and all attached resources.",
-    "deleteBody": "We will delete the databases, Git repository, source code, and all application data for {domain}.",
     "confirmDatabase": "I understand the databases will be deleted.",
     "confirmCode": "I understand the code and Git repository will be deleted.",
     "confirmData": "I understand all application data will be permanently lost.",
@@ -210,7 +226,7 @@
     "deleteFailed": "Delete failed"
   },
   "userAgent": {
-    "welcome": "I can help you think across your apps and route app-specific work to the right project agent.",
+    "welcome": "I can help you coordinate work across your apps and direct app-specific requests to the most appropriate project agent.",
     "placeholder": "Ask about your apps or what to build next..."
   },
   "project": {
@@ -242,7 +258,36 @@
     "optionsAria": "Chat options",
     "clearAria": "Clear chat history",
     "clearFailed": "Failed to clear chat history",
-    "usageBreakdown": "{input} in / {output} out"
+    "usageBreakdown": "{input} in / {output} out",
+    "toolProgress": {
+      "askAppAgent": "Ask app",
+      "buildProjectApp": "Build app",
+      "callAppMcpTool": "Call app tool",
+      "getApp": "Get app",
+      "getInstallStatus": "Get install status",
+      "getPersonalUsageSummary": "Get usage summary",
+      "getProjectAppLogs": "Get app logs",
+      "getProjectAppStatus": "Get app status",
+      "getProjectDiff": "Get project diff",
+      "getProjectGitStatus": "Get git status",
+      "listAppMcpTools": "List app tools",
+      "listInstalledApps": "List installed apps",
+      "listPersonalApps": "List apps",
+      "listProjectFiles": "List project files",
+      "patchProjectFiles": "Patch project files",
+      "readProjectFile": "Read project file",
+      "replaceTextInFile": "Replace text in file",
+      "requestInstallApp": "Install app",
+      "restartProjectProdServer": "Restart prod",
+      "runProjectCommand": "Run project command",
+      "runtimeStatus": "Check runtime status",
+      "saveProjectChanges": "Save project changes",
+      "searchApps": "Search apps",
+      "searchProjectFiles": "Search project files",
+      "startProjectDevServer": "Start dev",
+      "stopProjectDevServer": "Stop dev",
+      "writeProjectFile": "Write project file"
+    }
   },
   "mcp": {
     "buttonLabel": "Connect MCP",
@@ -264,55 +309,5 @@
   },
   "logout": {
     "signOut": "Sign out"
-  },
-  "templates": {
-    "money": {
-      "name": "Money",
-      "description": "Personal finance dashboard with own database."
-    },
-    "kanban": {
-      "name": "Kanban",
-      "description": "Visual task board for projects, cards, priorities, and workflows."
-    },
-    "personalCrm": {
-      "name": "Personal CRM",
-      "description": "Lightweight contact manager with notes, follow-ups, and relationship history."
-    },
-    "habitTracker": {
-      "name": "Habit Tracker",
-      "description": "Daily habit tracking with streaks, goals, and progress insights."
-    },
-    "pomodoro": {
-      "name": "Pomodoro",
-      "description": "Focus timer with sessions, breaks, tasks, and productivity stats."
-    },
-    "notes": {
-      "name": "Notes",
-      "description": "Personal knowledge base with tags, search, and linked notes."
-    },
-    "mealPlanner": {
-      "name": "Meal Planner",
-      "description": "Weekly meals, recipes, ingredients, and grocery planning."
-    },
-    "workoutTracker": {
-      "name": "Workout Tracker",
-      "description": "Exercise plans, sets, progress history, and personal records."
-    },
-    "subscriptionTracker": {
-      "name": "Subscription Tracker",
-      "description": "Track recurring payments, renewal dates, and monthly spending."
-    },
-    "jobSearchCrm": {
-      "name": "Job Search CRM",
-      "description": "Manage vacancies, companies, interviews, offers, and follow-ups."
-    },
-    "moodJournal": {
-      "name": "Mood Journal",
-      "description": "Track mood, notes, triggers, habits, and emotional patterns."
-    },
-    "bookingCalendar": {
-      "name": "Booking Calendar",
-      "description": "Calendly-style scheduling app where people can book available time slots."
-    }
   }
 }

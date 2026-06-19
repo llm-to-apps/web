@@ -3,15 +3,15 @@ import { NextRequest } from 'next/server'
 import { getCurrentUser, type CurrentUser } from '@/server/auth'
 import { prisma } from '@/server/db'
 import { envNumber } from '@/server/env'
+import {
+  deleteUploadedFileStorageObjects,
+  markUploadedFileDeleted
+} from '@/server/files/delete-uploaded-file'
 import { getUploadedFileQueue } from '@/server/files/queue'
 import { jsonErrorMessage, jsonOk } from '@/server/http'
 import { logError, logInfo } from '@/server/logger'
 import { projectMemberWhere } from '@/server/project-members'
-import {
-  deletePlatformStorageObject,
-  getPlatformStorageObjectBuffer,
-  putPlatformStorageObject
-} from '@/server/storage'
+import { getPlatformStorageObjectBuffer, putPlatformStorageObject } from '@/server/storage'
 
 const maxUploadBytes = envNumber('AGENT_FILE_UPLOAD_MAX_BYTES', 5 * 1024 * 1024)
 const defaultFilesPageSize = 50
@@ -305,57 +305,9 @@ export async function handleUploadedFileDelete(
     return jsonErrorMessage('File not found', 404)
   }
 
-  if (file.storageBucket && file.storageKey) {
-    await deletePlatformStorageObject({
-      bucket: file.storageBucket,
-      key: file.storageKey
-    })
-  }
-  if (file.thumbnail?.storageBucket && file.thumbnail.storageKey) {
-    await deletePlatformStorageObject({
-      bucket: file.thumbnail.storageBucket,
-      key: file.thumbnail.storageKey
-    })
-  }
-
+  await deleteUploadedFileStorageObjects(file)
   await prisma.$transaction(async (tx) => {
-    if (file.thumbnail) {
-      await tx.uploadedFileChunk.deleteMany({
-        where: {
-          uploadedFileId: file.thumbnail.id
-        }
-      })
-      await tx.uploadedFile.update({
-        where: {
-          id: file.thumbnail.id
-        },
-        data: {
-          deletedAt: new Date(),
-          error: null,
-          status: 'deleted',
-          storageBucket: '',
-          storageKey: ''
-        }
-      })
-    }
-    await tx.uploadedFileChunk.deleteMany({
-      where: {
-        uploadedFileId: file.id
-      }
-    })
-    await tx.uploadedFile.update({
-      where: {
-        id: file.id
-      },
-      data: {
-        deletedAt: new Date(),
-        error: null,
-        status: 'deleted',
-        storageBucket: '',
-        storageKey: '',
-        thumbnailId: null
-      }
-    })
+    await markUploadedFileDeleted(tx, file)
   })
 
   logInfo('uploaded_file.deleted', {

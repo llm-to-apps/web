@@ -11,7 +11,7 @@ type HubFilePickerProps = {
   disabled?: boolean
   files: File[]
   fullWidth?: boolean
-  label: string
+  label?: string
   locale: string
   onChange: (files: File[]) => void
   removeFileLabel: (name: string) => string
@@ -57,11 +57,9 @@ export function HubFilePicker({
       />
       <Group justify="space-between">
         <Stack gap={2}>
-          <Text fw={500} size="sm">
-            {label}
-          </Text>
+          {label ? <Text fw={500}>{label}</Text> : null}
           {description ? (
-            <Text c="dimmed" size="xs">
+            <Text c="dimmed">
               {description}
             </Text>
           ) : null}
@@ -71,7 +69,6 @@ export function HubFilePicker({
             disabled={disabled}
             leftSection={<Paperclip size={16} />}
             onClick={() => fileInputRef.current?.click()}
-            size="sm"
             variant="light"
           >
             {buttonLabel}
@@ -84,7 +81,6 @@ export function HubFilePicker({
           fullWidth={fullWidth}
           leftSection={<Paperclip size={16} />}
           onClick={() => fileInputRef.current?.click()}
-          size="sm"
           variant="light"
         >
           {buttonLabel}
@@ -106,17 +102,16 @@ export function HubFilePicker({
               }}
               wrap="nowrap"
             >
-              <Text size="xs" style={{ flex: 1, minWidth: 0 }} truncate>
+              <Text style={{ flex: 1, minWidth: 0 }} truncate>
                 {file.name}
               </Text>
               <Group gap={4} wrap="nowrap">
-                <Text c="dimmed" size="xs" style={{ whiteSpace: 'nowrap' }}>
+                <Text c="dimmed" style={{ whiteSpace: 'nowrap' }}>
                   {formatFileSize(file.size, locale)}
                 </Text>
                 <CloseButton
                   aria-label={removeFileLabel(file.name)}
                   onClick={() => removeFile(index)}
-                  size="xs"
                   variant="transparent"
                 />
               </Group>

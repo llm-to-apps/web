@@ -1,4 +1,11 @@
 import { elapsedSince, logAgentRun, warnAgentRun } from '@/server/agent/run-logger'
+import {
+  getAppTool,
+  getInstallStatusTool,
+  listInstalledAppsTool,
+  requestInstallAppTool,
+  searchAppsTool
+} from './apps'
 import { askAppAgent } from './ask-app-agent'
 import { jsonRpcError, jsonRpcResult } from './http'
 import {
@@ -175,6 +182,55 @@ async function callTool(
 
   if (params.name === 'list_apps') {
     return listPersonalAppsTool({
+      context,
+      requestId,
+      startedAt,
+      toolName: params.name
+    })
+  }
+
+  if (params.name === 'apps_search') {
+    return searchAppsTool({
+      args: params.arguments,
+      context,
+      requestId,
+      startedAt,
+      toolName: params.name
+    })
+  }
+
+  if (params.name === 'apps_get') {
+    return getAppTool({
+      args: params.arguments,
+      context,
+      requestId,
+      startedAt,
+      toolName: params.name
+    })
+  }
+
+  if (params.name === 'apps_request_install') {
+    return requestInstallAppTool({
+      args: params.arguments,
+      context,
+      requestId,
+      startedAt,
+      toolName: params.name
+    })
+  }
+
+  if (params.name === 'apps_list_installed') {
+    return listInstalledAppsTool({
+      context,
+      requestId,
+      startedAt,
+      toolName: params.name
+    })
+  }
+
+  if (params.name === 'apps_get_install_status') {
+    return getInstallStatusTool({
+      args: params.arguments,
       context,
       requestId,
       startedAt,

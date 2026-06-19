@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Download } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { Alert, Button, Stack } from '@mantine/core'
-import { useAuthModal } from '../_components/auth-modal-provider'
+import { useAuthFlow } from '../_components/auth-flow-provider'
 import { useI18n } from '../_components/i18n-provider'
 import { useSession } from '../_components/session-provider'
 import type { ApiResponse } from '@/shared/api'
@@ -24,14 +24,26 @@ type InstallButtonProps = {
 export function InstallButton({ templateId }: InstallButtonProps) {
   const { format, t } = useI18n()
   const session = useSession()
-  const { openAuthModal } = useAuthModal()
+  const { openAuthFlow } = useAuthFlow()
   const router = useRouter()
   const [isInstalling, setIsInstalling] = useState(false)
   const [result, setResult] = useState<InstallResult | null>(null)
 
   async function install() {
-    if (session.status !== 'authenticated') {
-      openAuthModal()
+    if (session.status !== 'authenticated' || !session.data.user.onboarded) {
+      openAuthFlow({
+        onReady: () => {
+          void performInstall()
+        }
+      })
+      return
+    }
+
+    await performInstall()
+  }
+
+  async function performInstall() {
+    if (isInstalling) {
       return
     }
 

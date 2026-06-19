@@ -23,7 +23,7 @@
     "signInTitle": "Anmelden",
     "signInDescription": "Gib deine E-Mail ein und baue Software rund um dein Leben oder dein Unternehmen.",
     "storeTitle": "Vorlagen",
-    "storeDescription": "Installiere neue Vorlagen in deinen Workspace."
+    "storeDescription": "Verbinde eine neue App mit deinem Agenten, um sie per Chat oder Sprachbefehlen zu steuern."
   },
   "settings": {
     "title": "Einstellungen",
@@ -50,8 +50,8 @@
     "uploaded": "Hochgeladen",
     "actions": "Aktionen",
     "attach": "Datei anhängen",
-    "uploadNew": "Upload",
-    "chooseUploaded": "Choose",
+    "uploadNew": "Hochladen",
+    "chooseUploaded": "Auswählen",
     "search": "Hochgeladene Dateien suchen",
     "loading": "Dateien werden geladen",
     "noReadyFiles": "Keine bereiten Dateien gefunden",
@@ -66,6 +66,14 @@
   "profile": {
     "nameLabel": "Dein Name",
     "namePlaceholder": "Alexander",
+    "setupProfile": "Profil einrichten",
+    "usernameLabel": "Benutzername",
+    "usernamePlaceholder": "alexander",
+    "usernameDescription": "Englische Buchstaben, Zahlen, Punkte und Unterstriche. Bis zu 18 Zeichen.",
+    "usernameAvailable": "Benutzername ist verfügbar",
+    "usernameUnavailable": "Benutzername ist nicht verfügbar",
+    "usernameRequired": "Benutzername ist erforderlich",
+    "usernameCheckFailed": "Benutzername konnte nicht geprüft werden",
     "aiExperienceLabel": "Erfahrung mit KI",
     "vibeCodingExperienceLabel": "Vibe-Coding-Erfahrung",
     "experienceNone": "Nein",
@@ -73,7 +81,7 @@
     "experienceAdvanced": "Fortgeschritten"
   },
   "welcome": {
-    "title": "Welcome",
+    "title": "Willkommen",
     "description": "Erzähl uns kurz von dir, damit der Agent Ton und Annahmen anpassen kann.",
     "continue": "Weiter",
     "saving": "Speichert...",
@@ -91,16 +99,24 @@
     "working": "Wird ausgeführt",
     "continue": "Weiter",
     "signIn": "Anmelden",
+    "signInToContinue": "Anmelden, um fortzufahren",
     "authenticationFailed": "Authentifizierung fehlgeschlagen"
   },
   "tabs": {
     "ariaLabel": "Anwendungsbereiche",
     "apps": "Agent",
-    "hub": "Hub",
+    "hub": "Ideen",
     "store": "Apps"
   },
   "store": {
     "comingSoon": "Wird von KI entwickelt",
+    "personal": "Für dich",
+    "company": "Für dein Unternehmen",
+    "searchPlaceholder": "Apps suchen",
+    "searchAria": "Apps suchen",
+    "noResultsTitle": "App nicht gefunden?",
+    "askDevelopIn": "KI-Entwicklung anfragen in",
+    "hubLink": "Ideen",
     "install": "Installieren",
     "installing": "Installiert",
     "installFailed": "Installation fehlgeschlagen",
@@ -108,30 +124,31 @@
     "emptyResponse": "Installation fehlgeschlagen: leere Antwort ({status})"
   },
   "hub": {
-    "title": "Hub",
-    "description": "Sammle App-Ideen, Artefakte, Kommentare und Stimmen.",
+    "title": "Ideen",
+    "description": "Verwandle eine Idee in nur 24 Stunden in eine agentische App",
     "personal": "Für dich",
     "company": "Für dein Unternehmen",
+    "searchPlaceholder": "Ideen durchsuchen",
+    "searchAria": "Ideen durchsuchen",
     "noTags": "Keine Tags",
     "newTopic": "Neue Anfrage",
-    "noTopicsTitle": "Noch keine Topics",
-    "noTopicsDescription": "Erstelle die erste Anfrage für eine App.",
-    "noTopicsMatch": "Keine Topics passen zu diesen Filtern.",
+    "noTopicsTitle": "Noch keine Ideen",
+    "noTopicsDescription": "Erstelle die erste Idee für eine App.",
+    "noTopicsMatch": "Keine Ideen passen zu diesen Filtern.",
     "allStatuses": "Alle",
     "upvote": "Upvote",
     "downvote": "Downvote",
     "upvoteComment": "Kommentar upvoten",
     "downvoteComment": "Kommentar downvoten",
-    "topic": "Topic",
+    "topic": "Idee",
     "artifact": "Artefakt",
     "comments": "Kommentare",
     "noComments": "Noch keine Kommentare.",
     "commentPlaceholder": "Füge Kontext, Fragen oder Umsetzungsnotizen hinzu",
     "addComment": "Kommentar hinzufügen",
     "signIn": "Anmelden",
-    "signInToCreateTopic": "Melde dich an, um ein Hub-Topic zu erstellen.",
+    "signInToCreateTopic": "Melde dich an, um eine Idee zu erstellen.",
     "signInToDiscuss": "Melde dich an, um mitzudiskutieren.",
-    "signInToInteract": "Melde dich an, um Artefakte, Kommentare und Stimmen hinzuzufügen.",
     "addArtifact": "Artefakt hinzufügen",
     "addArtifacts": "Artefakte hinzufügen",
     "artifactsHelp": "Artefakte helfen der KI, den Kontext der Anforderungen zu verstehen und genau das zu bauen, was du willst.",
@@ -156,25 +173,25 @@
     "removeFile": "{name} entfernen",
     "tooManyInitialFiles": "Hänge bis zu 10 Dateien an.",
     "createTopic": "Weiter",
-    "topicCreated": "Topic erstellt",
+    "topicCreated": "Idee erstellt",
     "artifactAdded": "Artefakt hinzugefügt",
     "artifactsAdded": "Artefakte hinzugefügt",
     "artifactDeleted": "Artefakt gelöscht",
-    "topicActions": "Topic-Aktionen",
+    "topicActions": "Ideen-Aktionen",
     "enrichTopic": "Anreichern",
     "enrichTopicStarted": "Anreicherung gestartet",
     "enrichTopicStartedMessage": "Das Topic wird verarbeitet.",
-    "deleteTopic": "Topic löschen",
+    "deleteTopic": "Idee löschen",
     "deleteArtifact": "Artefakt löschen",
     "deleteArtifactDescription": "{name} wird aus diesem Topic entfernt.",
-    "loadFailed": "Hub konnte nicht geladen werden",
-    "loadTopicFailed": "Topic konnte nicht geladen werden",
+    "loadFailed": "Ideen konnten nicht geladen werden",
+    "loadTopicFailed": "Idee konnte nicht geladen werden",
     "loadArtifactFailed": "Artefakt konnte nicht geladen werden",
     "artifactNotFound": "Artefakt nicht gefunden",
-    "createTopicFailed": "Topic konnte nicht erstellt werden",
+    "createTopicFailed": "Idee konnte nicht erstellt werden",
     "saveArtifactFailed": "Artefakt konnte nicht gespeichert werden",
-    "enrichTopicFailed": "Topic konnte nicht angereichert werden",
-    "deleteTopicFailed": "Topic konnte nicht gelöscht werden",
+    "enrichTopicFailed": "Idee konnte nicht angereichert werden",
+    "deleteTopicFailed": "Idee konnte nicht gelöscht werden",
     "deleteArtifactFailed": "Artefakt konnte nicht gelöscht werden",
     "addCommentFailed": "Kommentar konnte nicht hinzugefügt werden",
     "updateVoteFailed": "Stimme konnte nicht aktualisiert werden",
@@ -201,7 +218,6 @@
     "openStore": "Vorlagen öffnen",
     "deleteTitle": "{name} löschen?",
     "deleteDescription": "Dadurch werden der Anwendungsdienst und alle verbundenen Ressourcen dauerhaft entfernt.",
-    "deleteBody": "Wir löschen Datenbanken, Git-Repository, Quellcode und alle Anwendungsdaten für {domain}.",
     "confirmDatabase": "Ich verstehe, dass die Datenbanken gelöscht werden.",
     "confirmCode": "Ich verstehe, dass Code und Git-Repository gelöscht werden.",
     "confirmData": "Ich verstehe, dass alle Anwendungsdaten dauerhaft verloren gehen.",
@@ -242,7 +258,36 @@
     "optionsAria": "Chat-Optionen",
     "clearAria": "Chatverlauf löschen",
     "clearFailed": "Chatverlauf konnte nicht gelöscht werden",
-    "usageBreakdown": "{input} rein / {output} raus"
+    "usageBreakdown": "{input} rein / {output} raus",
+    "toolProgress": {
+      "askAppAgent": "App fragen",
+      "buildProjectApp": "App bauen",
+      "callAppMcpTool": "App-Tool aufrufen",
+      "getApp": "App abrufen",
+      "getInstallStatus": "Installationsstatus prüfen",
+      "getPersonalUsageSummary": "Nutzungsübersicht abrufen",
+      "getProjectAppLogs": "App-Logs abrufen",
+      "getProjectAppStatus": "App-Status prüfen",
+      "getProjectDiff": "Projekt-Diff abrufen",
+      "getProjectGitStatus": "Git-Status prüfen",
+      "listAppMcpTools": "App-Tools anzeigen",
+      "listInstalledApps": "Installierte Apps anzeigen",
+      "listPersonalApps": "Apps anzeigen",
+      "listProjectFiles": "Projektdateien anzeigen",
+      "patchProjectFiles": "Projektdateien ändern",
+      "readProjectFile": "Projektdatei lesen",
+      "replaceTextInFile": "Text in Datei ersetzen",
+      "requestInstallApp": "App installieren",
+      "restartProjectProdServer": "Production neu starten",
+      "runProjectCommand": "Projektbefehl ausführen",
+      "runtimeStatus": "Runtime-Status prüfen",
+      "saveProjectChanges": "Projektänderungen speichern",
+      "searchApps": "Apps suchen",
+      "searchProjectFiles": "Projektdateien suchen",
+      "startProjectDevServer": "Dev-Server starten",
+      "stopProjectDevServer": "Dev-Server stoppen",
+      "writeProjectFile": "Projektdatei schreiben"
+    }
   },
   "mcp": {
     "buttonLabel": "MCP verbinden",
@@ -264,55 +309,5 @@
   },
   "logout": {
     "signOut": "Abmelden"
-  },
-  "templates": {
-    "money": {
-      "name": "Finanzen",
-      "description": "Persönliches Finanz-Dashboard mit eigener Datenbank."
-    },
-    "kanban": {
-      "name": "Kanban",
-      "description": "Visuelles Taskboard für Projekte, Karten, Prioritäten und Workflows."
-    },
-    "personalCrm": {
-      "name": "Persönliches CRM",
-      "description": "Leichte Kontaktverwaltung mit Notizen, Follow-ups und Beziehungshistorie."
-    },
-    "habitTracker": {
-      "name": "Gewohnheiten",
-      "description": "Tägliches Habit-Tracking mit Serien, Zielen und Fortschrittsanalysen."
-    },
-    "pomodoro": {
-      "name": "Pomodoro",
-      "description": "Fokus-Timer mit Sessions, Pausen, Aufgaben und Produktivitätsstatistiken."
-    },
-    "notes": {
-      "name": "Notizen",
-      "description": "Persönliche Wissensbasis mit Tags, Suche und verknüpften Notizen."
-    },
-    "mealPlanner": {
-      "name": "Essensplaner",
-      "description": "Wochenmahlzeiten, Rezepte, Zutaten und Einkaufsplanung."
-    },
-    "workoutTracker": {
-      "name": "Training",
-      "description": "Trainingspläne, Sätze, Fortschrittshistorie und persönliche Rekorde."
-    },
-    "subscriptionTracker": {
-      "name": "Abos",
-      "description": "Wiederkehrende Zahlungen, Verlängerungen und monatliche Ausgaben verfolgen."
-    },
-    "jobSearchCrm": {
-      "name": "Jobsuche CRM",
-      "description": "Verwalte Stellen, Unternehmen, Interviews, Angebote und Follow-ups."
-    },
-    "moodJournal": {
-      "name": "Stimmungstagebuch",
-      "description": "Stimmung, Notizen, Auslöser, Gewohnheiten und emotionale Muster verfolgen."
-    },
-    "bookingCalendar": {
-      "name": "Buchungskalender",
-      "description": "Calendly-ähnliche Terminplanung, bei der Personen freie Slots buchen."
-    }
   }
 }

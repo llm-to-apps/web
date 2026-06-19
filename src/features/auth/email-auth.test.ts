@@ -12,7 +12,8 @@ const mocks = vi.hoisted(() => ({
     }
   },
   sendEmail: vi.fn(),
-  verifyEmailLoginCode: vi.fn()
+  verifyEmailLoginCode: vi.fn(),
+  withAvailableUsernameRetry: vi.fn()
 }))
 
 vi.mock('@/server/db', () => ({
@@ -32,6 +33,10 @@ vi.mock('@/server/auth/email-login-codes', () => ({
   verifyEmailLoginCode: mocks.verifyEmailLoginCode
 }))
 
+vi.mock('@/server/auth/username', () => ({
+  withAvailableUsernameRetry: mocks.withAvailableUsernameRetry
+}))
+
 vi.mock('@/server/integrations/email', () => ({
   sendEmail: mocks.sendEmail
 }))
@@ -49,6 +54,10 @@ describe('email auth routes', () => {
     mocks.prisma.user.upsert.mockResolvedValue(user())
     mocks.sendEmail.mockResolvedValue({})
     mocks.verifyEmailLoginCode.mockResolvedValue(true)
+    mocks.withAvailableUsernameRetry.mockImplementation(
+      (_email: string, createUser: (username: string) => Promise<unknown>) =>
+        createUser('new.user')
+    )
   })
 
   it('starts registration by creating a user, login code, and email', async () => {
@@ -66,7 +75,8 @@ describe('email auth routes', () => {
     })
     expect(mocks.prisma.user.upsert).toHaveBeenCalledWith({
       create: {
-        email: 'new.user@example.com'
+        email: 'new.user@example.com',
+        username: 'new.user'
       },
       update: {},
       where: {
@@ -178,6 +188,7 @@ function user(overrides: Record<string, unknown> = {}) {
     name: null,
     onboarded: false,
     onboardingGoal: null,
+    username: 'new.user',
     vibeCodingExperienceLevel: null,
     ...overrides
   }

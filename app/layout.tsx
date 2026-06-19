@@ -1,5 +1,6 @@
 import '@mantine/core/styles.css'
 import '@mantine/notifications/styles.css'
+import './globals.css'
 import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
 import { AppSplash } from './_components/app-splash'

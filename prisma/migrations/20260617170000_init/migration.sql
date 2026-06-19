@@ -11,6 +11,7 @@ CREATE TYPE "project_member_role" AS ENUM ('admin', 'editor', 'viewer');
 CREATE TABLE "users" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
+    "username" VARCHAR(18) NOT NULL,
     "name" TEXT,
     "onboarded" BOOLEAN NOT NULL DEFAULT false,
     "aiExperienceLevel" "user_experience_level",
@@ -80,6 +81,17 @@ CREATE TABLE "app_templates" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "app_templates_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "app_template_translations" (
+    "id" TEXT NOT NULL,
+    "templateId" VARCHAR(64) NOT NULL,
+    "locale" VARCHAR(8) NOT NULL,
+    "name" VARCHAR(128) NOT NULL,
+    "description" TEXT NOT NULL,
+
+    CONSTRAINT "app_template_translations_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -287,6 +299,7 @@ CREATE TABLE "auth_tokens" (
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
+CREATE UNIQUE INDEX "users_username_key" ON "users"("username");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "projects_slug_key" ON "projects"("slug");
@@ -317,6 +330,12 @@ CREATE UNIQUE INDEX "app_templates_slug_key" ON "app_templates"("slug");
 
 -- CreateIndex
 CREATE INDEX "app_templates_status_sortOrder_idx" ON "app_templates"("status", "sortOrder");
+
+-- CreateIndex
+CREATE INDEX "app_template_translations_locale_idx" ON "app_template_translations"("locale");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "app_template_translations_templateId_locale_key" ON "app_template_translations"("templateId", "locale");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "oauth_clients_projectId_key" ON "oauth_clients"("projectId");
@@ -425,6 +444,9 @@ ALTER TABLE "project_members" ADD CONSTRAINT "project_members_projectId_fkey" FO
 
 -- AddForeignKey
 ALTER TABLE "project_members" ADD CONSTRAINT "project_members_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "app_template_translations" ADD CONSTRAINT "app_template_translations_templateId_fkey" FOREIGN KEY ("templateId") REFERENCES "app_templates"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "oauth_clients" ADD CONSTRAINT "oauth_clients_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -593,6 +615,15 @@ CREATE TABLE "hub_artifacts" (
   CONSTRAINT "hub_artifacts_pkey" PRIMARY KEY ("id")
 );
 
+CREATE TABLE "hub_artifact_translations" (
+  "id" TEXT NOT NULL,
+  "artifactId" TEXT NOT NULL,
+  "locale" VARCHAR(8) NOT NULL,
+  "title" VARCHAR(160) NOT NULL,
+
+  CONSTRAINT "hub_artifact_translations_pkey" PRIMARY KEY ("id")
+);
+
 CREATE TABLE "hub_topic_translations" (
   "id" TEXT NOT NULL,
   "topicId" TEXT NOT NULL,
@@ -747,6 +778,9 @@ CREATE INDEX "hub_artifacts_authorId_createdAt_idx" ON "hub_artifacts"("authorId
 CREATE INDEX "hub_artifacts_uploadedFileId_idx" ON "hub_artifacts"("uploadedFileId");
 CREATE UNIQUE INDEX "hub_artifacts_slug_key" ON "hub_artifacts"("slug");
 
+CREATE UNIQUE INDEX "hub_artifact_translations_artifactId_locale_key" ON "hub_artifact_translations"("artifactId", "locale");
+CREATE INDEX "hub_artifact_translations_locale_idx" ON "hub_artifact_translations"("locale");
+
 CREATE UNIQUE INDEX "hub_topic_translations_topicId_locale_key" ON "hub_topic_translations"("topicId", "locale");
 CREATE INDEX "hub_topic_translations_locale_idx" ON "hub_topic_translations"("locale");
 
@@ -817,6 +851,10 @@ ALTER TABLE "hub_artifacts"
 ALTER TABLE "hub_artifacts"
   ADD CONSTRAINT "hub_artifacts_uploadedFileId_fkey"
   FOREIGN KEY ("uploadedFileId") REFERENCES "uploaded_files"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE "hub_artifact_translations"
+  ADD CONSTRAINT "hub_artifact_translations_artifactId_fkey"
+  FOREIGN KEY ("artifactId") REFERENCES "hub_artifacts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE "hub_topic_translations"
   ADD CONSTRAINT "hub_topic_translations_topicId_fkey"

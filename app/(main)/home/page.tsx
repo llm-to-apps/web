@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import type { ComponentProps } from 'react'
 import { Alert, Grid, GridCol, Skeleton, Stack } from '@mantine/core'
+import { useAuthFlow } from '@/app/_components/auth-flow-provider'
+import { useSession } from '@/app/_components/session-provider'
 import { AppDesktop, type DesktopProject } from '@/app/home/app-desktop'
 import { UserAgentChat } from '@/app/home/user-agent-chat'
 import type { ApiResponse } from '@/shared/api'
@@ -16,10 +18,25 @@ type HomeData = {
 type HomeResponse = ApiResponse<HomeData>
 
 export default function HomePage() {
+  const session = useSession()
+  const { openAuthFlow } = useAuthFlow()
   const [data, setData] = useState<HomeData | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const canLoadHome = session.status === 'authenticated' && session.data.user.onboarded
 
   useEffect(() => {
+    if (session.status === 'loading' || canLoadHome) {
+      return
+    }
+
+    openAuthFlow()
+  }, [canLoadHome, openAuthFlow, session.status])
+
+  useEffect(() => {
+    if (!canLoadHome) {
+      return
+    }
+
     let isCurrent = true
 
     async function loadHome() {
@@ -53,7 +70,7 @@ export default function HomePage() {
     return () => {
       isCurrent = false
     }
-  }, [])
+  }, [canLoadHome])
 
   return (
     <>

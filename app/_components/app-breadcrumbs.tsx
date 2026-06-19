@@ -1,5 +1,13 @@
 'use client'
 
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode
+} from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Breadcrumbs, Button } from '@mantine/core'
@@ -12,70 +20,163 @@ type BreadcrumbItem = {
   label: string
 }
 
-export function AppBreadcrumbs() {
+type AppBreadcrumbsContextValue = {
+  items: BreadcrumbItem[] | null
+  setItems: (items: BreadcrumbItem[] | null) => void
+}
+
+type AppBreadcrumbsProps = {
+  onHomeNavigate?: () => void
+}
+
+const AppBreadcrumbsContext = createContext<AppBreadcrumbsContextValue | null>(null)
+const rootlessBreadcrumbSections = new Set(['/hub'])
+
+export function AppBreadcrumbsProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname()
+  const [items, setItems] = useState<BreadcrumbItem[] | null>(null)
+  const value = useMemo(
+    () => ({
+      items,
+      setItems
+    }),
+    [items]
+  )
+
+  useEffect(() => {
+    setItems(null)
+  }, [pathname])
+
+  return (
+    <AppBreadcrumbsContext.Provider value={value}>
+      {children}
+    </AppBreadcrumbsContext.Provider>
+  )
+}
+
+export function useAppBreadcrumbItems(items: BreadcrumbItem[] | null) {
+  const context = useContext(AppBreadcrumbsContext)
+  const setItems = context?.setItems
+
+  useEffect(() => {
+    if (!setItems) {
+      return
+    }
+
+    setItems(items)
+
+    return () => {
+      setItems(null)
+    }
+  }, [items, setItems])
+}
+
+export function AppBreadcrumbs({ onHomeNavigate }: AppBreadcrumbsProps = {}) {
+  const pathname = usePathname()
+  const customBreadcrumbs = useContext(AppBreadcrumbsContext)
   const { t } = useI18n()
 
   if (pathname === '/home' || pathname.startsWith('/apps/')) {
     return null
   }
 
-  const item = getBreadcrumbItem(pathname, {
-    apps: t.tabs.apps,
-    files: t.files.title,
-    home: t.navigation.home,
-    settings: t.settings.title,
-    store: t.tabs.store
-  })
+  const items =
+    customBreadcrumbs?.items ??
+    getBreadcrumbItems(pathname, {
+      apps: t.tabs.apps,
+      files: t.files.title,
+      home: t.navigation.home,
+      hub: t.tabs.hub,
+      new: t.hub.newTopic,
+      settings: t.settings.title,
+      store: t.tabs.store
+    })
 
-  if (!item) {
+  if (pathname.startsWith('/hub/') && pathname !== '/hub/new' && !customBreadcrumbs?.items) {
     return null
   }
 
+  if (items.length <= 1) {
+    return null
+  }
+
+  const showHomeBreadcrumb = shouldShowHomeBreadcrumb(items)
+
   return (
     <Breadcrumbs separator={<ChevronRight size={14} />}>
-      <Button
-        component={Link}
-        href="/home"
-        leftSection={<Home size={15} />}
-        size="compact-sm"
-        variant="subtle"
-      >
-        {t.navigation.home}
-      </Button>
-      <BreadcrumbLabel>{item.label}</BreadcrumbLabel>
+      {showHomeBreadcrumb
+        ? onHomeNavigate ? (
+          <Button
+            leftSection={<Home size={15} />}
+            onClick={onHomeNavigate}
+            variant="subtle"
+          >
+            {t.navigation.home}
+          </Button>
+        ) : (
+          <Button
+            component={Link}
+            href="/home"
+            leftSection={<Home size={15} />}
+            variant="subtle"
+          >
+            {t.navigation.home}
+          </Button>
+        )
+        : null}
+      {items.map((item, index) =>
+        index === items.length - 1 ? (
+          <BreadcrumbLabel key={item.href}>{item.label}</BreadcrumbLabel>
+        ) : (
+          <Button
+            component={Link}
+            href={item.href}
+            key={item.href}
+            variant="subtle"
+          >
+            {item.label}
+          </Button>
+        )
+      )}
     </Breadcrumbs>
   )
 }
 
-function getBreadcrumbItem(
+function getBreadcrumbItems(
   pathname: string,
   labels: {
     apps: string
     files: string
     home: string
+    hub: string
+    new: string
     settings: string
     store: string
   }
-): BreadcrumbItem | null {
+): BreadcrumbItem[] {
   const normalizedPathname = pathname.replace(/\/+$/, '') || '/home'
   const routeLabels: Record<string, string> = {
     apps: labels.apps,
     files: labels.files,
     home: labels.home,
+    hub: labels.hub,
+    new: labels.new,
     settings: labels.settings,
     store: labels.store
   }
 
   const segments = normalizedPathname.split('/').filter(Boolean)
-  const segment = segments.at(-1)
 
-  return segment
-    ? {
-        href: normalizedPathname,
-        label: routeLabels[segment] ?? formatSegmentLabel(segment)
-      }
-    : null
+  return segments.map((segment, index) => ({
+    href: `/${segments.slice(0, index + 1).join('/')}`,
+    label: routeLabels[segment] ?? formatSegmentLabel(segment)
+  }))
+}
+
+function shouldShowHomeBreadcrumb(items: BreadcrumbItem[]) {
+  const firstHref = items[0]?.href
+
+  return !firstHref || !rootlessBreadcrumbSections.has(firstHref)
 }
 
 function formatSegmentLabel(segment: string) {

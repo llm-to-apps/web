@@ -42,6 +42,7 @@ export type DesktopProject = {
 }
 
 type ProjectResult = ApiResponse<{ project: DesktopProject }>
+type HomeResult = ApiResponse<{ projects: DesktopProject[] }>
 
 type AppDesktopProps = {
   initialProjects: DesktopProject[]
@@ -65,6 +66,35 @@ export function AppDesktop({ initialProjects }: AppDesktopProps) {
   useEffect(() => {
     setProjects(initialProjects)
   }, [initialProjects])
+
+  useEffect(() => {
+    let isStopped = false
+    const source = new EventSource('/api/home/events')
+
+    async function refreshHomeProjects() {
+      try {
+        const response = await fetch('/api/home', {
+          cache: 'no-store'
+        })
+        const data = (await response.json().catch(() => null)) as HomeResult | null
+
+        if (!isStopped && response.ok && data?.ok) {
+          setProjects(data.data.projects)
+        }
+      } catch {
+        // Keep the current desktop until the next event or navigation refresh.
+      }
+    }
+
+    source.addEventListener('home_changed', () => {
+      void refreshHomeProjects()
+    })
+
+    return () => {
+      isStopped = true
+      source.close()
+    }
+  }, [])
 
   useEffect(() => {
     const projectIds = pollingProjectIdsKey.split('|').filter(Boolean)

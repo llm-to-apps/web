@@ -1,4 +1,5 @@
 import { Worker, type Job } from 'bullmq'
+import { randomBytes } from 'node:crypto'
 
 import { redisConnectionOptions } from '../src/server/deploy/queue'
 import { prisma } from '../src/server/db'
@@ -23,6 +24,7 @@ type TopicLocale = (typeof topicLocales)[number]
 type TopicEnrichment = {
   description: Record<TopicLocale, string>
   intent: Record<TopicLocale, string>
+  slug: string
   tags: string[]
   title: Record<TopicLocale, string>
 }
@@ -99,6 +101,7 @@ async function enrichHubTopic(topicId: string) {
       category: true,
       id: true,
       intent: true,
+      slug: true,
       title: true
     }
   })
@@ -137,6 +140,9 @@ async function enrichHubTopic(topicId: string) {
   const title = cleanText(enrichment.title.en).slice(0, 160)
   const description = cleanText(enrichment.description.en)
   const selectedTags = selectValidTopicTags(enrichment.tags, tagRecords)
+  const slug = topic.slug
+    ? topic.slug
+    : await createUniqueHubTopicSlug(enrichment.slug || title || topic.title)
 
   const updated = await prisma.$transaction(async (tx) => {
     const updateResult = await tx.hubTopic.updateMany({
@@ -145,6 +151,7 @@ async function enrichHubTopic(topicId: string) {
       },
       data: {
         description,
+        slug,
         status: enrichedHubTopicStatus,
         title: title || topic.title
       }
@@ -260,11 +267,12 @@ async function requestTopicEnrichment(intent: string, tagOptions: TopicTagOption
             `Each translated intent locale must be an array with exactly ${intentSegments.length} string item(s), one translated item per source segment, in the same order.`,
             'Do not include numbering or bullets in translated intents.',
             'Create a short practical title and a concise description in English, Russian, and German.',
+            'Create a short URL slug in English using lowercase letters, numbers, and hyphens only.',
             'Do not invent product details that are not implied by the intent.',
             'Select 0 to 3 topic tag slugs from the allowed tag list.',
             'Do not return tags that are not present in the allowed tag list.',
-            'Title must be 3 to 7 words. Description must be 1 to 2 sentences.',
-            'JSON shape: {"intent":{"en":[],"ru":[],"de":[]},"title":{"en":"","ru":"","de":""},"description":{"en":"","ru":"","de":""},"tags":[]}.'
+            'Title must be 3 to 7 words. Description must be 1 to 2 sentences. Slug must be 3 to 8 words joined by hyphens.',
+            'JSON shape: {"intent":{"en":[],"ru":[],"de":[]},"title":{"en":"","ru":"","de":""},"description":{"en":"","ru":"","de":""},"slug":"","tags":[]}.'
           ].join(' ')
         },
         {
@@ -333,6 +341,10 @@ function parseTopicEnrichment(
     throw new Error('Topic enrichment response is missing tags')
   }
 
+  if (typeof parsed.slug !== 'string') {
+    throw new Error('Topic enrichment response is missing slug')
+  }
+
   const translatedIntent: Record<TopicLocale, string[]> = {
     de: [],
     en: [],
@@ -363,6 +375,7 @@ function parseTopicEnrichment(
       en: joinIntentSegments(translatedIntent.en),
       ru: joinIntentSegments(translatedIntent.ru)
     },
+    slug: parsed.slug,
     tags: parsed.tags,
     title: parsed.title as Record<TopicLocale, string>
   }
@@ -405,6 +418,46 @@ function cleanText(value: string) {
   return value.replace(/\s+/g, ' ').trim()
 }
 
+async function createUniqueHubTopicSlug(value: string) {
+  const base = cleanHubTopicSlug(value) || 'idea'
+
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const salt = randomBytes(3).toString('hex')
+    const slug = buildSaltedHubTopicSlug(base, salt)
+    const existingTopic = await prisma.hubTopic.findUnique({
+      where: {
+        slug
+      },
+      select: {
+        id: true
+      }
+    })
+
+    if (!existingTopic) {
+      return slug
+    }
+  }
+
+  return buildSaltedHubTopicSlug(base, randomBytes(8).toString('hex'))
+}
+
+function cleanHubTopicSlug(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 160)
+    .replace(/-$/g, '')
+}
+
+function buildSaltedHubTopicSlug(base: string, salt: string) {
+  const suffix = `-${salt}`
+  const cleanBase = cleanHubTopicSlug(base).slice(0, 160 - suffix.length)
+  return cleanHubTopicSlug(`${cleanBase}${suffix}`)
+}
+
 function cleanMultilineText(value: string) {
   return value
     .replace(/\r\n/g, '\n')
@@ -444,5 +497,5 @@ function validateTranslatedIntent(
 }
 
 function joinIntentSegments(segments: string[]) {
-  return segments.map((segment) => segment.trim()).join('\n')
+  return segments.map((segment) => segment.trim()).join('\n\n')
 }

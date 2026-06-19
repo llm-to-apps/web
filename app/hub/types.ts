@@ -68,6 +68,12 @@ export type HubArtifact = {
   tags: string[]
   textContent: string | null
   title: string
+  translations: Record<
+    string,
+    {
+      title: string
+    }
+  >
   type: string
 }
 

@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { Avatar, Button, Menu, Text } from '@mantine/core'
-import { ChevronDown, FileText, LogOut, Settings } from 'lucide-react'
+import { Avatar, Group, Menu, Text, UnstyledButton } from '@mantine/core'
+import { ChevronDown, FileText, LogOut, Settings, UserRound } from 'lucide-react'
 import type { CurrentUser } from '@/server/auth'
 import { useI18n } from './i18n-provider'
 
@@ -43,26 +43,33 @@ export function AccountMenu({ usageSummary, user }: AccountMenuProps) {
       withinPortal
     >
       <Menu.Target>
-        <Button
-          leftSection={
+        <UnstyledButton
+          aria-label={accountName}
+          style={{
+            borderRadius: 'var(--mantine-radius-md)',
+            color: 'var(--mantine-color-text)',
+            display: 'block',
+            maxWidth: 'min(184px, 36vw)',
+            padding: '6px 10px'
+          }}
+        >
+          <Group gap="xs" wrap="nowrap">
             <Avatar alt={accountName} radius="xl" size={20}>
               {initials}
             </Avatar>
-          }
-          maw={{ base: 132, md: 184 }}
-          rightSection={<ChevronDown size={12} />}
-          variant="subtle"
-        >
-          <span
-            style={{
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            {accountName}
-          </span>
-        </Button>
+            <Text
+              component="span"
+              fw={500}
+              style={{
+                minWidth: 0
+              }}
+              truncate
+            >
+              {accountName}
+            </Text>
+            <ChevronDown size={12} style={{ flex: '0 0 auto' }} />
+          </Group>
+        </UnstyledButton>
       </Menu.Target>
       <Menu.Dropdown>
         {usageSummary ? (
@@ -74,12 +81,32 @@ export function AccountMenu({ usageSummary, user }: AccountMenuProps) {
             <Menu.Divider />
           </>
         ) : null}
-        <Menu.Item component={Link} href="/settings" leftSection={<Settings size={16} />}>
-          {t.settings.title}
-        </Menu.Item>
-        <Menu.Item component={Link} href="/files" leftSection={<FileText size={16} />}>
-          {t.files.title}
-        </Menu.Item>
+        {user.onboarded ? (
+          <>
+            <Menu.Item
+              component={Link}
+              href="/settings"
+              leftSection={<Settings size={16} />}
+            >
+              {t.settings.title}
+            </Menu.Item>
+            <Menu.Item
+              component={Link}
+              href="/files"
+              leftSection={<FileText size={16} />}
+            >
+              {t.files.title}
+            </Menu.Item>
+          </>
+        ) : (
+          <Menu.Item
+            component={Link}
+            href="/welcome"
+            leftSection={<UserRound size={16} />}
+          >
+            {t.profile.setupProfile}
+          </Menu.Item>
+        )}
         <Menu.Item
           color="red"
           disabled={isSigningOut}

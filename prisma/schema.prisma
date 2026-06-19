@@ -10,6 +10,7 @@ datasource db {
 model User {
   id                                 String                              @id @default(cuid())
   email                              String                              @unique
+  username                           String                              @unique @db.VarChar(18)
   name                               String?
   onboarded                          Boolean                             @default(false)
   aiExperienceLevel                  UserExperienceLevel?
@@ -132,8 +133,24 @@ model AppTemplate {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  translations AppTemplateTranslation[]
+
   @@index([status, sortOrder])
   @@map("app_templates")
+}
+
+model AppTemplateTranslation {
+  id          String @id @default(cuid())
+  templateId  String @db.VarChar(64)
+  locale      String @db.VarChar(8)
+  name        String @db.VarChar(128)
+  description String @db.Text
+
+  template AppTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, locale])
+  @@index([locale])
+  @@map("app_template_translations")
 }
 
 model OAuthClient {
@@ -523,11 +540,25 @@ model HubArtifact {
   uploadedFile UploadedFile?              @relation(fields: [uploadedFileId], references: [id], onDelete: SetNull)
   comments     HubComment[]
   artifactTags HubArtifactTagAssignment[]
+  translations HubArtifactTranslation[]
 
   @@index([topicId, createdAt])
   @@index([authorId, createdAt])
   @@index([uploadedFileId])
   @@map("hub_artifacts")
+}
+
+model HubArtifactTranslation {
+  id         String @id @default(cuid())
+  artifactId String
+  locale     String @db.VarChar(8)
+  title      String @db.VarChar(160)
+
+  artifact HubArtifact @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+
+  @@unique([artifactId, locale])
+  @@index([locale])
+  @@map("hub_artifact_translations")
 }
 
 model HubComment {
