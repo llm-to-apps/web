@@ -3,9 +3,10 @@ import sharp from 'sharp'
 
 import { prisma } from '@/server/db'
 import { browserlessToken, browserlessUrl, envNumber } from '@/server/env'
-import { publishHubArtifactChanged } from '@/server/hub/artifact-events'
+import { publishHubArtifactChanged } from '@/server/hub/topic-events'
 import { logInfo, logWarn } from '@/server/logger'
 import {
+  deletePlatformStorageObject,
   getPlatformStorageObjectBuffer,
   putPlatformStorageObject
 } from '@/server/storage'
@@ -29,6 +30,7 @@ export async function generateUploadedFileThumbnail(uploadedFileId: string) {
       scope: true,
       storageBucket: true,
       storageKey: true,
+      status: true,
       thumbnailId: true,
       userId: true
     }
@@ -66,6 +68,12 @@ export async function generateUploadedFileThumbnail(uploadedFileId: string) {
   })
   const imageSource =
     file.mimeType === 'application/pdf' ? await renderPdfFirstPage(source) : source
+  if (await isUploadedFileThumbnailSourceDeleted(file.id)) {
+    logWarn('uploaded_file.thumbnail.skipped_deleted_after_render', {
+      uploadedFileId
+    })
+    return { skipped: true }
+  }
   const thumbnailBuffer = await sharp(imageSource, {
     failOn: 'none'
   })
@@ -116,13 +124,31 @@ export async function generateUploadedFileThumbnail(uploadedFileId: string) {
 
     await tx.uploadedFile.updateMany({
       where: {
+        deletedAt: null,
         id: file.id,
+        status: {
+          not: 'deleted'
+        },
         thumbnailId: null
       },
       data: {
         thumbnailId: thumbnail.id
       }
     })
+
+    const linkedFile = await tx.uploadedFile.findFirst({
+      where: {
+        id: file.id,
+        thumbnailId: thumbnail.id
+      },
+      select: {
+        id: true
+      }
+    })
+
+    if (!linkedFile) {
+      return null
+    }
 
     return tx.hubArtifact.findMany({
       where: {
@@ -135,6 +161,27 @@ export async function generateUploadedFileThumbnail(uploadedFileId: string) {
       }
     })
   })
+
+  if (!linkedArtifacts) {
+    await deletePlatformStorageObject({
+      bucket: storageObject.bucket,
+      key: storageObject.key
+    })
+    await prisma.uploadedFile.update({
+      where: {
+        id: thumbnailId
+      },
+      data: {
+        deletedAt: new Date(),
+        error: null,
+        status: 'deleted',
+        storageBucket: '',
+        storageKey: ''
+      }
+    })
+    logWarn('uploaded_file.thumbnail.skipped_unlinked', { uploadedFileId })
+    return { skipped: true }
+  }
 
   await Promise.all(
     linkedArtifacts.map((artifact) =>
@@ -156,6 +203,20 @@ export async function generateUploadedFileThumbnail(uploadedFileId: string) {
   return {
     thumbnailId
   }
+}
+
+async function isUploadedFileThumbnailSourceDeleted(uploadedFileId: string) {
+  const file = await prisma.uploadedFile.findUnique({
+    where: {
+      id: uploadedFileId
+    },
+    select: {
+      deletedAt: true,
+      status: true
+    }
+  })
+
+  return !file || Boolean(file.deletedAt) || file.status === 'deleted'
 }
 
 function thumbnailFileName(originalName: string) {

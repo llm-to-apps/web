@@ -94,8 +94,16 @@ export function agentPdfExtractionModel() {
   return optionalEnv('AGENT_PDF_EXTRACTION_MODEL') ?? 'openai/gpt-4o-mini'
 }
 
+export function agentImageExtractionModel() {
+  return optionalEnv('AGENT_IMAGE_EXTRACTION_MODEL') ?? agentPdfExtractionModel()
+}
+
 export function hubArtifactClassifierModel() {
   return optionalEnv('HUB_ARTIFACT_CLASSIFIER_MODEL') ?? 'openai/gpt-4o-mini'
+}
+
+export function hubTopicEnrichmentModel() {
+  return optionalEnv('HUB_TOPIC_ENRICHMENT_MODEL') ?? 'openai/gpt-4o-mini'
 }
 
 export function agentPdfExtractionEngine() {

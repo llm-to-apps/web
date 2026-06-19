@@ -21,8 +21,8 @@ import {
   Textarea
 } from '@mantine/core'
 import {
-  ArrowBigDown,
-  ArrowBigUp,
+  ChevronDown,
+  ChevronUp,
   ChevronRight,
   ExternalLink,
   FileText,
@@ -116,6 +116,9 @@ export default function HubArtifactPage() {
     )
 
     source.addEventListener('artifact_changed', () => {
+      void loadArtifact()
+    })
+    source.addEventListener('topic_changed', () => {
       void loadArtifact()
     })
 
@@ -621,7 +624,7 @@ function CommentItem({
               size="sm"
               variant={comment.viewerHasUpvoted ? 'light' : 'subtle'}
             >
-              <ArrowBigUp size={16} />
+              <ChevronUp size={16} />
             </ActionIcon>
             <Text fw={700} size="xs">
               {comment.upvoteCount - comment.downvoteCount}
@@ -635,7 +638,7 @@ function CommentItem({
               size="sm"
               variant={comment.viewerHasDownvoted ? 'light' : 'subtle'}
             >
-              <ArrowBigDown size={16} />
+              <ChevronDown size={16} />
             </ActionIcon>
           </Stack>
         )}

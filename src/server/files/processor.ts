@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/server/db'
 import {
   agentEmbeddingDimensions,
+  agentImageExtractionModel,
   agentPdfExtractionEngine,
   agentPdfExtractionFallbackEngine,
   agentPdfExtractionModel,
@@ -11,7 +12,7 @@ import {
   uploadedFileExtractionMaxBytes
 } from '@/server/env'
 import { enqueueHubArtifactAnalysis } from '@/server/hub/artifact-analysis-queue'
-import { publishHubArtifactChanged } from '@/server/hub/artifact-events'
+import { publishHubArtifactChanged } from '@/server/hub/topic-events'
 import { logError, logInfo, logWarn } from '@/server/logger'
 import { getPlatformStorageObjectBuffer } from '@/server/storage'
 
@@ -22,7 +23,7 @@ type UploadedFileRecord = NonNullable<
   Awaited<ReturnType<typeof prisma.uploadedFile.findUnique>>
 >
 
-type OpenRouterPdfResponse = {
+type OpenRouterExtractionResponse = {
   choices?: Array<{
     message?: {
       annotations?: unknown[]
@@ -53,6 +54,8 @@ type FileAnnotation = {
   type: 'file'
 }
 
+const hubUrlScreenshotScope = 'hub_url_screenshot'
+
 export async function processUploadedFile(uploadedFileId: string) {
   const file = await prisma.uploadedFile.findUnique({
     where: { id: uploadedFileId }
@@ -68,15 +71,99 @@ export async function processUploadedFile(uploadedFileId: string) {
     return { skipped: true }
   }
 
+  if (isUrlScreenshotFile(file)) {
+    const updateResult = await prisma.uploadedFile.updateMany({
+      where: {
+        deletedAt: null,
+        id: file.id,
+        status: {
+          not: 'deleted'
+        }
+      },
+      data: {
+        error: null,
+        status: 'processing'
+      }
+    })
+    if (updateResult.count === 0) {
+      return { skipped: true }
+    }
+
+    try {
+      const buffer = await getPlatformStorageObjectBuffer({
+        bucket: file.storageBucket,
+        key: file.storageKey
+      })
+      const text = await extractImageTextWithOpenRouter(
+        buffer,
+        file.originalName,
+        file.mimeType
+      )
+      if (await isUploadedFileDeleted(file.id)) {
+        logWarn('uploaded_file.image_extraction.skipped_deleted_after_extract', {
+          uploadedFileId: file.id
+        })
+        return { skipped: true }
+      }
+      const chunkCount = await saveExtractedFileText(file, text, {
+        model: agentImageExtractionModel(),
+        provider: 'openrouter'
+      })
+      await enqueueHubArtifactAnalysisForFile(file.id)
+
+      logInfo(
+        'uploaded_file.image_extraction.completed',
+        {
+          projectId: file.projectId,
+          uploadedFileId: file.id,
+          userId: file.userId
+        },
+        {
+          chunkCount,
+          scope: file.scope,
+          sizeBytes: file.sizeBytes
+        }
+      )
+
+      return {
+        chunkCount
+      }
+    } catch (error) {
+      await markFailed(
+        file.id,
+        error instanceof Error ? error.message : 'Processing failed'
+      )
+      logError(
+        'uploaded_file.image_extraction.failed',
+        {
+          projectId: file.projectId,
+          uploadedFileId: file.id,
+          userId: file.userId
+        },
+        { error }
+      )
+      throw error
+    }
+  }
+
   if (isSupportedVisionMimeType(file.mimeType)) {
-    await prisma.uploadedFile.update({
-      where: { id: file.id },
+    const updateResult = await prisma.uploadedFile.updateMany({
+      where: {
+        deletedAt: null,
+        id: file.id,
+        status: {
+          not: 'deleted'
+        }
+      },
       data: {
         error: null,
         processedAt: new Date(),
         status: 'processed'
       }
     })
+    if (updateResult.count === 0) {
+      return { skipped: true }
+    }
     await enqueueHubArtifactAnalysisForFile(file.id)
     return {
       chunkCount: 0
@@ -88,13 +175,22 @@ export async function processUploadedFile(uploadedFileId: string) {
     return { skipped: true }
   }
 
-  await prisma.uploadedFile.update({
-    where: { id: file.id },
+  const updateResult = await prisma.uploadedFile.updateMany({
+    where: {
+      deletedAt: null,
+      id: file.id,
+      status: {
+        not: 'deleted'
+      }
+    },
     data: {
       error: null,
       status: 'processing'
     }
   })
+  if (updateResult.count === 0) {
+    return { skipped: true }
+  }
 
   try {
     const buffer = await getPlatformStorageObjectBuffer({
@@ -105,6 +201,12 @@ export async function processUploadedFile(uploadedFileId: string) {
       file.mimeType === 'application/pdf'
         ? await extractPdfTextWithOpenRouter(buffer, file.originalName)
         : buffer.toString('utf8')
+    if (await isUploadedFileDeleted(file.id)) {
+      logWarn('uploaded_file.processing.skipped_deleted_after_extract', {
+        uploadedFileId: file.id
+      })
+      return { skipped: true }
+    }
     const chunkCount = await saveExtractedFileText(file, text, {
       model: file.mimeType === 'application/pdf' ? agentPdfExtractionModel() : null,
       provider: file.mimeType === 'application/pdf' ? 'openrouter' : 'local'
@@ -163,7 +265,21 @@ async function saveExtractedFileText(
   const embeddings = await embedTexts(chunks.map((chunk) => chunk.content))
   const extraction = truncateTextByBytes(normalizedText, uploadedFileExtractionMaxBytes())
 
-  await prisma.$transaction(async (tx) => {
+  const saved = await prisma.$transaction(async (tx) => {
+    const currentFile = await tx.uploadedFile.findUnique({
+      where: {
+        id: file.id
+      },
+      select: {
+        deletedAt: true,
+        status: true
+      }
+    })
+
+    if (!currentFile || currentFile.deletedAt || currentFile.status === 'deleted') {
+      return false
+    }
+
     await tx.uploadedFileExtraction.upsert({
       where: {
         uploadedFileId_format: {
@@ -238,9 +354,11 @@ async function saveExtractedFileText(
         status: 'processed'
       }
     })
+
+    return true
   })
 
-  return chunks.length
+  return saved ? chunks.length : 0
 }
 
 function truncateTextByBytes(content: string, maxBytes: number) {
@@ -352,7 +470,9 @@ async function requestPdfExtraction({
     method: 'POST'
   })
 
-  const body = (await response.json().catch(() => null)) as OpenRouterPdfResponse | null
+  const body = (await response
+    .json()
+    .catch(() => null)) as OpenRouterExtractionResponse | null
 
   if (!response.ok) {
     const annotationsText = extractTextFromFileAnnotations(body)
@@ -380,6 +500,61 @@ async function requestPdfExtraction({
   }
 
   return messageText || annotationsText
+}
+
+async function extractImageTextWithOpenRouter(
+  buffer: Buffer,
+  fileName: string,
+  mimeType: string
+) {
+  const response = await fetch(`${openRouterBaseUrl()}/chat/completions`, {
+    body: JSON.stringify({
+      model: agentImageExtractionModel(),
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: [
+                `File name: ${fileName}.`,
+                'Extract all readable text from this screenshot as Markdown.',
+                'Also describe the visible page or UI in useful detail for future app-development analysis.',
+                'Capture headings, navigation, sections, forms, buttons, labels, tables, prices, and important visual states.',
+                'Preserve structure with Markdown headings and lists.',
+                'Return only the extracted page content. Do not summarize.'
+              ].join(' ')
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:${mimeType};base64,${buffer.toString('base64')}`
+              }
+            }
+          ]
+        }
+      ],
+      stream: false
+    }),
+    headers: {
+      Authorization: `Bearer ${openRouterApiKey()}`,
+      'Content-Type': 'application/json'
+    },
+    method: 'POST'
+  })
+
+  const body = (await response
+    .json()
+    .catch(() => null)) as OpenRouterExtractionResponse | null
+
+  if (!response.ok) {
+    throw new Error(
+      body?.error?.message ??
+        `OpenRouter image extraction failed with status ${response.status}`
+    )
+  }
+
+  return extractMessageText(body?.choices?.[0]?.message?.content)
 }
 
 function isWeakPdfExtraction(content: string) {
@@ -433,7 +608,7 @@ function extractMessageText(content: unknown) {
     .trim()
 }
 
-function extractTextFromFileAnnotations(response: OpenRouterPdfResponse | null) {
+function extractTextFromFileAnnotations(response: OpenRouterExtractionResponse | null) {
   const annotations = [
     ...(response?.choices?.[0]?.message?.annotations ?? []),
     ...(response?.error?.metadata?.file_annotations ?? [])
@@ -476,14 +651,39 @@ function vectorLiteral(embedding: number[] | undefined) {
 }
 
 async function markFailed(uploadedFileId: string, message: string) {
-  await prisma.uploadedFile.update({
-    where: { id: uploadedFileId },
+  const updateResult = await prisma.uploadedFile.updateMany({
+    where: {
+      deletedAt: null,
+      id: uploadedFileId,
+      status: {
+        not: 'deleted'
+      }
+    },
     data: {
       error: message,
       status: 'failed'
     }
   })
+
+  if (updateResult.count === 0) {
+    return
+  }
+
   await markHubArtifactFileProcessingFailed(uploadedFileId, message)
+}
+
+async function isUploadedFileDeleted(uploadedFileId: string) {
+  const file = await prisma.uploadedFile.findUnique({
+    where: {
+      id: uploadedFileId
+    },
+    select: {
+      deletedAt: true,
+      status: true
+    }
+  })
+
+  return !file || Boolean(file.deletedAt) || file.status === 'deleted'
 }
 
 async function enqueueHubArtifactAnalysisForFile(uploadedFileId: string) {
@@ -557,4 +757,8 @@ function isSupportedVisionMimeType(mimeType: string) {
   return (
     mimeType === 'image/png' || mimeType === 'image/jpeg' || mimeType === 'image/webp'
   )
+}
+
+function isUrlScreenshotFile(file: UploadedFileRecord) {
+  return file.scope === hubUrlScreenshotScope && isSupportedVisionMimeType(file.mimeType)
 }

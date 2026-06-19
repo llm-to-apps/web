@@ -566,7 +566,6 @@ CREATE TABLE "hub_topics" (
   "intent" TEXT NOT NULL,
   "description" TEXT,
   "category" VARCHAR(32) NOT NULL,
-  "tags" JSONB NOT NULL,
   "status" VARCHAR(32) NOT NULL DEFAULT 'analyzing',
   "appUrl" VARCHAR(1024),
   "authorId" TEXT NOT NULL,

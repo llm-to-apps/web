@@ -17,6 +17,7 @@ import { logError, logInfo, logWarn, type LogContext } from '../src/server/logge
 import { startAgentRunWorker } from './agent-run-worker'
 import { startHubArtifactScreenshotWorker } from './hub-artifact-screenshot-worker'
 import { startHubArtifactWorker } from './hub-artifact-worker'
+import { startHubTopicWorker } from './hub-topic-worker'
 import { startUploadedFileThumbnailWorker } from './uploaded-file-thumbnail-worker'
 import { startUploadedFileWorker } from './uploaded-file-worker'
 
@@ -85,6 +86,7 @@ const worker = new Worker(
 const agentRunWorker = startAgentRunWorker()
 const hubArtifactWorker = startHubArtifactWorker()
 const hubArtifactScreenshotWorker = startHubArtifactScreenshotWorker()
+const hubTopicWorker = startHubTopicWorker()
 const uploadedFileThumbnailWorker = startUploadedFileThumbnailWorker()
 const uploadedFileWorker = startUploadedFileWorker()
 
@@ -158,6 +160,7 @@ async function shutdown(signal: NodeJS.Signals) {
     closeWorkerGracefully('agent run worker', agentRunWorker),
     closeWorkerGracefully('hub artifact worker', hubArtifactWorker),
     closeWorkerGracefully('hub artifact screenshot worker', hubArtifactScreenshotWorker),
+    closeWorkerGracefully('hub topic worker', hubTopicWorker),
     closeWorkerGracefully('uploaded file thumbnail worker', uploadedFileThumbnailWorker),
     closeWorkerGracefully('uploaded file worker', uploadedFileWorker)
   ])

@@ -223,10 +223,10 @@ const hubTags: HubTagSeed[] = [
     category: 'business',
     translations: {
       de: 'Finanzen',
-      en: 'Finances',
+      en: 'Finance',
       ru: 'Финансы'
     },
-    slug: 'finances',
+    slug: 'finance',
     sortOrder: 10
   },
   {
@@ -242,22 +242,102 @@ const hubTags: HubTagSeed[] = [
   {
     category: 'business',
     translations: {
+      de: 'Marketing',
+      en: 'Marketing',
+      ru: 'Маркетинг'
+    },
+    slug: 'marketing',
+    sortOrder: 30
+  },
+  {
+    category: 'business',
+    translations: {
+      de: 'Betrieb',
+      en: 'Operations',
+      ru: 'Операции'
+    },
+    slug: 'operations',
+    sortOrder: 40
+  },
+  {
+    category: 'business',
+    translations: {
       de: 'Projektmanagement',
       en: 'Project management',
       ru: 'Управление проектами'
     },
     slug: 'project-management',
-    sortOrder: 30
+    sortOrder: 50
   },
   {
-    category: 'personal',
+    category: 'business',
     translations: {
-      de: 'Gewohnheiten',
-      en: 'Habits',
-      ru: 'Привычки'
+      de: 'HR',
+      en: 'HR',
+      ru: 'HR'
     },
-    slug: 'habits',
-    sortOrder: 10
+    slug: 'hr',
+    sortOrder: 60
+  },
+  {
+    category: 'business',
+    translations: {
+      de: 'Support',
+      en: 'Support',
+      ru: 'Поддержка'
+    },
+    slug: 'support',
+    sortOrder: 70
+  },
+  {
+    category: 'business',
+    translations: {
+      de: 'Analytik',
+      en: 'Analytics',
+      ru: 'Аналитика'
+    },
+    slug: 'analytics',
+    sortOrder: 80
+  },
+  {
+    category: 'business',
+    translations: {
+      de: 'Inventar',
+      en: 'Inventory',
+      ru: 'Склад'
+    },
+    slug: 'inventory',
+    sortOrder: 90
+  },
+  {
+    category: 'business',
+    translations: {
+      de: 'Dokumente',
+      en: 'Documents',
+      ru: 'Документы'
+    },
+    slug: 'documents',
+    sortOrder: 100
+  },
+  {
+    category: 'business',
+    translations: {
+      de: 'Automatisierung',
+      en: 'Automation',
+      ru: 'Автоматизация'
+    },
+    slug: 'automation',
+    sortOrder: 110
+  },
+  {
+    category: 'business',
+    translations: {
+      de: 'Wissensdatenbank',
+      en: 'Knowledge base',
+      ru: 'База знаний'
+    },
+    slug: 'knowledge-base',
+    sortOrder: 120
   },
   {
     category: 'personal',
@@ -267,6 +347,16 @@ const hubTags: HubTagSeed[] = [
       ru: 'Продуктивность'
     },
     slug: 'productivity',
+    sortOrder: 10
+  },
+  {
+    category: 'personal',
+    translations: {
+      de: 'Finanzen',
+      en: 'Finance',
+      ru: 'Финансы'
+    },
+    slug: 'finance',
     sortOrder: 20
   },
   {
@@ -278,6 +368,86 @@ const hubTags: HubTagSeed[] = [
     },
     slug: 'health',
     sortOrder: 30
+  },
+  {
+    category: 'personal',
+    translations: {
+      de: 'Lernen',
+      en: 'Learning',
+      ru: 'Обучение'
+    },
+    slug: 'learning',
+    sortOrder: 40
+  },
+  {
+    category: 'personal',
+    translations: {
+      de: 'Zuhause',
+      en: 'Home',
+      ru: 'Дом'
+    },
+    slug: 'home',
+    sortOrder: 50
+  },
+  {
+    category: 'personal',
+    translations: {
+      de: 'Planung',
+      en: 'Planning',
+      ru: 'Планирование'
+    },
+    slug: 'planning',
+    sortOrder: 60
+  },
+  {
+    category: 'personal',
+    translations: {
+      de: 'Reisen',
+      en: 'Travel',
+      ru: 'Путешествия'
+    },
+    slug: 'travel',
+    sortOrder: 70
+  },
+  {
+    category: 'personal',
+    translations: {
+      de: 'Dokumente',
+      en: 'Documents',
+      ru: 'Документы'
+    },
+    slug: 'documents',
+    sortOrder: 80
+  },
+  {
+    category: 'personal',
+    translations: {
+      de: 'Kreativität',
+      en: 'Creative',
+      ru: 'Творчество'
+    },
+    slug: 'creative',
+    sortOrder: 90
+  },
+  {
+    category: 'personal',
+    translations: {
+      de: 'Kontakte',
+      en: 'Social',
+      ru: 'Контакты'
+    },
+    slug: 'social',
+    sortOrder: 100
+  },
+  {
+    category: 'personal',
+    translations: {
+      de: 'Gewohnheiten',
+      en: 'Habits',
+      ru: 'Привычки'
+    },
+    slug: 'habits',
+    sortOrder: 110
   }
 ]
 
@@ -343,7 +513,6 @@ async function main() {
   await seedUsagePrices()
   await seedHubTags()
   await seedHubArtifactTags()
-  await backfillHubTopicTags()
 }
 
 async function seedAppTemplates() {
@@ -456,6 +625,23 @@ async function seedUsagePrices() {
 }
 
 async function seedHubTags() {
+  const activeTagsByCategory = hubTags.reduce<Record<string, string[]>>((acc, tag) => {
+    acc[tag.category] ??= []
+    acc[tag.category].push(tag.slug)
+    return acc
+  }, {})
+
+  for (const [category, slugs] of Object.entries(activeTagsByCategory)) {
+    await prisma.hubTag.deleteMany({
+      where: {
+        category,
+        slug: {
+          notIn: slugs
+        }
+      }
+    })
+  }
+
   for (const tag of hubTags) {
     const tagRecord = await prisma.hubTag.upsert({
       where: {
@@ -538,50 +724,6 @@ async function seedHubArtifactTags() {
         }
       })
     }
-  }
-}
-
-async function backfillHubTopicTags() {
-  const topics = await prisma.hubTopic.findMany({
-    select: {
-      category: true,
-      id: true,
-      tags: true
-    }
-  })
-
-  for (const topic of topics) {
-    const tags = Array.isArray(topic.tags)
-      ? topic.tags.filter((tag): tag is string => typeof tag === 'string')
-      : []
-
-    if (tags.length === 0) {
-      continue
-    }
-
-    const tagRecords = await prisma.hubTag.findMany({
-      where: {
-        category: topic.category,
-        slug: {
-          in: tags
-        }
-      },
-      select: {
-        id: true
-      }
-    })
-
-    if (tagRecords.length === 0) {
-      continue
-    }
-
-    await prisma.hubTopicTag.createMany({
-      data: tagRecords.map((tag) => ({
-        tagId: tag.id,
-        topicId: topic.id
-      })),
-      skipDuplicates: true
-    })
   }
 }
 

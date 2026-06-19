@@ -17,7 +17,7 @@ import {
   Text,
   Title
 } from '@mantine/core'
-import { ArrowBigDown, ArrowBigUp, FileText, MessageSquare, Plus } from 'lucide-react'
+import { ChevronDown, ChevronUp, FileText, MessageSquare, Plus } from 'lucide-react'
 import { useAuthModal } from '../_components/auth-modal-provider'
 import { useI18n } from '../_components/i18n-provider'
 import { useSession } from '../_components/session-provider'
@@ -34,6 +34,7 @@ type TopicsResponse = ApiResponse<{
 
 type VoteKind = 'downvote' | 'upvote'
 type StatusFilterOption = {
+  count: number
   label: string
   value: string
 }
@@ -75,22 +76,6 @@ export default function HubPage() {
       { label: hub.company, value: 'business' }
     ],
     [hub.company, hub.personal]
-  )
-  const statusFilterOptions = useMemo(
-    () => [
-      { label: hub.allStatuses, value: allHubStatusFilter },
-      { label: hub.status.analyzing, value: 'analyzing' },
-      { label: hub.status.discussing, value: 'discussing' },
-      { label: hub.status.inDevelopment, value: 'in_development' },
-      { label: hub.status.developed, value: 'developed' }
-    ],
-    [
-      hub.allStatuses,
-      hub.status.analyzing,
-      hub.status.developed,
-      hub.status.discussing,
-      hub.status.inDevelopment
-    ]
   )
 
   const loadTopics = useCallback(async () => {
@@ -225,6 +210,66 @@ export default function HubPage() {
     setTagFilter((currentTag) => (currentTag === tag ? null : tag))
   }, [])
 
+  const statusCounts = useMemo(() => {
+    const counts = new Map<string, number>([[allHubStatusFilter, 0]])
+
+    for (const status of hubTopicStatuses) {
+      counts.set(status, 0)
+    }
+
+    for (const topic of topics) {
+      if (topic.category !== categoryFilter) {
+        continue
+      }
+
+      if (tagFilter && !topic.tags.includes(tagFilter)) {
+        continue
+      }
+
+      counts.set(allHubStatusFilter, (counts.get(allHubStatusFilter) ?? 0) + 1)
+      counts.set(topic.status, (counts.get(topic.status) ?? 0) + 1)
+    }
+
+    return counts
+  }, [categoryFilter, tagFilter, topics])
+  const statusFilterOptions = useMemo(
+    () => [
+      {
+        count: statusCounts.get(allHubStatusFilter) ?? 0,
+        label: hub.allStatuses,
+        value: allHubStatusFilter
+      },
+      {
+        count: statusCounts.get('analyzing') ?? 0,
+        label: hub.status.analyzing,
+        value: 'analyzing'
+      },
+      {
+        count: statusCounts.get('discussing') ?? 0,
+        label: hub.status.discussing,
+        value: 'discussing'
+      },
+      {
+        count: statusCounts.get('in_development') ?? 0,
+        label: hub.status.inDevelopment,
+        value: 'in_development'
+      },
+      {
+        count: statusCounts.get('developed') ?? 0,
+        label: hub.status.developed,
+        value: 'developed'
+      }
+    ],
+    [
+      hub.allStatuses,
+      hub.status.analyzing,
+      hub.status.developed,
+      hub.status.discussing,
+      hub.status.inDevelopment,
+      statusCounts
+    ]
+  )
+
   const filteredTopics = useMemo(
     () =>
       topics.filter((topic) => {
@@ -252,19 +297,25 @@ export default function HubPage() {
         />
       </Group>
 
-      <StatusFilterTabs
-        onChange={setStatusFilter}
-        options={statusFilterOptions}
-        value={statusFilter}
-      />
-
-      <Group align="center" gap="xs">
+      <Group align="flex-end" gap="sm" wrap="nowrap">
         <SegmentedControl
           data={categoryFilterOptions}
           onChange={setCategoryFilter}
           size="sm"
           value={categoryFilter}
         />
+        <div
+          style={{ display: 'flex', flex: 1, justifyContent: 'flex-end', minWidth: 0 }}
+        >
+          <StatusFilterTabs
+            onChange={setStatusFilter}
+            options={statusFilterOptions}
+            value={statusFilter}
+          />
+        </div>
+      </Group>
+
+      <Group align="center" gap={6}>
         <Group gap={6} style={{ flex: 1, minWidth: 180 }}>
           {availableTags.length === 0 ? (
             <Text c="dimmed" size="xs">
@@ -310,13 +361,6 @@ export default function HubPage() {
           <Stack gap="sm">
             <Text fw={700}>{hub.noTopicsTitle}</Text>
             <Text c="dimmed">{hub.noTopicsDescription}</Text>
-            <Group>
-              <NewTopicButton
-                canCreateTopic={canCreateTopic}
-                label={hub.newTopic}
-                onSignIn={openAuthModal}
-              />
-            </Group>
           </Stack>
         </Paper>
       ) : null}
@@ -372,7 +416,10 @@ function StatusFilterTabs({
             role="tab"
             type="button"
           >
-            {option.label}
+            <span>{option.label}</span>
+            {option.count > 0 ? (
+              <span className={styles.statusTabCount}>{option.count}</span>
+            ) : null}
           </button>
         )
       })}
@@ -479,7 +526,7 @@ const TopicCard = memo(function TopicCard({
           onClick={(event) => handleVoteClick(event, 'upvote')}
           variant={topic.viewerHasUpvoted ? 'light' : 'subtle'}
         >
-          <ArrowBigUp size={20} />
+          <ChevronUp size={20} />
         </ActionIcon>
         <Text fw={700} size="sm">
           {score}
@@ -492,7 +539,7 @@ const TopicCard = memo(function TopicCard({
           onClick={(event) => handleVoteClick(event, 'downvote')}
           variant={topic.viewerHasDownvoted ? 'light' : 'subtle'}
         >
-          <ArrowBigDown size={20} />
+          <ChevronDown size={20} />
         </ActionIcon>
       </Stack>
 
@@ -514,7 +561,7 @@ const TopicCard = memo(function TopicCard({
             <Badge variant="light">{topicStatusLabel(topic.status, labels.status)}</Badge>
           </Group>
           <Text c="dimmed" lineClamp={3} size="sm">
-            {localizedTopic.intent}
+            {localizedTopic.description || localizedTopic.intent}
           </Text>
           <Group gap="xs">
             <Badge
@@ -530,9 +577,6 @@ const TopicCard = memo(function TopicCard({
             ))}
           </Group>
           <Group justify="space-between">
-            <Text c="dimmed" size="sm">
-              {topic.author.name}
-            </Text>
             <Group c="dimmed" gap="md">
               <Group gap={6}>
                 <FileText size={16} />
@@ -543,6 +587,9 @@ const TopicCard = memo(function TopicCard({
                 <Text size="sm">{topic.commentCount}</Text>
               </Group>
             </Group>
+            <Text c="dimmed" size="sm">
+              {topic.author.name}
+            </Text>
           </Group>
         </Stack>
       </Card>

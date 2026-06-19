@@ -14,11 +14,6 @@ export const createHubTopicSchema = z.object({
       `Intent must be at least ${minHubTopicIntentLength} characters`
     )
     .max(maxHubTopicIntentLength),
-  tags: z
-    .array(z.string().trim().min(1).max(40))
-    .max(8)
-    .default([])
-    .transform((tags) => [...new Set(tags.map((tag) => normalizeTag(tag)))]),
   title: z.string().trim().max(160).optional()
 })
 
@@ -27,10 +22,6 @@ export const createHubCommentSchema = z.object({
   body: z.string().trim().min(1, 'Comment is required').max(5000),
   parentId: z.string().trim().min(1).optional().nullable()
 })
-
-export function normalizeTag(tag: string) {
-  return tag.trim().toLowerCase().replace(/\s+/g, '-').slice(0, 40)
-}
 
 export function parseArtifactType(value: FormDataEntryValue | null) {
   const type = typeof value === 'string' ? value : ''

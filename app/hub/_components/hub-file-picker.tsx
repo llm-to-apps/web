@@ -10,6 +10,7 @@ type HubFilePickerProps = {
   description?: string
   disabled?: boolean
   files: File[]
+  fullWidth?: boolean
   label: string
   locale: string
   onChange: (files: File[]) => void
@@ -21,6 +22,7 @@ export function HubFilePicker({
   description,
   disabled = false,
   files,
+  fullWidth = false,
   label,
   locale,
   onChange,
@@ -64,8 +66,22 @@ export function HubFilePicker({
             </Text>
           ) : null}
         </Stack>
+        {!fullWidth ? (
+          <Button
+            disabled={disabled}
+            leftSection={<Paperclip size={16} />}
+            onClick={() => fileInputRef.current?.click()}
+            size="sm"
+            variant="light"
+          >
+            {buttonLabel}
+          </Button>
+        ) : null}
+      </Group>
+      {fullWidth ? (
         <Button
           disabled={disabled}
+          fullWidth={fullWidth}
           leftSection={<Paperclip size={16} />}
           onClick={() => fileInputRef.current?.click()}
           size="sm"
@@ -73,7 +89,7 @@ export function HubFilePicker({
         >
           {buttonLabel}
         </Button>
-      </Group>
+      ) : null}
       {files.length > 0 ? (
         <Stack gap={6}>
           {files.map((file, index) => (

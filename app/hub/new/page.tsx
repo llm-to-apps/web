@@ -131,20 +131,6 @@ export default function NewHubTopicPage() {
         ) : null}
         <GridCol span={{ base: 12, md: 9 }}>
           <Stack gap="md">
-            <Group justify="space-between">
-              <Text
-                c={trimmedIntentLength >= minIntentLength ? 'dimmed' : 'red'}
-                size="xs"
-              >
-                {format(hub.intentCharacterCount, {
-                  count: trimmedIntentLength,
-                  min: minIntentLength
-                })}
-              </Text>
-              <Text c="dimmed" size="xs">
-                {format(hub.intentMinLength, { count: minIntentLength })}
-              </Text>
-            </Group>
             <Textarea
               autosize
               disabled={!canCreateTopic}
@@ -153,7 +139,14 @@ export default function NewHubTopicPage() {
               placeholder={hub.intentPlaceholder}
               value={intent}
             />
-            <Group justify="flex-end">
+            <Group justify="space-between">
+              <Text
+                c={trimmedIntentLength >= minIntentLength ? 'dimmed' : 'red'}
+                size="xs"
+              >
+                {trimmedIntentLength} /{' '}
+                {format(hub.intentMinLength, { count: minIntentLength })}
+              </Text>
               <Button
                 disabled={canCreateTopic && !canSubmit}
                 loading={isCreating}
@@ -172,6 +165,7 @@ export default function NewHubTopicPage() {
               description={hub.initialFilesDescription}
               disabled={!canCreateTopic}
               files={files}
+              fullWidth
               label={hub.initialFiles}
               locale={locale}
               onChange={setFiles}

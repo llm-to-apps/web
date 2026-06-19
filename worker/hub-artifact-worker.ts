@@ -4,7 +4,7 @@ import {
   hubArtifactAnalysisQueueName,
   type AnalyzeHubArtifactJob
 } from '../src/server/hub/artifact-analysis-queue'
-import { publishHubArtifactChanged } from '../src/server/hub/artifact-events'
+import { publishHubArtifactChanged } from '../src/server/hub/topic-events'
 import { prisma } from '../src/server/db'
 import { redisConnectionOptions } from '../src/server/deploy/queue'
 import {
@@ -71,24 +71,20 @@ export function startHubArtifactWorker() {
         }
       })
 
-      const updateResult = await prisma.hubArtifact.updateMany({
-        where: {
-          id: artifact.id
-        },
-        data: {
-          status: 'checked'
-        }
-      })
-
-      if (updateResult.count === 0) {
-        logInfo('hub_artifact.worker.job.skipped_deleted', {
-          artifactId: artifact.id,
-          jobId: job.id
+      const updated = await prisma.$transaction(async (tx) => {
+        const updateResult = await tx.hubArtifact.updateMany({
+          where: {
+            id: artifact.id
+          },
+          data: {
+            status: 'checked'
+          }
         })
-        return
-      }
 
-      await prisma.$transaction(async (tx) => {
+        if (updateResult.count === 0) {
+          return false
+        }
+
         await tx.hubArtifactTagAssignment.deleteMany({
           where: {
             artifactId: artifact.id
@@ -104,7 +100,17 @@ export function startHubArtifactWorker() {
             skipDuplicates: true
           })
         }
+
+        return true
       })
+
+      if (!updated) {
+        logInfo('hub_artifact.worker.job.skipped_deleted', {
+          artifactId: artifact.id,
+          jobId: job.id
+        })
+        return
+      }
 
       await publishHubArtifactChanged({
         artifactId: artifact.id,

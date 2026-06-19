@@ -12,6 +12,7 @@ import {
   Card,
   FileInput,
   Group,
+  Menu,
   Modal,
   Paper,
   SegmentedControl,
@@ -22,19 +23,23 @@ import {
   Title,
   Textarea
 } from '@mantine/core'
+import { notifications } from '@mantine/notifications'
 import {
-  ArrowBigDown,
-  ArrowBigUp,
+  ChevronDown,
+  ChevronUp,
   ChevronRight,
   File,
   FileText,
   Image as ImageIcon,
   Link as LinkIcon,
+  LoaderCircle,
   MessagesSquare,
   MessageSquare,
-  Plus
+  MoreHorizontal,
+  Plus,
+  Trash2
 } from 'lucide-react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { useAuthModal } from '@/app/_components/auth-modal-provider'
 import { BreadcrumbLabel } from '@/app/_components/breadcrumb-label'
 import { useI18n } from '@/app/_components/i18n-provider'
@@ -55,6 +60,7 @@ type VoteKind = 'downvote' | 'upvote'
 
 export default function HubTopicPage() {
   const params = useParams<{ id: string }>()
+  const router = useRouter()
   const topicId = params.id
   const session = useSession()
   const { openAuthModal } = useAuthModal()
@@ -68,12 +74,90 @@ export default function HubTopicPage() {
   const [commentBody, setCommentBody] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isArtifactModalOpen, setIsArtifactModalOpen] = useState(false)
+  const [isEnrichingTopic, setIsEnrichingTopic] = useState(false)
   const [isCommenting, setIsCommenting] = useState(false)
+  const [isDeletingTopic, setIsDeletingTopic] = useState(false)
   const [isSavingArtifact, setIsSavingArtifact] = useState(false)
   const [isVoting, setIsVoting] = useState(false)
   const [topic, setTopic] = useState<HubTopicDetail | null>(null)
   const hasPassedInitialUiDelayRef = useRef(false)
   const localizedTopic = topic ? localizeHubTopic(topic, locale) : null
+  const canManageTopic =
+    session.status === 'authenticated' && topic?.author.id === session.data.user.id
+
+  async function enrichTopic() {
+    if (!topic || isEnrichingTopic) {
+      return
+    }
+
+    setIsEnrichingTopic(true)
+    setError(null)
+
+    try {
+      const topicReference = topic.slug ?? topic.id
+      const response = await fetch(
+        `/api/hub/topics/${encodeURIComponent(topicReference)}/enrich`,
+        {
+          method: 'POST'
+        }
+      )
+      const payload = (await response.json().catch(() => null)) as ApiResponse | null
+
+      if (!response.ok || !payload?.ok) {
+        throw new Error(
+          payload && !payload.ok
+            ? payload.error.message
+            : `${hub.enrichTopicFailed} (${response.status})`
+        )
+      }
+
+      notifications.show({
+        color: 'green',
+        icon: <LoaderCircle size={16} />,
+        message: hub.enrichTopicStartedMessage,
+        title: hub.enrichTopicStarted
+      })
+      await loadTopic()
+    } catch (error) {
+      setError(error instanceof Error ? error.message : hub.enrichTopicFailed)
+    } finally {
+      setIsEnrichingTopic(false)
+    }
+  }
+
+  async function deleteTopic() {
+    if (!topic || isDeletingTopic) {
+      return
+    }
+
+    setIsDeletingTopic(true)
+    setError(null)
+
+    try {
+      const topicReference = topic.slug ?? topic.id
+      const response = await fetch(
+        `/api/hub/topics/${encodeURIComponent(topicReference)}`,
+        {
+          method: 'DELETE'
+        }
+      )
+      const payload = (await response.json().catch(() => null)) as ApiResponse | null
+
+      if (!response.ok || !payload?.ok) {
+        throw new Error(
+          payload && !payload.ok
+            ? payload.error.message
+            : `${hub.deleteTopicFailed} (${response.status})`
+        )
+      }
+
+      router.push('/hub')
+    } catch (error) {
+      setError(error instanceof Error ? error.message : hub.deleteTopicFailed)
+    } finally {
+      setIsDeletingTopic(false)
+    }
+  }
 
   const loadTopic = useCallback(async () => {
     setError(null)
@@ -113,6 +197,9 @@ export default function HubTopicPage() {
     )
 
     source.addEventListener('artifact_changed', () => {
+      void loadTopic()
+    })
+    source.addEventListener('topic_changed', () => {
       void loadTopic()
     })
 
@@ -307,10 +394,42 @@ export default function HubTopicPage() {
         ) : null}
       </Breadcrumbs>
       {localizedTopic ? (
-        <div>
-          <Title order={1}>{localizedTopic.title}</Title>
-          {localizedTopic.intent ? <Text c="dimmed">{localizedTopic.intent}</Text> : null}
-        </div>
+        <Group align="flex-start" justify="space-between" wrap="nowrap">
+          <Stack gap={4} style={{ minWidth: 0 }}>
+            <Title order={1}>{localizedTopic.title}</Title>
+            {localizedTopic.description ? (
+              <Text c="dimmed">{localizedTopic.description}</Text>
+            ) : null}
+          </Stack>
+          {canManageTopic ? (
+            <Menu position="bottom-end" shadow="md">
+              <Menu.Target>
+                <ActionIcon
+                  aria-label={hub.topicActions}
+                  disabled={isDeletingTopic || isEnrichingTopic}
+                  variant="subtle"
+                >
+                  <MoreHorizontal size={17} />
+                </ActionIcon>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Item
+                  leftSection={<LoaderCircle size={16} />}
+                  onClick={() => void enrichTopic()}
+                >
+                  {hub.enrichTopic}
+                </Menu.Item>
+                <Menu.Item
+                  color="red"
+                  leftSection={<Trash2 size={16} />}
+                  onClick={() => void deleteTopic()}
+                >
+                  {hub.deleteTopic}
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          ) : null}
+        </Group>
       ) : (
         <Stack gap="xs">
           <Skeleton height={44} radius="sm" maw={420} />
@@ -332,7 +451,7 @@ export default function HubTopicPage() {
                   onClick={() => void vote('upvote')}
                   variant={topic.viewerHasUpvoted ? 'light' : 'subtle'}
                 >
-                  <ArrowBigUp size={20} />
+                  <ChevronUp size={20} />
                 </ActionIcon>
                 <Text fw={700} size="sm">
                   {topic.upvoteCount - topic.downvoteCount}
@@ -345,28 +464,28 @@ export default function HubTopicPage() {
                   onClick={() => void vote('downvote')}
                   variant={topic.viewerHasDownvoted ? 'light' : 'subtle'}
                 >
-                  <ArrowBigDown size={20} />
+                  <ChevronDown size={20} />
                 </ActionIcon>
               </Stack>
               <Paper withBorder p="md" radius="md" style={{ flex: 1, minWidth: 0 }}>
                 <Stack gap="sm" style={{ flex: 1, minWidth: 0 }}>
-                  <Group>
+                  <Group justify="flex-end">
                     <Badge variant="light">
                       {topicStatusLabel(topic.status, hub.status)}
                     </Badge>
                   </Group>
-                  <Group gap="xs">
-                    <Badge color={topic.category === 'business' ? 'blue' : 'teal'}>
-                      {categoryLabel(topic.category, hub.company)}
-                    </Badge>
-                    {topic.tags.map((tag) => (
-                      <Badge color="gray" key={tag} variant="light">
-                        {topicTagLabel(topic, tag, locale)}
-                      </Badge>
-                    ))}
-                  </Group>
                   <Text style={{ whiteSpace: 'pre-wrap' }}>{localizedTopic?.intent}</Text>
-                  <Group justify="flex-end">
+                  <Group justify="space-between">
+                    <Group gap="xs" style={{ minWidth: 0 }}>
+                      <Badge color={topic.category === 'business' ? 'blue' : 'teal'}>
+                        {categoryLabel(topic.category, hub.company)}
+                      </Badge>
+                      {topic.tags.map((tag) => (
+                        <Badge color="gray" key={tag} variant="light">
+                          {topicTagLabel(topic, tag, locale)}
+                        </Badge>
+                      ))}
+                    </Group>
                     <Text c="dimmed" size="sm">
                       {topic.author.name}
                     </Text>
@@ -417,9 +536,13 @@ export default function HubTopicPage() {
           </Stack>
 
           <Stack gap="md">
-            <Group justify="flex-end">
+            <Stack gap="xs">
+              <Text c="dimmed" size="sm">
+                {hub.artifactsHelp}
+              </Text>
               {canInteract ? (
                 <Button
+                  fullWidth
                   leftSection={<Plus size={16} />}
                   onClick={() => setIsArtifactModalOpen(true)}
                   size="sm"
@@ -427,14 +550,9 @@ export default function HubTopicPage() {
                   {hub.addArtifacts}
                 </Button>
               ) : null}
-            </Group>
+            </Stack>
             {!canInteract ? (
               <SignInPanel onSignIn={openAuthModal} text={hub.signInToInteract} />
-            ) : null}
-            {topic.artifacts.length === 0 ? (
-              <Text c="dimmed" size="sm">
-                {hub.noArtifacts}
-              </Text>
             ) : null}
             {topic.artifacts.map((artifact) => (
               <ArtifactCard
@@ -781,7 +899,7 @@ function CommentItem({
               size="sm"
               variant={comment.viewerHasUpvoted ? 'light' : 'subtle'}
             >
-              <ArrowBigUp size={16} />
+              <ChevronUp size={16} />
             </ActionIcon>
             <Text fw={700} size="xs">
               {comment.upvoteCount - comment.downvoteCount}
@@ -795,7 +913,7 @@ function CommentItem({
               size="sm"
               variant={comment.viewerHasDownvoted ? 'light' : 'subtle'}
             >
-              <ArrowBigDown size={16} />
+              <ChevronDown size={16} />
             </ActionIcon>
           </Stack>
         )}

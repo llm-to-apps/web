@@ -8,14 +8,17 @@
 }
 
 .statusTab {
+  align-items: center;
   background: var(--mantine-color-gray-0);
   border: 1px solid transparent;
   border-radius: var(--mantine-radius-sm) var(--mantine-radius-sm) 0 0;
   color: var(--mantine-color-dimmed);
   cursor: pointer;
+  display: inline-flex;
   font: inherit;
   font-size: var(--mantine-font-size-sm);
   font-weight: 500;
+  gap: 8px;
   height: 34px;
   padding: 0 14px;
   position: relative;
@@ -38,4 +41,23 @@
   border-bottom: 0;
   color: var(--mantine-color-text);
   font-weight: 700;
+}
+
+.statusTabCount {
+  align-items: center;
+  background: var(--mantine-color-gray-2);
+  border-radius: 999px;
+  color: var(--mantine-color-dimmed);
+  display: inline-flex;
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 700;
+  height: 18px;
+  justify-content: center;
+  min-width: 18px;
+  padding-inline: 6px;
+}
+
+.statusTab[data-active='true'] .statusTabCount {
+  background: var(--mantine-color-green-1);
+  color: var(--mantine-color-green-8);
 }

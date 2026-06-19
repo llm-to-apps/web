@@ -5,13 +5,15 @@ import { prisma } from '@/server/db'
 import {
   browserlessToken,
   browserlessUrl,
+  envFlag,
   envNumber,
   platformBaseUrl
 } from '@/server/env'
+import { getUploadedFileQueue } from '@/server/files/queue'
 import { generateUploadedFileThumbnail } from '@/server/files/thumbnailer'
-import { publishHubArtifactChanged } from '@/server/hub/artifact-events'
+import { publishHubArtifactChanged } from '@/server/hub/topic-events'
 import { logInfo, logWarn } from '@/server/logger'
-import { putPlatformStorageObject } from '@/server/storage'
+import { deletePlatformStorageObject, putPlatformStorageObject } from '@/server/storage'
 
 const screenshotMimeType = 'image/jpeg'
 const screenshotScope = 'hub_url_screenshot'
@@ -113,11 +115,36 @@ export async function generateHubArtifactScreenshot(artifactId: string) {
   })
 
   if (!linkedFile) {
-    logWarn('hub_artifact.screenshot.skipped_already_linked', { artifactId })
+    await deletePlatformStorageObject({
+      bucket: storageObject.bucket,
+      key: storageObject.key
+    })
+    await prisma.uploadedFile.update({
+      where: {
+        id: screenshotId
+      },
+      data: {
+        deletedAt: new Date(),
+        error: null,
+        status: 'deleted',
+        storageBucket: '',
+        storageKey: ''
+      }
+    })
+    logWarn('hub_artifact.screenshot.skipped_unlinked', { artifactId })
     return { skipped: true }
   }
 
   await generateUploadedFileThumbnail(linkedFile.id)
+  await getUploadedFileQueue().add(
+    'process-uploaded-file',
+    {
+      uploadedFileId: linkedFile.id
+    },
+    {
+      jobId: linkedFile.id
+    }
+  )
   await publishHubArtifactChanged({
     artifactId: artifact.id,
     status: artifact.status,
@@ -159,7 +186,7 @@ async function captureScreenshot(url: string) {
       body: JSON.stringify({
         url,
         options: {
-          fullPage: true,
+          fullPage: envFlag('HUB_URL_SCREENSHOT_FULL_PAGE'),
           quality: 86,
           type: 'jpeg'
         },

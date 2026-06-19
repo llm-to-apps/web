@@ -5,7 +5,11 @@ import { getCurrentUser, type CurrentUser } from '@/server/auth'
 import { prisma } from '@/server/db'
 import { enqueueHubArtifactAnalysis } from '@/server/hub/artifact-analysis-queue'
 import { enqueueHubArtifactScreenshot } from '@/server/hub/artifact-screenshot-queue'
-import { subscribeHubTopicEvents } from '@/server/hub/artifact-events'
+import { enqueueHubTopicEnrichment } from '@/server/hub/topic-enrichment-queue'
+import {
+  publishHubTopicChanged,
+  subscribeHubTopicEvents
+} from '@/server/hub/topic-events'
 import { getUploadedFileQueue } from '@/server/files/queue'
 import { enqueueUploadedFileThumbnail } from '@/server/files/thumbnail-queue'
 import { jsonErrorMessage, jsonOk, jsonValidationError } from '@/server/http'
@@ -107,7 +111,6 @@ export async function handleHubTopicsGet() {
       intent: true,
       slug: true,
       status: true,
-      tags: true,
       translations: {
         select: {
           description: true,
@@ -182,9 +185,6 @@ export async function handleHubTopicsPost(request: NextRequest) {
       data = createHubTopicSchema.parse({
         category: formText(formData, 'category') || undefined,
         intent,
-        tags: formData
-          .getAll('tags')
-          .filter((tag): tag is string => typeof tag === 'string'),
         title: formText(formData, 'title') || undefined
       })
       files = formData
@@ -206,11 +206,6 @@ export async function handleHubTopicsPost(request: NextRequest) {
   }
 
   const topicTitle = data.title?.trim() || titleFromIntent(data.intent)
-  const tagRecords = await findHubTagsForCategory(data.category, data.tags)
-
-  if (tagRecords.length !== data.tags.length) {
-    return jsonErrorMessage('One or more tags are not available for this category', 400)
-  }
 
   const topic = await prisma.hubTopic.create({
     data: {
@@ -219,18 +214,13 @@ export async function handleHubTopicsPost(request: NextRequest) {
       description: null,
       intent: data.intent,
       status: initialHubTopicStatus,
-      tags: data.tags,
-      topicTags: {
-        create: tagRecords.map((tag) => ({
-          tagId: tag.id
-        }))
-      },
       title: topicTitle
     },
     select: {
       id: true
     }
   })
+  await enqueueHubTopicEnrichment(topic.id)
 
   for (const file of files) {
     const uploadedFile = await uploadHubArtifactFile(file, user)
@@ -272,6 +262,120 @@ export async function handleHubTopicGet(_request: NextRequest, context: TopicCon
   return jsonOk({
     topic: serializeTopicDetail(topic)
   })
+}
+
+export async function handleHubTopicDelete(_request: NextRequest, context: TopicContext) {
+  const user = await requireHubUser('Sign in before deleting Hub topics')
+
+  if (user instanceof Response) {
+    return user
+  }
+
+  const { id: topicReference } = await context.params
+  const topic = await prisma.hubTopic.findFirst({
+    where: {
+      OR: hubReferenceWhere(topicReference)
+    },
+    select: {
+      artifacts: {
+        select: {
+          uploadedFile: {
+            select: {
+              id: true,
+              storageBucket: true,
+              storageKey: true,
+              thumbnail: {
+                select: {
+                  id: true,
+                  storageBucket: true,
+                  storageKey: true
+                }
+              }
+            }
+          }
+        }
+      },
+      authorId: true,
+      id: true
+    }
+  })
+
+  if (!topic) {
+    return jsonErrorMessage('Topic not found', 404)
+  }
+
+  if (topic.authorId !== user.id) {
+    return jsonErrorMessage('Only the topic author can delete topics', 403)
+  }
+
+  const uploadedFiles = topic.artifacts
+    .map((artifact) => artifact.uploadedFile)
+    .filter((file): file is NonNullable<typeof file> => Boolean(file))
+
+  for (const file of uploadedFiles) {
+    await deleteUploadedFileStorageObjects(file)
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.hubTopic.delete({
+      where: {
+        id: topic.id
+      }
+    })
+
+    for (const file of uploadedFiles) {
+      await markUploadedFileDeleted(tx, file)
+    }
+  })
+
+  return jsonOk({})
+}
+
+export async function handleHubTopicEnrichPost(
+  _request: NextRequest,
+  context: TopicContext
+) {
+  const user = await requireHubUser('Sign in before enriching Hub topics')
+
+  if (user instanceof Response) {
+    return user
+  }
+
+  const { id: topicReference } = await context.params
+  const topic = await prisma.hubTopic.findFirst({
+    where: {
+      OR: hubReferenceWhere(topicReference)
+    },
+    select: {
+      authorId: true,
+      id: true
+    }
+  })
+
+  if (!topic) {
+    return jsonErrorMessage('Topic not found', 404)
+  }
+
+  if (topic.authorId !== user.id) {
+    return jsonErrorMessage('Only the topic author can enrich topics', 403)
+  }
+
+  await prisma.hubTopic.update({
+    where: {
+      id: topic.id
+    },
+    data: {
+      status: initialHubTopicStatus
+    }
+  })
+  await enqueueHubTopicEnrichment(topic.id, { repeat: true })
+  await publishHubTopicChanged({
+    status: initialHubTopicStatus,
+    topicId: topic.id,
+    type: 'topic_changed'
+  })
+
+  return jsonOk({})
 }
 
 export async function handleHubTopicEventsGet(
@@ -323,7 +427,6 @@ export async function handleHubArtifactsPost(
   const explicitTitle = formText(formData, 'title')
   const description = formText(formData, 'description') || null
   const textContent = formText(formData, 'textContent') || null
-  const externalUrl = formText(formData, 'externalUrl') || null
   const externalUrls = parseExternalUrls(formText(formData, 'externalUrls'))
 
   if (!type) {
@@ -342,10 +445,6 @@ export async function handleHubArtifactsPost(
     return jsonErrorMessage('Text artifact content must be 512KB or smaller', 400)
   }
 
-  if (type === 'link' && externalUrls.length === 0 && externalUrl) {
-    externalUrls.push(externalUrl)
-  }
-
   if (type === 'link' && externalUrls.length === 0) {
     return jsonErrorMessage('At least one valid link URL is required', 400)
   }
@@ -357,11 +456,6 @@ export async function handleHubArtifactsPost(
   const files = formData
     .getAll('files')
     .filter((value): value is File => value instanceof File)
-  const legacyFile = formData.get('file')
-
-  if (legacyFile instanceof File) {
-    files.push(legacyFile)
-  }
 
   if (type === 'file' && files.length === 0) {
     return jsonErrorMessage('Upload a file for file artifacts', 400)
@@ -418,7 +512,6 @@ export async function handleHubArtifactsPost(
         }
       })
       await enqueueHubArtifactScreenshot(artifact.id)
-      await enqueueHubArtifactAnalysis(artifact.id)
       artifacts.push(artifact)
     }
 
@@ -684,20 +777,8 @@ export async function handleHubArtifactDelete(
     return jsonErrorMessage('Only the topic author can delete artifacts', 403)
   }
 
-  if (artifact.uploadedFile?.storageBucket && artifact.uploadedFile.storageKey) {
-    await deletePlatformStorageObject({
-      bucket: artifact.uploadedFile.storageBucket,
-      key: artifact.uploadedFile.storageKey
-    })
-  }
-  if (
-    artifact.uploadedFile?.thumbnail?.storageBucket &&
-    artifact.uploadedFile.thumbnail.storageKey
-  ) {
-    await deletePlatformStorageObject({
-      bucket: artifact.uploadedFile.thumbnail.storageBucket,
-      key: artifact.uploadedFile.thumbnail.storageKey
-    })
+  if (artifact.uploadedFile) {
+    await deleteUploadedFileStorageObjects(artifact.uploadedFile)
   }
 
   await prisma.$transaction(async (tx) => {
@@ -708,47 +789,82 @@ export async function handleHubArtifactDelete(
     })
 
     if (artifact.uploadedFile) {
-      if (artifact.uploadedFile.thumbnail) {
-        await tx.uploadedFileChunk.deleteMany({
-          where: {
-            uploadedFileId: artifact.uploadedFile.thumbnail.id
-          }
-        })
-        await tx.uploadedFile.update({
-          where: {
-            id: artifact.uploadedFile.thumbnail.id
-          },
-          data: {
-            deletedAt: new Date(),
-            error: null,
-            status: 'deleted',
-            storageBucket: '',
-            storageKey: ''
-          }
-        })
-      }
-      await tx.uploadedFileChunk.deleteMany({
-        where: {
-          uploadedFileId: artifact.uploadedFile.id
-        }
-      })
-      await tx.uploadedFile.update({
-        where: {
-          id: artifact.uploadedFile.id
-        },
-        data: {
-          deletedAt: new Date(),
-          error: null,
-          status: 'deleted',
-          storageBucket: '',
-          storageKey: '',
-          thumbnailId: null
-        }
-      })
+      await markUploadedFileDeleted(tx, artifact.uploadedFile)
     }
   })
 
   return jsonOk({})
+}
+
+type DeletedUploadedFile = {
+  id: string
+  storageBucket: string
+  storageKey: string
+  thumbnail: {
+    id: string
+    storageBucket: string
+    storageKey: string
+  } | null
+}
+
+async function deleteUploadedFileStorageObjects(file: DeletedUploadedFile) {
+  if (file.storageBucket && file.storageKey) {
+    await deletePlatformStorageObject({
+      bucket: file.storageBucket,
+      key: file.storageKey
+    })
+  }
+
+  if (file.thumbnail?.storageBucket && file.thumbnail.storageKey) {
+    await deletePlatformStorageObject({
+      bucket: file.thumbnail.storageBucket,
+      key: file.thumbnail.storageKey
+    })
+  }
+}
+
+async function markUploadedFileDeleted(
+  tx: Prisma.TransactionClient,
+  file: DeletedUploadedFile
+) {
+  if (file.thumbnail) {
+    await tx.uploadedFileChunk.deleteMany({
+      where: {
+        uploadedFileId: file.thumbnail.id
+      }
+    })
+    await tx.uploadedFile.update({
+      where: {
+        id: file.thumbnail.id
+      },
+      data: {
+        deletedAt: new Date(),
+        error: null,
+        status: 'deleted',
+        storageBucket: '',
+        storageKey: ''
+      }
+    })
+  }
+
+  await tx.uploadedFileChunk.deleteMany({
+    where: {
+      uploadedFileId: file.id
+    }
+  })
+  await tx.uploadedFile.update({
+    where: {
+      id: file.id
+    },
+    data: {
+      deletedAt: new Date(),
+      error: null,
+      status: 'deleted',
+      storageBucket: '',
+      storageKey: '',
+      thumbnailId: null
+    }
+  })
 }
 
 export async function handleHubCommentsPost(request: NextRequest, context: TopicContext) {
@@ -1147,25 +1263,6 @@ async function findVisibleHubTopicReference(reference: string, userId: string) {
   return topic
 }
 
-async function findHubTagsForCategory(category: string, slugs: string[]) {
-  if (slugs.length === 0) {
-    return []
-  }
-
-  return prisma.hubTag.findMany({
-    where: {
-      category,
-      slug: {
-        in: slugs
-      }
-    },
-    select: {
-      id: true,
-      slug: true
-    }
-  })
-}
-
 async function getHotHubTopicIds(viewerUserId: string) {
   const rows = await prisma.$queryRaw<Array<{ id: string }>>(
     Prisma.sql`
@@ -1394,7 +1491,6 @@ async function findHubTopic(reference: string, userId: string) {
       id: true,
       intent: true,
       status: true,
-      tags: true,
       title: true,
       translations: {
         select: {
@@ -1570,7 +1666,6 @@ type HubTopicListRecord = {
   intent: string
   slug: string | null
   status: string
-  tags: unknown
   translations: HubTopicTranslationRecord[]
   topicTags: Array<{
     tag: {
@@ -1741,15 +1836,8 @@ function serializeHubTag(tag: {
   }
 }
 
-function serializeTopicTags(topic: {
-  tags: unknown
-  topicTags: Array<{ tag: { slug: string } }>
-}) {
-  if (topic.topicTags.length > 0) {
-    return topic.topicTags.map((topicTag) => topicTag.tag.slug)
-  }
-
-  return serializeTags(topic.tags)
+function serializeTopicTags(topic: { topicTags: Array<{ tag: { slug: string } }> }) {
+  return topic.topicTags.map((topicTag) => topicTag.tag.slug)
 }
 
 function serializeTopicTagLabels(
@@ -1782,12 +1870,6 @@ function serializeTagLabels(translations: HubTagTranslationRecord[]) {
   return Object.fromEntries(
     translations.map((translation) => [translation.locale, translation.title])
   )
-}
-
-function serializeTags(tags: unknown) {
-  return Array.isArray(tags)
-    ? tags.filter((tag): tag is string => typeof tag === 'string')
-    : []
 }
 
 function normalizeMimeType(file: File) {
