@@ -122,9 +122,7 @@ function MainAppShell({ children }: { children: ReactNode }) {
       <AppShell.Footer pos="static">
         <Container h="100%">
           <Group h="100%" justify="space-between">
-            <Text c="dimmed">
-              Build and run agentic apps.
-            </Text>
+            <Text c="dimmed">Build and run agentic apps.</Text>
             <Os7Logo h={18} href={os7Brand.siteHref} target="_blank" />
           </Group>
         </Container>

@@ -268,9 +268,7 @@ function FilesContent() {
           leftSection={<Search size={15} />}
           onChange={(event) => setQuery(event.currentTarget.value)}
           placeholder={t.files.search}
-          rightSection={
-            isSearchLoadingVisible ? <Loader size="xs" type="dots" /> : null
-          }
+          rightSection={isSearchLoadingVisible ? <Loader size="xs" type="dots" /> : null}
           size="sm"
           value={query}
         />

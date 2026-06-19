@@ -11,7 +11,10 @@ import { getUploadedFileQueue } from '@/server/files/queue'
 import { jsonErrorMessage, jsonOk } from '@/server/http'
 import { logError, logInfo } from '@/server/logger'
 import { projectMemberWhere } from '@/server/project-members'
-import { getPlatformStorageObjectBuffer, putPlatformStorageObject } from '@/server/storage'
+import {
+  getPlatformStorageObjectBuffer,
+  putPlatformStorageObject
+} from '@/server/storage'
 
 const maxUploadBytes = envNumber('AGENT_FILE_UPLOAD_MAX_BYTES', 5 * 1024 * 1024)
 const defaultFilesPageSize = 50

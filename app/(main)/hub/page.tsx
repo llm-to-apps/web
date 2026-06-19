@@ -350,9 +350,7 @@ export default function HubPage() {
               <Skeleton height={22} radius="xl" width={96} />
             </>
           ) : availableTags.length === 0 ? (
-            <Text c="dimmed">
-              {hub.noTags}
-            </Text>
+            <Text c="dimmed">{hub.noTags}</Text>
           ) : (
             availableTags.map((tag) => {
               const isSelected = tagFilter === tag.slug

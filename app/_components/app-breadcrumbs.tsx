@@ -92,7 +92,11 @@ export function AppBreadcrumbs({ onHomeNavigate }: AppBreadcrumbsProps = {}) {
       store: t.tabs.store
     })
 
-  if (pathname.startsWith('/hub/') && pathname !== '/hub/new' && !customBreadcrumbs?.items) {
+  if (
+    pathname.startsWith('/hub/') &&
+    pathname !== '/hub/new' &&
+    !customBreadcrumbs?.items
+  ) {
     return null
   }
 
@@ -104,8 +108,8 @@ export function AppBreadcrumbs({ onHomeNavigate }: AppBreadcrumbsProps = {}) {
 
   return (
     <Breadcrumbs separator={<ChevronRight size={14} />}>
-      {showHomeBreadcrumb
-        ? onHomeNavigate ? (
+      {showHomeBreadcrumb ? (
+        onHomeNavigate ? (
           <Button
             leftSection={<Home size={15} />}
             onClick={onHomeNavigate}
@@ -123,17 +127,12 @@ export function AppBreadcrumbs({ onHomeNavigate }: AppBreadcrumbsProps = {}) {
             {t.navigation.home}
           </Button>
         )
-        : null}
+      ) : null}
       {items.map((item, index) =>
         index === items.length - 1 ? (
           <BreadcrumbLabel key={item.href}>{item.label}</BreadcrumbLabel>
         ) : (
-          <Button
-            component={Link}
-            href={item.href}
-            key={item.href}
-            variant="subtle"
-          >
+          <Button component={Link} href={item.href} key={item.href} variant="subtle">
             {item.label}
           </Button>
         )

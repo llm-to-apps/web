@@ -17,7 +17,10 @@ import {
 import { getUploadedFileQueue } from '@/server/files/queue'
 import { enqueueUploadedFileThumbnail } from '@/server/files/thumbnail-queue'
 import { jsonErrorMessage, jsonOk, jsonValidationError } from '@/server/http'
-import { getPlatformStorageObjectBuffer, putPlatformStorageObject } from '@/server/storage'
+import {
+  getPlatformStorageObjectBuffer,
+  putPlatformStorageObject
+} from '@/server/storage'
 import { parseJsonRequest } from '@/shared/schema'
 import {
   createHubCommentSchema,

@@ -58,11 +58,7 @@ export function HubFilePicker({
       <Group justify="space-between">
         <Stack gap={2}>
           {label ? <Text fw={500}>{label}</Text> : null}
-          {description ? (
-            <Text c="dimmed">
-              {description}
-            </Text>
-          ) : null}
+          {description ? <Text c="dimmed">{description}</Text> : null}
         </Stack>
         {!fullWidth ? (
           <Button

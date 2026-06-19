@@ -2,16 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import {
-  Alert,
-  Button,
-  Grid,
-  GridCol,
-  Group,
-  Stack,
-  Text,
-  Textarea
-} from '@mantine/core'
+import { Alert, Button, Grid, GridCol, Group, Stack, Text, Textarea } from '@mantine/core'
 import { ChevronRight } from 'lucide-react'
 import { useAuthFlow } from '@/app/_components/auth-flow-provider'
 import { useI18n } from '@/app/_components/i18n-provider'
