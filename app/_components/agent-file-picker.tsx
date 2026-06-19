@@ -200,7 +200,9 @@ export function AgentFilePicker({
         onClose={() => setIsSelectOpen(false)}
         size="md"
         title={
-          <ModalTitle icon={<FolderOpen size={18} />}>{t.files.chooseUploaded}</ModalTitle>
+          <ModalTitle icon={<FolderOpen size={18} />}>
+            {t.files.chooseUploaded}
+          </ModalTitle>
         }
       >
         <Stack gap="sm">

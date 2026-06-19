@@ -53,7 +53,10 @@ export async function generateHubArtifactScreenshot(artifactId: string) {
   }
 
   if (artifact.uploadedFile) {
-    if (artifact.uploadedFile.mimeType.startsWith('image/') && !artifact.uploadedFile.thumbnailId) {
+    if (
+      artifact.uploadedFile.mimeType.startsWith('image/') &&
+      !artifact.uploadedFile.thumbnailId
+    ) {
       await generateUploadedFileThumbnail(artifact.uploadedFile.id)
     }
 

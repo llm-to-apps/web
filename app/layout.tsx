@@ -6,11 +6,7 @@ import { AppSplash } from './_components/app-splash'
 import { I18nProvider } from './_components/i18n-provider'
 import { SessionProvider } from './_components/session-provider'
 import { WebMantineProvider } from './mantine-provider'
-import {
-  defaultLocale,
-  isLocale,
-  localeCookieName
-} from '@/shared/i18n/config'
+import { defaultLocale, isLocale, localeCookieName } from '@/shared/i18n/config'
 
 export const metadata: Metadata = {
   title: 'OS7 – your own agentic operating system',

@@ -18,7 +18,9 @@ import { getPlatformStorageObjectBuffer } from '@/server/storage'
 import { embedTexts } from './embeddings'
 import { chunkText } from './text-chunks'
 
-type UploadedFileRecord = NonNullable<Awaited<ReturnType<typeof prisma.uploadedFile.findUnique>>>
+type UploadedFileRecord = NonNullable<
+  Awaited<ReturnType<typeof prisma.uploadedFile.findUnique>>
+>
 
 type OpenRouterPdfResponse = {
   choices?: Array<{
@@ -360,7 +362,8 @@ async function requestPdfExtraction({
     }
 
     throw new Error(
-      body?.error?.message ?? `OpenRouter PDF extraction failed with status ${response.status}`
+      body?.error?.message ??
+        `OpenRouter PDF extraction failed with status ${response.status}`
     )
   }
 
@@ -500,7 +503,10 @@ async function enqueueHubArtifactAnalysisForFile(uploadedFileId: string) {
   await enqueueHubArtifactAnalysis(artifact.id)
 }
 
-async function markHubArtifactFileProcessingFailed(uploadedFileId: string, message: string) {
+async function markHubArtifactFileProcessingFailed(
+  uploadedFileId: string,
+  message: string
+) {
   const artifact = await prisma.hubArtifact.updateMany({
     where: {
       uploadedFileId

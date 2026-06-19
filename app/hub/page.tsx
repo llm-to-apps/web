@@ -42,7 +42,12 @@ const redditEpochSeconds = 1134028003
 const redditHotScaleSeconds = 45000
 const hubCategoryStorageKey = 'os7_hub_category'
 const allHubStatusFilter = 'all'
-const hubTopicStatuses = ['analyzing', 'discussing', 'in_development', 'developed'] as const
+const hubTopicStatuses = [
+  'analyzing',
+  'discussing',
+  'in_development',
+  'developed'
+] as const
 
 export default function HubPage() {
   const [categoryFilter, setCategoryFilter] = useState('personal')
@@ -131,7 +136,9 @@ export default function HubPage() {
     const nextTagFilter = tagFilterFromUrl(searchParams)
 
     setCategoryFilter((currentCategoryFilter) =>
-      currentCategoryFilter === nextCategoryFilter ? currentCategoryFilter : nextCategoryFilter
+      currentCategoryFilter === nextCategoryFilter
+        ? currentCategoryFilter
+        : nextCategoryFilter
     )
     setTagFilter((currentTagFilter) =>
       currentTagFilter === nextTagFilter ? currentTagFilter : nextTagFilter
@@ -238,7 +245,11 @@ export default function HubPage() {
           <Title order={2}>{hub.title}</Title>
           <Text c="dimmed">{hub.description}</Text>
         </div>
-        <NewTopicButton canCreateTopic={canCreateTopic} label={hub.newTopic} onSignIn={openAuthModal} />
+        <NewTopicButton
+          canCreateTopic={canCreateTopic}
+          label={hub.newTopic}
+          onSignIn={openAuthModal}
+        />
       </Group>
 
       <StatusFilterTabs
@@ -269,7 +280,12 @@ export default function HubPage() {
                   key={`${tag.category}:${tag.slug}`}
                   onClick={() => toggleTagFilter(tag.slug)}
                   size="sm"
-                  style={{ cursor: 'pointer', fontSize: 11, height: 22, paddingInline: 8 }}
+                  style={{
+                    cursor: 'pointer',
+                    fontSize: 11,
+                    height: 22,
+                    paddingInline: 8
+                  }}
                   type="button"
                   variant="light"
                   color={isSelected ? 'green' : 'gray'}
@@ -295,7 +311,11 @@ export default function HubPage() {
             <Text fw={700}>{hub.noTopicsTitle}</Text>
             <Text c="dimmed">{hub.noTopicsDescription}</Text>
             <Group>
-              <NewTopicButton canCreateTopic={canCreateTopic} label={hub.newTopic} onSignIn={openAuthModal} />
+              <NewTopicButton
+                canCreateTopic={canCreateTopic}
+                label={hub.newTopic}
+                onSignIn={openAuthModal}
+              />
             </Group>
           </Stack>
         </Paper>
@@ -338,11 +358,7 @@ function StatusFilterTabs({
   value: string
 }) {
   return (
-    <div
-      aria-label="Topic status"
-      className={styles.statusTabs}
-      role="tablist"
-    >
+    <div aria-label="Topic status" className={styles.statusTabs} role="tablist">
       {options.map((option) => {
         const isSelected = option.value === value
 
@@ -491,11 +507,7 @@ const TopicCard = memo(function TopicCard({
         <Stack gap="sm" style={{ flex: 1, minWidth: 0 }}>
           <Group justify="space-between" wrap="nowrap">
             <Stack gap={2} style={{ minWidth: 0 }}>
-              <Text
-                fw={800}
-                lineClamp={1}
-                size="lg"
-              >
+              <Text fw={800} lineClamp={1} size="lg">
                 {localizedTopic.title}
               </Text>
             </Stack>
@@ -505,7 +517,10 @@ const TopicCard = memo(function TopicCard({
             {localizedTopic.intent}
           </Text>
           <Group gap="xs">
-            <Badge color={topic.category === 'business' ? 'blue' : 'teal'} variant="light">
+            <Badge
+              color={topic.category === 'business' ? 'blue' : 'teal'}
+              variant="light"
+            >
               {categoryLabel(topic.category, labels.company)}
             </Badge>
             {topic.tags.map((tag) => (
@@ -569,7 +584,9 @@ function applyTopicVote(topic: HubTopicListItem, kind: VoteKind): HubTopicListIt
   return {
     ...topic,
     downvoteCount: topic.downvoteCount + 1,
-    upvoteCount: topic.viewerHasUpvoted ? Math.max(0, topic.upvoteCount - 1) : topic.upvoteCount,
+    upvoteCount: topic.viewerHasUpvoted
+      ? Math.max(0, topic.upvoteCount - 1)
+      : topic.upvoteCount,
     viewerHasDownvoted: true,
     viewerHasUpvoted: false
   }
@@ -665,7 +682,10 @@ function writeStoredCategoryFilter(category: string) {
   }
 
   try {
-    window.localStorage.setItem(hubCategoryStorageKey, categoryFilterToUrl(category) ?? 'personal')
+    window.localStorage.setItem(
+      hubCategoryStorageKey,
+      categoryFilterToUrl(category) ?? 'personal'
+    )
   } catch {
     // Ignore storage failures, for example in private browsing modes.
   }

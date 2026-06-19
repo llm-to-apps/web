@@ -5,7 +5,10 @@ import { prisma } from '@/server/db'
 import { browserlessToken, browserlessUrl, envNumber } from '@/server/env'
 import { publishHubArtifactChanged } from '@/server/hub/artifact-events'
 import { logInfo, logWarn } from '@/server/logger'
-import { getPlatformStorageObjectBuffer, putPlatformStorageObject } from '@/server/storage'
+import {
+  getPlatformStorageObjectBuffer,
+  putPlatformStorageObject
+} from '@/server/storage'
 
 const thumbnailMaxSizePx = 500
 const thumbnailMimeType = 'image/webp'
@@ -62,9 +65,7 @@ export async function generateUploadedFileThumbnail(uploadedFileId: string) {
     key: file.storageKey
   })
   const imageSource =
-    file.mimeType === 'application/pdf'
-      ? await renderPdfFirstPage(source)
-      : source
+    file.mimeType === 'application/pdf' ? await renderPdfFirstPage(source) : source
   const thumbnailBuffer = await sharp(imageSource, {
     failOn: 'none'
   })
@@ -80,9 +81,12 @@ export async function generateUploadedFileThumbnail(uploadedFileId: string) {
 
   const thumbnailId = crypto.randomUUID()
   const thumbnailName = thumbnailFileName(file.originalName)
-  const storageKey = ['generated-thumbnails', file.userId, thumbnailId, thumbnailName].join(
-    '/'
-  )
+  const storageKey = [
+    'generated-thumbnails',
+    file.userId,
+    thumbnailId,
+    thumbnailName
+  ].join('/')
 
   const storageObject = await putPlatformStorageObject({
     body: thumbnailBuffer,

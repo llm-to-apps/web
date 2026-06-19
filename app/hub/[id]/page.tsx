@@ -277,10 +277,10 @@ export default function HubTopicPage() {
 
       if (!response.ok || !payload?.ok) {
         throw new Error(
-              payload && !payload.ok
-                ? payload.error.message
-                : `${hub.updateVoteFailed} (${response.status})`
-          )
+          payload && !payload.ok
+            ? payload.error.message
+            : `${hub.updateVoteFailed} (${response.status})`
+        )
       }
     } catch (error) {
       setTopic(previousTopic)
@@ -351,7 +351,9 @@ export default function HubTopicPage() {
               <Paper withBorder p="md" radius="md" style={{ flex: 1, minWidth: 0 }}>
                 <Stack gap="sm" style={{ flex: 1, minWidth: 0 }}>
                   <Group>
-                    <Badge variant="light">{topicStatusLabel(topic.status, hub.status)}</Badge>
+                    <Badge variant="light">
+                      {topicStatusLabel(topic.status, hub.status)}
+                    </Badge>
                   </Group>
                   <Group gap="xs">
                     <Badge color={topic.category === 'business' ? 'blue' : 'teal'}>
@@ -427,10 +429,7 @@ export default function HubTopicPage() {
               ) : null}
             </Group>
             {!canInteract ? (
-              <SignInPanel
-                onSignIn={openAuthModal}
-                text={hub.signInToInteract}
-              />
+              <SignInPanel onSignIn={openAuthModal} text={hub.signInToInteract} />
             ) : null}
             {topic.artifacts.length === 0 ? (
               <Text c="dimmed" size="sm">
@@ -555,7 +554,8 @@ function ArtifactCard({
     ) : (
       <FileText size={18} />
     )
-  const isImageArtifact = artifact.type === 'file' && artifact.file?.mimeType.startsWith('image/')
+  const isImageArtifact =
+    artifact.type === 'file' && artifact.file?.mimeType.startsWith('image/')
   const artifactReference = artifact.slug ?? artifact.id
   const fileUrl = `/api/hub/topics/${encodeURIComponent(topicId)}/artifacts/${encodeURIComponent(
     artifactReference
@@ -914,7 +914,9 @@ function applyTopicVote(topic: HubTopicDetail, kind: VoteKind): HubTopicDetail {
   return {
     ...topic,
     downvoteCount: topic.downvoteCount + 1,
-    upvoteCount: topic.viewerHasUpvoted ? Math.max(0, topic.upvoteCount - 1) : topic.upvoteCount,
+    upvoteCount: topic.viewerHasUpvoted
+      ? Math.max(0, topic.upvoteCount - 1)
+      : topic.upvoteCount,
     viewerHasDownvoted: true,
     viewerHasUpvoted: false
   }

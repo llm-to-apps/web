@@ -1,4 +1,7 @@
-import { publishRedisMessage, subscribeRedisChannel } from '@/server/integrations/redis-pubsub'
+import {
+  publishRedisMessage,
+  subscribeRedisChannel
+} from '@/server/integrations/redis-pubsub'
 
 export type HubArtifactChangedEvent = {
   artifactId: string

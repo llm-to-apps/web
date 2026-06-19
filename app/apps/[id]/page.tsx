@@ -398,9 +398,7 @@ export default function ProjectPage() {
             onClose={() => setIsUpdateModalOpen(false)}
             opened={isUpdateModalOpen}
             size="md"
-            title={
-              <ModalTitle icon={<RefreshCw size={17} />}>Update app</ModalTitle>
-            }
+            title={<ModalTitle icon={<RefreshCw size={17} />}>Update app</ModalTitle>}
           >
             {isUpdatePreflightLoading ? (
               <Center py="lg">

@@ -90,10 +90,7 @@ export type HubComment = {
   viewerHasUpvoted: boolean
 }
 
-export type HubTopicDetail = Omit<
-  HubTopicListItem,
-  'artifactCount' | 'commentCount'
-> & {
+export type HubTopicDetail = Omit<HubTopicListItem, 'artifactCount' | 'commentCount'> & {
   appUrl: string | null
   artifacts: HubArtifact[]
   comments: HubComment[]

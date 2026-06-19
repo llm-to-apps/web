@@ -182,7 +182,9 @@ export async function handleHubTopicsPost(request: NextRequest) {
       data = createHubTopicSchema.parse({
         category: formText(formData, 'category') || undefined,
         intent,
-        tags: formData.getAll('tags').filter((tag): tag is string => typeof tag === 'string'),
+        tags: formData
+          .getAll('tags')
+          .filter((tag): tag is string => typeof tag === 'string'),
         title: formText(formData, 'title') || undefined
       })
       files = formData
@@ -272,7 +274,10 @@ export async function handleHubTopicGet(_request: NextRequest, context: TopicCon
   })
 }
 
-export async function handleHubTopicEventsGet(request: NextRequest, context: TopicContext) {
+export async function handleHubTopicEventsGet(
+  request: NextRequest,
+  context: TopicContext
+) {
   const user = await getCurrentUser()
   const { id } = await context.params
   const topic = await findVisibleHubTopicReference(id, user?.id ?? '__public_viewer__')
@@ -291,7 +296,10 @@ export async function handleHubTopicEventsGet(request: NextRequest, context: Top
   })
 }
 
-export async function handleHubArtifactsPost(request: NextRequest, context: TopicContext) {
+export async function handleHubArtifactsPost(
+  request: NextRequest,
+  context: TopicContext
+) {
   const user = await requireHubUser('Sign in before adding artifacts')
 
   if (user instanceof Response) {
@@ -326,7 +334,11 @@ export async function handleHubArtifactsPost(request: NextRequest, context: Topi
     return jsonErrorMessage('Text artifact content is required', 400)
   }
 
-  if (type === 'text' && textContent && textSizeBytes(textContent) > maxTextArtifactBytes) {
+  if (
+    type === 'text' &&
+    textContent &&
+    textSizeBytes(textContent) > maxTextArtifactBytes
+  ) {
     return jsonErrorMessage('Text artifact content must be 512KB or smaller', 400)
   }
 
@@ -413,8 +425,7 @@ export async function handleHubArtifactsPost(request: NextRequest, context: Topi
     return jsonOk({ artifact: artifacts[0], artifacts }, { status: 201 })
   }
 
-  const artifactTitle =
-    explicitTitle || titleFromText(textContent) || 'Artifact'
+  const artifactTitle = explicitTitle || titleFromText(textContent) || 'Artifact'
 
   const artifact = await prisma.hubArtifact.create({
     data: {
@@ -426,7 +437,7 @@ export async function handleHubArtifactsPost(request: NextRequest, context: Topi
       type
     },
     select: {
-      id: true,
+      id: true
     }
   })
   await enqueueHubArtifactAnalysis(artifact.id)
@@ -480,7 +491,10 @@ function createHubTopicEventStream(topicId: string, signal: AbortSignal) {
   })
 }
 
-export async function handleHubArtifactFileGet(_request: NextRequest, context: ArtifactContext) {
+export async function handleHubArtifactFileGet(
+  _request: NextRequest,
+  context: ArtifactContext
+) {
   const user = await getCurrentUser()
   const viewerUserId = user?.id ?? '__public_viewer__'
   const { artifactId, id: topicReference } = await context.params
@@ -619,7 +633,10 @@ export async function handleHubArtifactThumbnailGet(
   })
 }
 
-export async function handleHubArtifactDelete(_request: NextRequest, context: ArtifactContext) {
+export async function handleHubArtifactDelete(
+  _request: NextRequest,
+  context: ArtifactContext
+) {
   const user = await requireHubUser('Sign in before deleting artifacts')
 
   if (user instanceof Response) {
@@ -806,7 +823,7 @@ export async function handleHubCommentsPost(request: NextRequest, context: Topic
       topicId: topic.id
     },
     select: {
-      id: true,
+      id: true
     }
   })
 
@@ -850,7 +867,10 @@ export async function handleHubUpvotePost(_request: NextRequest, context: TopicC
   return jsonOk({})
 }
 
-export async function handleHubUpvoteDelete(_request: NextRequest, context: TopicContext) {
+export async function handleHubUpvoteDelete(
+  _request: NextRequest,
+  context: TopicContext
+) {
   const user = await requireHubUser('Sign in before removing upvotes')
 
   if (user instanceof Response) {
@@ -874,7 +894,10 @@ export async function handleHubUpvoteDelete(_request: NextRequest, context: Topi
   return jsonOk({})
 }
 
-export async function handleHubDownvotePost(_request: NextRequest, context: TopicContext) {
+export async function handleHubDownvotePost(
+  _request: NextRequest,
+  context: TopicContext
+) {
   const user = await requireHubUser('Sign in before downvoting')
 
   if (user instanceof Response) {
@@ -911,7 +934,10 @@ export async function handleHubDownvotePost(_request: NextRequest, context: Topi
   return jsonOk({})
 }
 
-export async function handleHubDownvoteDelete(_request: NextRequest, context: TopicContext) {
+export async function handleHubDownvoteDelete(
+  _request: NextRequest,
+  context: TopicContext
+) {
   const user = await requireHubUser('Sign in before removing downvotes')
 
   if (user instanceof Response) {
@@ -1400,7 +1426,11 @@ async function findHubTopic(reference: string, userId: string) {
   })
 }
 
-async function findVisibleHubComment(topicReference: string, commentId: string, userId: string) {
+async function findVisibleHubComment(
+  topicReference: string,
+  commentId: string,
+  userId: string
+) {
   const comment = await prisma.hubComment.findFirst({
     where: {
       id: commentId,
@@ -1574,7 +1604,9 @@ function serializeTopicListItem(topic: HubTopicListRecord) {
   }
 }
 
-function serializeTopicDetail(topic: NonNullable<Awaited<ReturnType<typeof findHubTopic>>>) {
+function serializeTopicDetail(
+  topic: NonNullable<Awaited<ReturnType<typeof findHubTopic>>>
+) {
   return {
     appUrl: topic.appUrl,
     artifacts: topic.artifacts.map((artifact) => ({
@@ -1709,7 +1741,10 @@ function serializeHubTag(tag: {
   }
 }
 
-function serializeTopicTags(topic: { tags: unknown; topicTags: Array<{ tag: { slug: string } }> }) {
+function serializeTopicTags(topic: {
+  tags: unknown
+  topicTags: Array<{ tag: { slug: string } }>
+}) {
   if (topic.topicTags.length > 0) {
     return topic.topicTags.map((topicTag) => topicTag.tag.slug)
   }
@@ -1728,9 +1763,7 @@ function serializeTopicTagLabels(
   )
 }
 
-function serializeArtifactTags(
-  artifactTags: Array<{ tag: { slug: string } }>
-) {
+function serializeArtifactTags(artifactTags: Array<{ tag: { slug: string } }>) {
   return artifactTags.map((artifactTag) => artifactTag.tag.slug)
 }
 

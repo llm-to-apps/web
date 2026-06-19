@@ -157,10 +157,7 @@ async function shutdown(signal: NodeJS.Signals) {
     closeWorkerGracefully('deploy worker', worker),
     closeWorkerGracefully('agent run worker', agentRunWorker),
     closeWorkerGracefully('hub artifact worker', hubArtifactWorker),
-    closeWorkerGracefully(
-      'hub artifact screenshot worker',
-      hubArtifactScreenshotWorker
-    ),
+    closeWorkerGracefully('hub artifact screenshot worker', hubArtifactScreenshotWorker),
     closeWorkerGracefully('uploaded file thumbnail worker', uploadedFileThumbnailWorker),
     closeWorkerGracefully('uploaded file worker', uploadedFileWorker)
   ])

@@ -37,7 +37,10 @@ export default function NewHubTopicPage() {
   const [isCreating, setIsCreating] = useState(false)
   const canCreateTopic = session.status === 'authenticated' && session.data.user.onboarded
   const trimmedIntentLength = intent.trim().length
-  const canSubmit = canCreateTopic && trimmedIntentLength >= minIntentLength && files.length <= maxInitialFiles
+  const canSubmit =
+    canCreateTopic &&
+    trimmedIntentLength >= minIntentLength &&
+    files.length <= maxInitialFiles
 
   useEffect(() => {
     if (session.status === 'unauthenticated') {
@@ -129,7 +132,10 @@ export default function NewHubTopicPage() {
         <GridCol span={{ base: 12, md: 9 }}>
           <Stack gap="md">
             <Group justify="space-between">
-              <Text c={trimmedIntentLength >= minIntentLength ? 'dimmed' : 'red'} size="xs">
+              <Text
+                c={trimmedIntentLength >= minIntentLength ? 'dimmed' : 'red'}
+                size="xs"
+              >
                 {format(hub.intentCharacterCount, {
                   count: trimmedIntentLength,
                   min: minIntentLength

@@ -31,7 +31,9 @@ export function ArtifactStatusIcon({
       {status === 'checked' ? <Check size={16} /> : null}
       {status === 'error' ? <CircleAlert size={16} /> : null}
       {status === 'analyzing' ? <Loader size={16} type="dots" /> : null}
-      {status !== 'checked' && status !== 'error' && status !== 'analyzing' ? status : null}
+      {status !== 'checked' && status !== 'error' && status !== 'analyzing'
+        ? status
+        : null}
     </Box>
   )
 }

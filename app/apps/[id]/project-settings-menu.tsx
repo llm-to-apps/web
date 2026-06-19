@@ -1,15 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import {
-  ActionIcon,
-  Button,
-  Checkbox,
-  Menu,
-  Modal,
-  Stack,
-  Text
-} from '@mantine/core'
+import { ActionIcon, Button, Checkbox, Menu, Modal, Stack, Text } from '@mantine/core'
 import { AlertTriangle, Eraser, ExternalLink, MoreHorizontal, Trash2 } from 'lucide-react'
 import { useI18n } from '../../_components/i18n-provider'
 import { FormActions } from '../../_components/form-actions'

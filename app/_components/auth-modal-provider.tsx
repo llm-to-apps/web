@@ -54,9 +54,7 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
         onClose={closeAuthModal}
         opened={opened}
         size="sm"
-        title={
-          <ModalTitle icon={<LogIn size={16} />}>Sign in to continue</ModalTitle>
-        }
+        title={<ModalTitle icon={<LogIn size={16} />}>Sign in to continue</ModalTitle>}
         withCloseButton
       >
         <AuthPanel onAuthenticated={closeAuthModal} redirectTo="/hub" variant="plain" />

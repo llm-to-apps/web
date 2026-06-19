@@ -5,7 +5,10 @@ type LocalizableHubTopic = Pick<
   'description' | 'intent' | 'title' | 'translations'
 >
 
-export function localizeHubTopic<T extends LocalizableHubTopic>(topic: T, locale: string) {
+export function localizeHubTopic<T extends LocalizableHubTopic>(
+  topic: T,
+  locale: string
+) {
   const translation = topic.translations[locale] ?? topic.translations.en
 
   return {

@@ -86,7 +86,8 @@ export default function HubArtifactPage() {
       }
 
       const foundArtifact = payload.data.topic.artifacts.find(
-        (candidate) => candidate.id === params.artifactId || candidate.slug === params.artifactId
+        (candidate) =>
+          candidate.id === params.artifactId || candidate.slug === params.artifactId
       )
 
       if (!foundArtifact) {
@@ -228,18 +229,16 @@ export default function HubArtifactPage() {
     () => topic?.comments.filter((comment) => comment.artifactId === artifact?.id) ?? [],
     [artifact?.id, topic?.comments]
   )
-  const artifactFileUrl =
-    artifact?.file
-      ? `/api/hub/topics/${encodeURIComponent(params.id)}/artifacts/${encodeURIComponent(
-          artifact.slug ?? artifact.id
-        )}/file`
-      : null
-  const artifactThumbnailUrl =
-    artifact?.file?.thumbnail
-      ? `/api/hub/topics/${encodeURIComponent(params.id)}/artifacts/${encodeURIComponent(
-          artifact.slug ?? artifact.id
-        )}/thumbnail`
-      : null
+  const artifactFileUrl = artifact?.file
+    ? `/api/hub/topics/${encodeURIComponent(params.id)}/artifacts/${encodeURIComponent(
+        artifact.slug ?? artifact.id
+      )}/file`
+    : null
+  const artifactThumbnailUrl = artifact?.file?.thumbnail
+    ? `/api/hub/topics/${encodeURIComponent(params.id)}/artifacts/${encodeURIComponent(
+        artifact.slug ?? artifact.id
+      )}/thumbnail`
+    : null
   const isImageArtifact = artifact?.file?.mimeType.startsWith('image/') ?? false
   const localizedTopic = topic ? localizeHubTopic(topic, locale) : null
   const canDeleteArtifact =
@@ -356,9 +355,7 @@ export default function HubArtifactPage() {
                 ) : null}
                 {artifact.type === 'text' ? (
                   <Paper bg="gray.0" p="md" radius="md">
-                    <Text style={{ whiteSpace: 'pre-wrap' }}>
-                      {artifact.textContent}
-                    </Text>
+                    <Text style={{ whiteSpace: 'pre-wrap' }}>{artifact.textContent}</Text>
                   </Paper>
                 ) : null}
                 {artifact.type === 'link' && artifact.externalUrl ? (
@@ -380,7 +377,7 @@ export default function HubArtifactPage() {
                             src={
                               isImageArtifact && artifactFileUrl
                                 ? artifactFileUrl
-                                : artifactThumbnailUrl ?? undefined
+                                : (artifactThumbnailUrl ?? undefined)
                             }
                             style={{
                               borderRadius: 'var(--mantine-radius-sm)',
@@ -403,7 +400,10 @@ export default function HubArtifactPage() {
                 ) : null}
                 <Group justify="flex-end">
                   <Group gap="xs">
-                    <ArtifactStatusIcon labels={hub.artifactStatus} status={artifact.status} />
+                    <ArtifactStatusIcon
+                      labels={hub.artifactStatus}
+                      status={artifact.status}
+                    />
                     {artifact.file ? (
                       <Text c="dimmed" size="xs">
                         {formatFileSize(artifact.file.sizeBytes, locale)}
