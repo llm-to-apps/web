@@ -31,6 +31,7 @@ import {
 } from 'lucide-react'
 import { AppLayout } from '../_components/app-layout'
 import { FormActions } from '../_components/form-actions'
+import { ModalTitle } from '../_components/modal-title'
 import { SessionGate } from '../_components/session-gate'
 import type { SessionData } from '../_components/session-provider'
 import { useI18n } from '../_components/i18n-provider'
@@ -391,20 +392,18 @@ function FilesContent({ session }: { session: SessionData }) {
       <Modal
         opened={Boolean(deleteTargetFile)}
         onClose={() => setDeleteTargetFile(null)}
+        size="sm"
         title={
-          <Group align="flex-start" wrap="nowrap">
-            <ThemeIcon color="red" size="lg" variant="light">
-              <AlertTriangle size={22} />
-            </ThemeIcon>
-            <Box>
-              <Text fw={700}>{t.files.deleteTitle}</Text>
-              <Text c="dimmed" size="sm">
-                {deleteTargetFile
-                  ? format(t.files.deleteDescription, { name: deleteTargetFile.name })
-                  : null}
-              </Text>
-            </Box>
-          </Group>
+          <ModalTitle
+            description={
+              deleteTargetFile
+                ? format(t.files.deleteDescription, { name: deleteTargetFile.name })
+                : null
+            }
+            icon={<AlertTriangle color="var(--mantine-color-red-6)" size={18} />}
+          >
+            {t.files.deleteTitle}
+          </ModalTitle>
         }
       >
         <FormActions>

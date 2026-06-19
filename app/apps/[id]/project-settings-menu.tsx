@@ -5,17 +5,15 @@ import {
   ActionIcon,
   Button,
   Checkbox,
-  Group,
   Menu,
   Modal,
   Stack,
-  Text,
-  ThemeIcon,
-  Title
+  Text
 } from '@mantine/core'
 import { AlertTriangle, Eraser, ExternalLink, MoreHorizontal, Trash2 } from 'lucide-react'
 import { useI18n } from '../../_components/i18n-provider'
 import { FormActions } from '../../_components/form-actions'
+import { ModalTitle } from '../../_components/modal-title'
 import { useRouter } from 'next/navigation'
 import type { ApiResponse } from '@/shared/api'
 
@@ -140,18 +138,14 @@ export function ProjectSettingsMenu({
           setIsDeleteOpen(false)
           setDeleteConfirmations(initialDeleteConfirmations)
         }}
+        size="sm"
         title={
-          <Group align="flex-start">
-            <ThemeIcon color="red" size="lg" variant="light">
-              <AlertTriangle size={22} />
-            </ThemeIcon>
-            <div>
-              <Title order={3}>
-                {format(t.desktop.deleteTitle, { name: project.templateName })}
-              </Title>
-              <Text c="dimmed">{t.desktop.deleteDescription}</Text>
-            </div>
-          </Group>
+          <ModalTitle
+            description={t.desktop.deleteDescription}
+            icon={<AlertTriangle color="var(--mantine-color-red-6)" size={18} />}
+          >
+            {format(t.desktop.deleteTitle, { name: project.templateName })}
+          </ModalTitle>
         }
       >
         <Stack>

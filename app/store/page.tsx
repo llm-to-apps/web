@@ -13,12 +13,9 @@ import {
   Text,
   Title
 } from '@mantine/core'
-import { AppIcon } from '../_components/app-icon'
-import { AppLayout } from '../_components/app-layout'
-import { SessionGate } from '../_components/session-gate'
-import type { SessionData } from '../_components/session-provider'
-import { InstallButton } from './install-button'
-import { useI18n } from '../_components/i18n-provider'
+import { AppIcon } from '@/app/_components/app-icon'
+import { InstallButton } from '@/app/store/install-button'
+import { useI18n } from '@/app/_components/i18n-provider'
 import type { ApiResponse } from '@/shared/api'
 
 type StoreTemplate = {
@@ -36,10 +33,6 @@ type StoreTemplate = {
 type StoreResponse = ApiResponse<{ templates: StoreTemplate[] }>
 
 export default function StorePage() {
-  return <SessionGate>{(session) => <StoreContent session={session} />}</SessionGate>
-}
-
-function StoreContent({ session }: { session: SessionData }) {
   const { t } = useI18n()
   const [templates, setTemplates] = useState<StoreTemplate[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -77,7 +70,7 @@ function StoreContent({ session }: { session: SessionData }) {
   }, [])
 
   return (
-    <AppLayout usageSummary={session.usageSummary} user={session.user}>
+    <>
       {error ? <Alert color="red">{error}</Alert> : null}
       {!templates && !error ? (
         <SimpleGrid cols={{ base: 1, md: 2 }}>
@@ -121,7 +114,7 @@ function StoreContent({ session }: { session: SessionData }) {
           ))}
         </SimpleGrid>
       ) : null}
-    </AppLayout>
+    </>
   )
 }
 

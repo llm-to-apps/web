@@ -1,0 +1,41 @@
+.statusTabs {
+  align-items: flex-end;
+  border-bottom: 1px solid var(--mantine-color-gray-3);
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  padding-inline: 2px;
+}
+
+.statusTab {
+  background: var(--mantine-color-gray-0);
+  border: 1px solid transparent;
+  border-radius: var(--mantine-radius-sm) var(--mantine-radius-sm) 0 0;
+  color: var(--mantine-color-dimmed);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 500;
+  height: 34px;
+  padding: 0 14px;
+  position: relative;
+  white-space: nowrap;
+}
+
+.statusTab:hover {
+  background: var(--mantine-color-gray-1);
+  color: var(--mantine-color-text);
+}
+
+.statusTab:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: 2px;
+}
+
+.statusTab[data-active='true'] {
+  background: var(--mantine-color-body);
+  border-color: var(--mantine-color-gray-3);
+  border-bottom: 0;
+  color: var(--mantine-color-text);
+  font-weight: 700;
+}

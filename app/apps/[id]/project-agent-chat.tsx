@@ -37,12 +37,14 @@ import {
   Textarea
 } from '@mantine/core'
 import { useHover } from '@mantine/hooks'
+import { notifications } from '@mantine/notifications'
 import {
   formatChatErrorMessage,
   formatChatProgressMessage
 } from '../../_components/chat-progress'
 import { AgentFilePicker } from '../../_components/agent-file-picker'
 import { useI18n } from '../../_components/i18n-provider'
+import { MarkdownContent } from '../../_components/markdown-content'
 import type { ApiResponse } from '@/shared/api'
 
 type ProjectAgentChatProps = {
@@ -491,17 +493,12 @@ export const ProjectAgentChat = forwardRef<ProjectAgentChatHandle, ProjectAgentC
         })
         void refreshAttachedFiles([data.data.file.id])
       } catch (error) {
-        setMessages((currentMessages) => [
-          ...currentMessages,
-          {
-            id: crypto.randomUUID(),
-            role: 'assistant',
-            content: formatChatErrorMessage(
-              error instanceof Error ? error.message : 'File upload failed'
-            ),
-            kind: 'error'
-          }
-        ])
+        notifications.show({
+          color: 'red',
+          icon: <CircleAlert size={16} />,
+          message: error instanceof Error ? error.message : 'Failed to upload file',
+          title: 'Failed to upload file'
+        })
       } finally {
         setIsUploadingFile(false)
         restoreInputFocus()
@@ -959,6 +956,10 @@ function FileProcessingDots() {
 }
 
 function MessageText({ children }: { children: ReactNode }) {
+  if (typeof children === 'string') {
+    return <MarkdownContent content={children} />
+  }
+
   return (
     <Text component="pre" ff="inherit" lh="md" m={0} pt={4} textWrap="wrap">
       {children}

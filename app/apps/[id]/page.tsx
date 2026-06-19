@@ -19,6 +19,7 @@ import {
 } from '@mantine/core'
 import { useParams, useSearchParams } from 'next/navigation'
 import { RefreshCw } from 'lucide-react'
+import { ModalTitle } from '@/app/_components/modal-title'
 import { formatMessage } from '@/shared/i18n/dictionaries'
 import { useI18n } from '../../_components/i18n-provider'
 import { ProjectAgentPanel } from './project-agent-panel'
@@ -396,11 +397,9 @@ export default function ProjectPage() {
             centered
             onClose={() => setIsUpdateModalOpen(false)}
             opened={isUpdateModalOpen}
+            size="md"
             title={
-              <Group gap="xs">
-                <RefreshCw size={17} />
-                <Text fw={700}>Update app</Text>
-              </Group>
+              <ModalTitle icon={<RefreshCw size={17} />}>Update app</ModalTitle>
             }
           >
             {isUpdatePreflightLoading ? (

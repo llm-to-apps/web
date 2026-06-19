@@ -29,6 +29,13 @@ model User {
   userAgentChatMessageAttachments UserAgentChatMessageAttachment[]
   userAgentChatMessages     UserAgentChatMessage[]
   uploadedFiles             UploadedFile[]
+  hubTopics                 HubTopic[]
+  hubArtifacts              HubArtifact[]
+  hubComments               HubComment[]
+  hubUpvotes                HubUpvote[]
+  hubDownvotes              HubDownvote[]
+  hubCommentUpvotes         HubCommentUpvote[]
+  hubCommentDownvotes       HubCommentDownvote[]
   ownedBillingAccounts      BillingAccount[]
   creditLedgerEntries       CreditLedgerEntry[]
 
@@ -268,20 +275,44 @@ model UploadedFile {
   error         String?   @db.Text
   processedAt   DateTime?
   deletedAt     DateTime?
+  thumbnailId   String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   user    User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   project Project?            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  thumbnail UploadedFile?      @relation("UploadedFileThumbnail", fields: [thumbnailId], references: [id], onDelete: SetNull)
+  thumbnailFor UploadedFile[]  @relation("UploadedFileThumbnail")
   chunks  UploadedFileChunk[]
+  extractions UploadedFileExtraction[]
   projectAgentChatMessageAttachments ProjectAgentChatMessageAttachment[]
   userAgentChatMessageAttachments UserAgentChatMessageAttachment[]
+  hubArtifacts HubArtifact[]
 
   @@index([userId, scope, createdAt])
   @@index([projectId, createdAt])
   @@index([status, createdAt])
+  @@index([thumbnailId])
   @@index([userId, deletedAt, createdAt])
   @@map("uploaded_files")
+}
+
+model UploadedFileExtraction {
+  id             String   @id @default(cuid())
+  uploadedFileId String
+  format         String   @db.VarChar(32)
+  content        String   @db.Text
+  provider       String?  @db.VarChar(64)
+  model          String?  @db.VarChar(128)
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  uploadedFile UploadedFile @relation(fields: [uploadedFileId], references: [id], onDelete: Cascade)
+
+  @@unique([uploadedFileId, format])
+  @@index([uploadedFileId, createdAt])
+  @@map("uploaded_file_extractions")
 }
 
 model UploadedFileChunk {
@@ -344,6 +375,255 @@ model AgentRunEvent {
   @@unique([runId, seq])
   @@index([runId, seq])
   @@map("agent_run_events")
+}
+
+model HubTopic {
+  id          String   @id @default(cuid())
+  slug        String?  @unique @db.VarChar(160)
+  title       String   @db.VarChar(160)
+  intent      String   @db.Text
+  description String?  @db.Text
+  category    String   @db.VarChar(32)
+  tags        Json
+  status      String   @default("analyzing") @db.VarChar(32)
+  appUrl      String?  @db.VarChar(1024)
+  authorId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  artifacts HubArtifact[]
+  comments  HubComment[]
+  upvotes   HubUpvote[]
+  downvotes HubDownvote[]
+  topicTags HubTopicTag[]
+  translations HubTopicTranslation[]
+
+  @@index([category, createdAt])
+  @@index([status, createdAt])
+  @@index([authorId, createdAt])
+  @@map("hub_topics")
+}
+
+model HubTopicTranslation {
+  id          String  @id @default(cuid())
+  topicId     String
+  locale      String  @db.VarChar(8)
+  title       String  @db.VarChar(160)
+  intent      String  @db.Text
+  description String? @db.Text
+
+  topic HubTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([topicId, locale])
+  @@index([locale])
+  @@map("hub_topic_translations")
+}
+
+model HubTag {
+  id        String   @id @default(cuid())
+  category  String   @db.VarChar(32)
+  slug      String   @db.VarChar(64)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  topicTags    HubTopicTag[]
+  translations HubTagTranslation[]
+
+  @@unique([category, slug])
+  @@index([category, sortOrder])
+  @@map("hub_tags")
+}
+
+model HubTagTranslation {
+  id          String  @id @default(cuid())
+  tagId       String
+  locale      String  @db.VarChar(8)
+  title       String  @db.VarChar(120)
+  description String? @db.Text
+  hint        String? @db.Text
+
+  tag HubTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([tagId, locale])
+  @@index([locale])
+  @@map("hub_tag_translations")
+}
+
+model HubTopicTag {
+  topicId String
+  tagId   String
+
+  topic HubTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  tag   HubTag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([topicId, tagId])
+  @@index([tagId])
+  @@map("hub_topic_tags")
+}
+
+model HubArtifactTag {
+  id        String   @id @default(cuid())
+  slug      String   @unique @db.VarChar(64)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  artifactTags HubArtifactTagAssignment[]
+  translations HubArtifactTagTranslation[]
+
+  @@index([sortOrder])
+  @@map("hub_artifact_tags")
+}
+
+model HubArtifactTagTranslation {
+  id          String  @id @default(cuid())
+  tagId       String
+  locale      String  @db.VarChar(8)
+  title       String  @db.VarChar(120)
+  description String? @db.Text
+  hint        String? @db.Text
+
+  tag HubArtifactTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([tagId, locale])
+  @@index([locale])
+  @@map("hub_artifact_tag_translations")
+}
+
+model HubArtifactTagAssignment {
+  artifactId String
+  tagId      String
+
+  artifact HubArtifact    @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+  tag      HubArtifactTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([artifactId, tagId])
+  @@index([tagId])
+  @@map("hub_artifact_tag_assignments")
+}
+
+model HubArtifact {
+  id             String   @id @default(cuid())
+  slug           String?  @unique @db.VarChar(160)
+  topicId        String
+  authorId       String
+  uploadedFileId String?
+  type           String   @db.VarChar(32)
+  status         String   @default("analyzing") @db.VarChar(32)
+  title          String   @db.VarChar(160)
+  description    String?  @db.Text
+  textContent    String?  @db.Text
+  externalUrl    String?  @db.VarChar(1024)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  topic        HubTopic      @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  author       User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  uploadedFile UploadedFile? @relation(fields: [uploadedFileId], references: [id], onDelete: SetNull)
+  comments     HubComment[]
+  artifactTags HubArtifactTagAssignment[]
+
+  @@index([topicId, createdAt])
+  @@index([authorId, createdAt])
+  @@index([uploadedFileId])
+  @@map("hub_artifacts")
+}
+
+model HubComment {
+  id         String   @id @default(cuid())
+  topicId    String
+  artifactId String?
+  parentId   String?
+  authorId   String
+  body       String   @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  topic    HubTopic     @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  artifact HubArtifact? @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+  parent   HubComment?  @relation("HubCommentThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  HubComment[] @relation("HubCommentThread")
+  author   User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  upvotes   HubCommentUpvote[]
+  downvotes HubCommentDownvote[]
+  translations HubCommentTranslation[]
+
+  @@index([topicId, createdAt])
+  @@index([artifactId, createdAt])
+  @@index([parentId, createdAt])
+  @@index([authorId, createdAt])
+  @@map("hub_comments")
+}
+
+model HubCommentTranslation {
+  id        String @id @default(cuid())
+  commentId String
+  locale    String @db.VarChar(8)
+  body      String @db.Text
+
+  comment HubComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, locale])
+  @@index([locale])
+  @@map("hub_comment_translations")
+}
+
+model HubCommentUpvote {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  comment HubComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([userId, createdAt])
+  @@map("hub_comment_upvotes")
+}
+
+model HubCommentDownvote {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  comment HubComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([userId, createdAt])
+  @@map("hub_comment_downvotes")
+}
+
+model HubUpvote {
+  id        String   @id @default(cuid())
+  topicId   String
+  userId    String
+  createdAt DateTime @default(now())
+
+  topic HubTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  user  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([topicId, userId])
+  @@index([userId, createdAt])
+  @@map("hub_upvotes")
+}
+
+model HubDownvote {
+  id        String   @id @default(cuid())
+  topicId   String
+  userId    String
+  createdAt DateTime @default(now())
+
+  topic HubTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  user  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([topicId, userId])
+  @@index([userId, createdAt])
+  @@map("hub_downvotes")
 }
 
 model AgentUsage {

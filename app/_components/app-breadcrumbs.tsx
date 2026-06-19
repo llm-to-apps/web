@@ -2,8 +2,9 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Breadcrumbs, Button, Text } from '@mantine/core'
+import { Breadcrumbs, Button } from '@mantine/core'
 import { ChevronRight, Home } from 'lucide-react'
+import { BreadcrumbLabel } from './breadcrumb-label'
 import { useI18n } from './i18n-provider'
 
 type BreadcrumbItem = {
@@ -15,13 +16,14 @@ export function AppBreadcrumbs() {
   const pathname = usePathname()
   const { t } = useI18n()
 
-  if (pathname.startsWith('/apps/')) {
+  if (pathname === '/home' || pathname.startsWith('/apps/')) {
     return null
   }
 
   const item = getBreadcrumbItem(pathname, {
+    apps: t.tabs.apps,
     files: t.files.title,
-    home: t.tabs.apps,
+    home: t.navigation.home,
     settings: t.settings.title,
     store: t.tabs.store
   })
@@ -39,9 +41,9 @@ export function AppBreadcrumbs() {
         size="compact-sm"
         variant="subtle"
       >
-        Home
+        {t.navigation.home}
       </Button>
-      <Text c="dimmed">{item.label}</Text>
+      <BreadcrumbLabel>{item.label}</BreadcrumbLabel>
     </Breadcrumbs>
   )
 }
@@ -49,6 +51,7 @@ export function AppBreadcrumbs() {
 function getBreadcrumbItem(
   pathname: string,
   labels: {
+    apps: string
     files: string
     home: string
     settings: string
@@ -57,14 +60,11 @@ function getBreadcrumbItem(
 ): BreadcrumbItem | null {
   const normalizedPathname = pathname.replace(/\/+$/, '') || '/home'
   const routeLabels: Record<string, string> = {
+    apps: labels.apps,
     files: labels.files,
     home: labels.home,
     settings: labels.settings,
     store: labels.store
-  }
-
-  if (normalizedPathname === '/home') {
-    return { href: '/home', label: labels.home }
   }
 
   const segments = normalizedPathname.split('/').filter(Boolean)

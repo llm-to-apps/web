@@ -1,10 +1,11 @@
 'use client'
 
-import { FormEvent, useState } from 'react'
+import { FormEvent, type ReactNode, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AtSign, Mail } from 'lucide-react'
 import {
   Alert,
+  Box,
   Button,
   Card,
   Input,
@@ -24,12 +25,18 @@ type AuthStep = 'email' | 'code'
 type AuthResult = ApiResponse
 
 type AuthPanelProps = {
+  onAuthenticated?: () => void
+  variant?: 'card' | 'plain'
   redirectTo?: string
 }
 
 const UI_DELAY_MS = 250
 
-export function AuthPanel({ redirectTo = '/home' }: AuthPanelProps) {
+export function AuthPanel({
+  onAuthenticated,
+  redirectTo = '/home',
+  variant = 'card'
+}: AuthPanelProps) {
   const { format, t } = useI18n()
   const router = useRouter()
   const session = useSession()
@@ -88,6 +95,11 @@ export function AuthPanel({ redirectTo = '/home' }: AuthPanelProps) {
       }
 
       await session.refresh()
+      if (onAuthenticated) {
+        onAuthenticated()
+        return
+      }
+
       router.push(redirectTo)
     } catch (error) {
       setResult({
@@ -117,19 +129,21 @@ export function AuthPanel({ redirectTo = '/home' }: AuthPanelProps) {
 
   return (
     <Stack gap="md" w="min(100%, 560px)">
-      <Card component="form" onSubmit={onSubmit} p="xl" pos="relative">
+      <AuthFormFrame onSubmit={onSubmit} variant={variant}>
         <Stack gap="md">
-          <Stack align="center" gap="xs">
-            <Os7Logo href="/" w={88} />
-            <Title order={3} ta="center">
-              {step === 'email' ? t.auth.emailTitle : t.auth.codeTitle}
-            </Title>
-          </Stack>
+          {variant === 'card' ? (
+            <Stack align="center" gap="xs">
+              <Os7Logo href="/" w={88} />
+              <Title order={3} ta="center">
+                {step === 'email' ? t.auth.emailTitle : t.auth.codeTitle}
+              </Title>
+            </Stack>
+          ) : null}
 
           {step === 'email' ? (
             <TextInput
+              aria-label={t.auth.emailLabel}
               id="email"
-              label={t.auth.emailLabel}
               leftSection={<AtSign size={18} />}
               name="email"
               onChange={(event) => setEmail(event.target.value)}
@@ -176,8 +190,32 @@ export function AuthPanel({ redirectTo = '/home' }: AuthPanelProps) {
             <Alert color="red">{result.error.message}</Alert>
           ) : null}
         </Stack>
-      </Card>
+      </AuthFormFrame>
     </Stack>
+  )
+}
+
+function AuthFormFrame({
+  children,
+  onSubmit,
+  variant
+}: {
+  children: ReactNode
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void
+  variant: 'card' | 'plain'
+}) {
+  if (variant === 'plain') {
+    return (
+      <Box component="form" onSubmit={onSubmit}>
+        {children}
+      </Box>
+    )
+  }
+
+  return (
+    <Card component="form" onSubmit={onSubmit} p="xl" pos="relative">
+      {children}
+    </Card>
   )
 }
 

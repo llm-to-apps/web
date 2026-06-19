@@ -108,6 +108,14 @@ Web uses Mantine as the UI framework.
   current layout and content, keep container dimensions stable, and show a
   delayed subtle loading indicator instead of replacing populated UI with
   skeletons.
+- Do not show placeholder text as a loading fallback for unknown entity data.
+  Avoid temporary labels such as `Topic`, `Artifact`, `Untitled`, or `Hub topic`
+  in titles, breadcrumbs, cards, or headers while data is loading; render a
+  dimensionally stable skeleton in that exact location instead.
+- Mutations should update the smallest visible UI scope possible. Prefer local
+  or optimistic updates for the changed entity, preserve object references for
+  unaffected items, and avoid refetching or replacing an entire list/page when a
+  single card, row, comment, vote, or control changed.
 
 ## Verification
 

@@ -16,6 +16,7 @@ import {
 const maxUploadBytes = envNumber('AGENT_FILE_UPLOAD_MAX_BYTES', 5 * 1024 * 1024)
 const defaultFilesPageSize = 50
 const maxFilesPageSize = 100
+const agentUploadedFileScopes = ['user_agent', 'project_agent']
 
 type ProjectFileUploadContext = {
   params: Promise<{
@@ -138,7 +139,7 @@ export async function handleUploadedFilesGet(request: NextRequest) {
             }
           }
         : {}),
-      ...(scope ? { scope } : {}),
+      scope: scope ?? { in: agentUploadedFileScopes },
       ...(status ? { status } : {}),
       userId: user.id
     },
@@ -224,6 +225,9 @@ export async function handleUploadedFileDownloadGet(
     where: {
       deletedAt: null,
       id,
+      scope: {
+        in: agentUploadedFileScopes
+      },
       userId: user.id
     },
     select: {
@@ -277,13 +281,23 @@ export async function handleUploadedFileDelete(
     where: {
       deletedAt: null,
       id,
+      scope: {
+        in: agentUploadedFileScopes
+      },
       userId: user.id
     },
     select: {
       id: true,
       projectId: true,
       storageBucket: true,
-      storageKey: true
+      storageKey: true,
+      thumbnail: {
+        select: {
+          id: true,
+          storageBucket: true,
+          storageKey: true
+        }
+      }
     }
   })
 
@@ -297,8 +311,33 @@ export async function handleUploadedFileDelete(
       key: file.storageKey
     })
   }
+  if (file.thumbnail?.storageBucket && file.thumbnail.storageKey) {
+    await deletePlatformStorageObject({
+      bucket: file.thumbnail.storageBucket,
+      key: file.thumbnail.storageKey
+    })
+  }
 
   await prisma.$transaction(async (tx) => {
+    if (file.thumbnail) {
+      await tx.uploadedFileChunk.deleteMany({
+        where: {
+          uploadedFileId: file.thumbnail.id
+        }
+      })
+      await tx.uploadedFile.update({
+        where: {
+          id: file.thumbnail.id
+        },
+        data: {
+          deletedAt: new Date(),
+          error: null,
+          status: 'deleted',
+          storageBucket: '',
+          storageKey: ''
+        }
+      })
+    }
     await tx.uploadedFileChunk.deleteMany({
       where: {
         uploadedFileId: file.id
@@ -313,7 +352,8 @@ export async function handleUploadedFileDelete(
         error: null,
         status: 'deleted',
         storageBucket: '',
-        storageKey: ''
+        storageKey: '',
+        thumbnailId: null
       }
     })
   })
@@ -459,7 +499,7 @@ async function uploadAgentFile({
   const mimeType = normalizeMimeType(file)
 
   if (!isSupportedAgentFileMimeType(mimeType)) {
-    return jsonErrorMessage('Only text and image files are supported for now', 400)
+    return jsonErrorMessage('Only text, PDF, and image files are supported for now', 400)
   }
 
   if (file.size <= 0) {
@@ -587,6 +627,10 @@ function normalizeMimeType(file: File) {
     return 'text/plain'
   }
 
+  if (file.name.toLowerCase().endsWith('.pdf')) {
+    return 'application/pdf'
+  }
+
   if (file.name.toLowerCase().endsWith('.png')) {
     return 'image/png'
   }
@@ -617,7 +661,11 @@ function isUuid(value: string) {
 }
 
 function isSupportedAgentFileMimeType(mimeType: string) {
-  return mimeType === 'text/plain' || isImageMimeType(mimeType)
+  return (
+    mimeType === 'text/plain' ||
+    mimeType === 'application/pdf' ||
+    isImageMimeType(mimeType)
+  )
 }
 
 function isImageMimeType(mimeType: string) {

@@ -18,6 +18,7 @@ import { Os7Logo, os7Brand } from '../../ui-kit/src/os7-brand'
 import { AccountMenu } from './account-menu'
 import { AppBreadcrumbs } from './app-breadcrumbs'
 import { HeaderNav } from './header-nav'
+import { ScrollToTop } from './scroll-to-top'
 
 type AppLayoutShellProps = {
   children: ReactNode
@@ -43,6 +44,7 @@ export function AppLayoutShell({
 
   return (
     <AppShell footer={{ height: 44, offset: false }} header={{ height: 64 }} padding="md">
+      <ScrollToTop />
       <AppShell.Header>
         <Container h="100%">
           <Box

@@ -42,6 +42,27 @@ type UsagePriceSeed = {
   metadata?: Prisma.InputJsonValue | null
 }
 
+type HubTagSeed = {
+  category: 'business' | 'personal'
+  translations: {
+    de: string
+    en: string
+    ru: string
+  }
+  slug: string
+  sortOrder: number
+}
+
+type HubArtifactTagSeed = {
+  translations: {
+    de: string
+    en: string
+    ru: string
+  }
+  slug: string
+  sortOrder: number
+}
+
 const prisma = new PrismaClient()
 const moneyTemplateManifestCommit = 'f67b4176d813dc0abe8854be70b700fe83247f9e'
 const moneyTemplateImage = 'ghcr.io/llm-to-apps/money-template:sha-f67b417'
@@ -197,6 +218,117 @@ const usagePrices: UsagePriceSeed[] = [
   }
 ]
 
+const hubTags: HubTagSeed[] = [
+  {
+    category: 'business',
+    translations: {
+      de: 'Finanzen',
+      en: 'Finances',
+      ru: 'Финансы'
+    },
+    slug: 'finances',
+    sortOrder: 10
+  },
+  {
+    category: 'business',
+    translations: {
+      de: 'Vertrieb',
+      en: 'Sales',
+      ru: 'Продажи'
+    },
+    slug: 'sales',
+    sortOrder: 20
+  },
+  {
+    category: 'business',
+    translations: {
+      de: 'Projektmanagement',
+      en: 'Project management',
+      ru: 'Управление проектами'
+    },
+    slug: 'project-management',
+    sortOrder: 30
+  },
+  {
+    category: 'personal',
+    translations: {
+      de: 'Gewohnheiten',
+      en: 'Habits',
+      ru: 'Привычки'
+    },
+    slug: 'habits',
+    sortOrder: 10
+  },
+  {
+    category: 'personal',
+    translations: {
+      de: 'Produktivität',
+      en: 'Productivity',
+      ru: 'Продуктивность'
+    },
+    slug: 'productivity',
+    sortOrder: 20
+  },
+  {
+    category: 'personal',
+    translations: {
+      de: 'Gesundheit',
+      en: 'Health',
+      ru: 'Здоровье'
+    },
+    slug: 'health',
+    sortOrder: 30
+  }
+]
+
+const hubArtifactTags: HubArtifactTagSeed[] = [
+  {
+    translations: {
+      de: 'UI',
+      en: 'UI',
+      ru: 'UI'
+    },
+    slug: 'ui',
+    sortOrder: 10
+  },
+  {
+    translations: {
+      de: 'Logik',
+      en: 'Logic',
+      ru: 'Логика'
+    },
+    slug: 'logic',
+    sortOrder: 20
+  },
+  {
+    translations: {
+      de: 'Datenbank',
+      en: 'Database',
+      ru: 'База данных'
+    },
+    slug: 'db',
+    sortOrder: 30
+  },
+  {
+    translations: {
+      de: 'Daten',
+      en: 'Data',
+      ru: 'Данные'
+    },
+    slug: 'data',
+    sortOrder: 40
+  },
+  {
+    translations: {
+      de: 'Spezifikation',
+      en: 'Spec',
+      ru: 'Спецификация'
+    },
+    slug: 'spec',
+    sortOrder: 50
+  }
+]
+
 main()
   .catch((error) => {
     console.error(error)
@@ -209,6 +341,9 @@ main()
 async function main() {
   await seedAppTemplates()
   await seedUsagePrices()
+  await seedHubTags()
+  await seedHubArtifactTags()
+  await backfillHubTopicTags()
 }
 
 async function seedAppTemplates() {
@@ -316,6 +451,136 @@ async function seedUsagePrices() {
         unitCostUsd: price.unitCostUsd ?? null,
         unitCredits: price.unitCredits ?? null
       }
+    })
+  }
+}
+
+async function seedHubTags() {
+  for (const tag of hubTags) {
+    const tagRecord = await prisma.hubTag.upsert({
+      where: {
+        category_slug: {
+          category: tag.category,
+          slug: tag.slug
+        }
+      },
+      update: {
+        sortOrder: tag.sortOrder
+      },
+      create: {
+        category: tag.category,
+        slug: tag.slug,
+        sortOrder: tag.sortOrder
+      }
+    })
+
+    for (const [locale, title] of Object.entries(tag.translations)) {
+      await prisma.hubTagTranslation.upsert({
+        where: {
+          tagId_locale: {
+            locale,
+            tagId: tagRecord.id
+          }
+        },
+        update: {
+          title
+        },
+        create: {
+          locale,
+          tagId: tagRecord.id,
+          title
+        }
+      })
+    }
+  }
+}
+
+async function seedHubArtifactTags() {
+  const activeSlugs = hubArtifactTags.map((tag) => tag.slug)
+
+  await prisma.hubArtifactTag.deleteMany({
+    where: {
+      slug: {
+        notIn: activeSlugs
+      }
+    }
+  })
+
+  for (const tag of hubArtifactTags) {
+    const tagRecord = await prisma.hubArtifactTag.upsert({
+      where: {
+        slug: tag.slug
+      },
+      update: {
+        sortOrder: tag.sortOrder
+      },
+      create: {
+        slug: tag.slug,
+        sortOrder: tag.sortOrder
+      }
+    })
+
+    for (const [locale, title] of Object.entries(tag.translations)) {
+      await prisma.hubArtifactTagTranslation.upsert({
+        where: {
+          tagId_locale: {
+            locale,
+            tagId: tagRecord.id
+          }
+        },
+        update: {
+          title
+        },
+        create: {
+          locale,
+          tagId: tagRecord.id,
+          title
+        }
+      })
+    }
+  }
+}
+
+async function backfillHubTopicTags() {
+  const topics = await prisma.hubTopic.findMany({
+    select: {
+      category: true,
+      id: true,
+      tags: true
+    }
+  })
+
+  for (const topic of topics) {
+    const tags = Array.isArray(topic.tags)
+      ? topic.tags.filter((tag): tag is string => typeof tag === 'string')
+      : []
+
+    if (tags.length === 0) {
+      continue
+    }
+
+    const tagRecords = await prisma.hubTag.findMany({
+      where: {
+        category: topic.category,
+        slug: {
+          in: tags
+        }
+      },
+      select: {
+        id: true
+      }
+    })
+
+    if (tagRecords.length === 0) {
+      continue
+    }
+
+    await prisma.hubTopicTag.createMany({
+      data: tagRecords.map((tag) => ({
+        tagId: tag.id,
+        topicId: topic.id
+      })),
+      skipDuplicates: true
     })
   }
 }

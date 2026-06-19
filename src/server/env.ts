@@ -90,6 +90,26 @@ export function agentEmbeddingDimensions() {
   return envNumber('AGENT_EMBEDDING_DIMENSIONS', 1536)
 }
 
+export function agentPdfExtractionModel() {
+  return optionalEnv('AGENT_PDF_EXTRACTION_MODEL') ?? 'openai/gpt-4o-mini'
+}
+
+export function hubArtifactClassifierModel() {
+  return optionalEnv('HUB_ARTIFACT_CLASSIFIER_MODEL') ?? 'openai/gpt-4o-mini'
+}
+
+export function agentPdfExtractionEngine() {
+  return optionalEnv('AGENT_PDF_EXTRACTION_ENGINE') ?? 'cloudflare-ai'
+}
+
+export function agentPdfExtractionFallbackEngine() {
+  return optionalEnv('AGENT_PDF_EXTRACTION_FALLBACK_ENGINE') ?? 'mistral-ocr'
+}
+
+export function uploadedFileExtractionMaxBytes() {
+  return envNumber('UPLOADED_FILE_EXTRACTION_MAX_BYTES', 512 * 1024)
+}
+
 export function resendApiKey() {
   return optionalEnv('RESEND_API_KEY')
 }
@@ -132,6 +152,14 @@ export function redisUrl() {
 
 export function redisPubSubUrl() {
   return optionalEnv('REDIS_PUBSUB_URL') ?? redisUrl()
+}
+
+export function browserlessUrl() {
+  return optionalTrimmedUrlEnv('BROWSERLESS_URL')
+}
+
+export function browserlessToken() {
+  return optionalEnv('BROWSERLESS_TOKEN')
 }
 
 export function forgejoUrl() {

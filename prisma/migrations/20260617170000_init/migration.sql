@@ -480,3 +480,421 @@ ALTER TABLE "auth_tokens" ADD CONSTRAINT "auth_tokens_userId_fkey" FOREIGN KEY (
 -- AddForeignKey
 ALTER TABLE "auth_tokens" ADD CONSTRAINT "auth_tokens_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
+
+
+-- Platform extensions and Hub
+CREATE EXTENSION IF NOT EXISTS vector;
+
+ALTER TABLE "projects" ADD COLUMN "templateImage" VARCHAR(255);
+
+CREATE TABLE "uploaded_files" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "projectId" TEXT,
+    "scope" VARCHAR(32) NOT NULL,
+    "originalName" VARCHAR(255) NOT NULL,
+    "mimeType" VARCHAR(128) NOT NULL,
+    "sizeBytes" INTEGER NOT NULL,
+    "storageBucket" VARCHAR(255) NOT NULL,
+    "storageKey" VARCHAR(1024) NOT NULL,
+    "status" VARCHAR(32) NOT NULL DEFAULT 'queued',
+    "error" TEXT,
+    "processedAt" TIMESTAMP(3),
+    "deletedAt" TIMESTAMP(3),
+    "thumbnailId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "uploaded_files_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "uploaded_file_chunks" (
+    "id" TEXT NOT NULL,
+    "uploadedFileId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "projectId" TEXT,
+    "chunkIndex" INTEGER NOT NULL,
+    "content" TEXT NOT NULL,
+    "embedding" vector(1536),
+    "embeddingModel" VARCHAR(128),
+    "embeddingDimensions" INTEGER,
+    "metadata" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "uploaded_file_chunks_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "uploaded_file_extractions" (
+    "id" TEXT NOT NULL,
+    "uploadedFileId" TEXT NOT NULL,
+    "format" VARCHAR(32) NOT NULL,
+    "content" TEXT NOT NULL,
+    "provider" VARCHAR(64),
+    "model" VARCHAR(128),
+    "metadata" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "uploaded_file_extractions_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "user_agent_chat_message_attachments" (
+    "id" TEXT NOT NULL,
+    "messageId" TEXT NOT NULL,
+    "uploadedFileId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "user_agent_chat_message_attachments_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "project_agent_chat_message_attachments" (
+    "id" TEXT NOT NULL,
+    "messageId" TEXT NOT NULL,
+    "uploadedFileId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "projectId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "project_agent_chat_message_attachments_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "hub_topics" (
+  "id" TEXT NOT NULL,
+  "slug" VARCHAR(160),
+  "title" VARCHAR(160) NOT NULL,
+  "intent" TEXT NOT NULL,
+  "description" TEXT,
+  "category" VARCHAR(32) NOT NULL,
+  "tags" JSONB NOT NULL,
+  "status" VARCHAR(32) NOT NULL DEFAULT 'analyzing',
+  "appUrl" VARCHAR(1024),
+  "authorId" TEXT NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+
+  CONSTRAINT "hub_topics_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "hub_artifacts" (
+  "id" TEXT NOT NULL,
+  "slug" VARCHAR(160),
+  "topicId" TEXT NOT NULL,
+  "authorId" TEXT NOT NULL,
+  "uploadedFileId" TEXT,
+  "type" VARCHAR(32) NOT NULL,
+  "status" VARCHAR(32) NOT NULL DEFAULT 'analyzing',
+  "title" VARCHAR(160) NOT NULL,
+  "description" TEXT,
+  "textContent" TEXT,
+  "externalUrl" VARCHAR(1024),
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+
+  CONSTRAINT "hub_artifacts_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "hub_topic_translations" (
+  "id" TEXT NOT NULL,
+  "topicId" TEXT NOT NULL,
+  "locale" VARCHAR(8) NOT NULL,
+  "title" VARCHAR(160) NOT NULL,
+  "intent" TEXT NOT NULL,
+  "description" TEXT,
+
+  CONSTRAINT "hub_topic_translations_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "hub_comments" (
+  "id" TEXT NOT NULL,
+  "topicId" TEXT NOT NULL,
+  "artifactId" TEXT,
+  "parentId" TEXT,
+  "authorId" TEXT NOT NULL,
+  "body" TEXT NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+
+  CONSTRAINT "hub_comments_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "hub_comment_translations" (
+  "id" TEXT NOT NULL,
+  "commentId" TEXT NOT NULL,
+  "locale" VARCHAR(8) NOT NULL,
+  "body" TEXT NOT NULL,
+
+  CONSTRAINT "hub_comment_translations_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "hub_comment_upvotes" (
+  "id" TEXT NOT NULL,
+  "commentId" TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT "hub_comment_upvotes_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "hub_comment_downvotes" (
+  "id" TEXT NOT NULL,
+  "commentId" TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT "hub_comment_downvotes_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "hub_tags" (
+  "id" TEXT NOT NULL,
+  "category" VARCHAR(32) NOT NULL,
+  "slug" VARCHAR(64) NOT NULL,
+  "sortOrder" INTEGER NOT NULL DEFAULT 0,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+
+  CONSTRAINT "hub_tags_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "hub_tag_translations" (
+  "id" TEXT NOT NULL,
+  "tagId" TEXT NOT NULL,
+  "locale" VARCHAR(8) NOT NULL,
+  "title" VARCHAR(120) NOT NULL,
+  "description" TEXT,
+  "hint" TEXT,
+
+  CONSTRAINT "hub_tag_translations_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "hub_topic_tags" (
+  "topicId" TEXT NOT NULL,
+  "tagId" TEXT NOT NULL,
+
+  CONSTRAINT "hub_topic_tags_pkey" PRIMARY KEY ("topicId", "tagId")
+);
+
+CREATE TABLE "hub_artifact_tags" (
+  "id" TEXT NOT NULL,
+  "slug" VARCHAR(64) NOT NULL,
+  "sortOrder" INTEGER NOT NULL DEFAULT 0,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+
+  CONSTRAINT "hub_artifact_tags_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "hub_artifact_tag_translations" (
+  "id" TEXT NOT NULL,
+  "tagId" TEXT NOT NULL,
+  "locale" VARCHAR(8) NOT NULL,
+  "title" VARCHAR(120) NOT NULL,
+  "description" TEXT,
+  "hint" TEXT,
+
+  CONSTRAINT "hub_artifact_tag_translations_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "hub_artifact_tag_assignments" (
+  "artifactId" TEXT NOT NULL,
+  "tagId" TEXT NOT NULL,
+
+  CONSTRAINT "hub_artifact_tag_assignments_pkey" PRIMARY KEY ("artifactId", "tagId")
+);
+
+CREATE TABLE "hub_upvotes" (
+  "id" TEXT NOT NULL,
+  "topicId" TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT "hub_upvotes_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "hub_downvotes" (
+  "id" TEXT NOT NULL,
+  "topicId" TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT "hub_downvotes_pkey" PRIMARY KEY ("id")
+);
+
+CREATE INDEX "uploaded_files_userId_scope_createdAt_idx" ON "uploaded_files"("userId", "scope", "createdAt");
+CREATE INDEX "uploaded_files_projectId_createdAt_idx" ON "uploaded_files"("projectId", "createdAt");
+CREATE INDEX "uploaded_files_status_createdAt_idx" ON "uploaded_files"("status", "createdAt");
+CREATE INDEX "uploaded_files_thumbnailId_idx" ON "uploaded_files"("thumbnailId");
+CREATE INDEX "uploaded_files_userId_deletedAt_createdAt_idx" ON "uploaded_files"("userId", "deletedAt", "createdAt");
+CREATE UNIQUE INDEX "uploaded_file_chunks_uploadedFileId_chunkIndex_key" ON "uploaded_file_chunks"("uploadedFileId", "chunkIndex");
+CREATE INDEX "uploaded_file_chunks_userId_projectId_createdAt_idx" ON "uploaded_file_chunks"("userId", "projectId", "createdAt");
+CREATE UNIQUE INDEX "uploaded_file_extractions_uploadedFileId_format_key" ON "uploaded_file_extractions"("uploadedFileId", "format");
+CREATE INDEX "uploaded_file_extractions_uploadedFileId_createdAt_idx" ON "uploaded_file_extractions"("uploadedFileId", "createdAt");
+
+CREATE UNIQUE INDEX "user_agent_chat_message_attachments_messageId_uploadedFileI_key" ON "user_agent_chat_message_attachments"("messageId", "uploadedFileId");
+CREATE INDEX "user_agent_chat_message_attachments_userId_createdAt_idx" ON "user_agent_chat_message_attachments"("userId", "createdAt");
+CREATE INDEX "user_agent_chat_message_attachments_uploadedFileId_idx" ON "user_agent_chat_message_attachments"("uploadedFileId");
+
+CREATE UNIQUE INDEX "project_agent_chat_message_attachments_messageId_uploadedFi_key" ON "project_agent_chat_message_attachments"("messageId", "uploadedFileId");
+CREATE INDEX "project_agent_chat_message_attachments_userId_projectId_cre_idx" ON "project_agent_chat_message_attachments"("userId", "projectId", "createdAt");
+CREATE INDEX "project_agent_chat_message_attachments_uploadedFileId_idx" ON "project_agent_chat_message_attachments"("uploadedFileId");
+
+CREATE INDEX "hub_topics_category_createdAt_idx" ON "hub_topics"("category", "createdAt");
+CREATE INDEX "hub_topics_status_createdAt_idx" ON "hub_topics"("status", "createdAt");
+CREATE INDEX "hub_topics_authorId_createdAt_idx" ON "hub_topics"("authorId", "createdAt");
+CREATE UNIQUE INDEX "hub_topics_slug_key" ON "hub_topics"("slug");
+
+CREATE INDEX "hub_artifacts_topicId_createdAt_idx" ON "hub_artifacts"("topicId", "createdAt");
+CREATE INDEX "hub_artifacts_authorId_createdAt_idx" ON "hub_artifacts"("authorId", "createdAt");
+CREATE INDEX "hub_artifacts_uploadedFileId_idx" ON "hub_artifacts"("uploadedFileId");
+CREATE UNIQUE INDEX "hub_artifacts_slug_key" ON "hub_artifacts"("slug");
+
+CREATE UNIQUE INDEX "hub_topic_translations_topicId_locale_key" ON "hub_topic_translations"("topicId", "locale");
+CREATE INDEX "hub_topic_translations_locale_idx" ON "hub_topic_translations"("locale");
+
+CREATE INDEX "hub_comments_topicId_createdAt_idx" ON "hub_comments"("topicId", "createdAt");
+CREATE INDEX "hub_comments_artifactId_createdAt_idx" ON "hub_comments"("artifactId", "createdAt");
+CREATE INDEX "hub_comments_parentId_createdAt_idx" ON "hub_comments"("parentId", "createdAt");
+CREATE INDEX "hub_comments_authorId_createdAt_idx" ON "hub_comments"("authorId", "createdAt");
+
+CREATE UNIQUE INDEX "hub_comment_translations_commentId_locale_key" ON "hub_comment_translations"("commentId", "locale");
+CREATE INDEX "hub_comment_translations_locale_idx" ON "hub_comment_translations"("locale");
+
+CREATE UNIQUE INDEX "hub_comment_upvotes_commentId_userId_key" ON "hub_comment_upvotes"("commentId", "userId");
+CREATE INDEX "hub_comment_upvotes_userId_createdAt_idx" ON "hub_comment_upvotes"("userId", "createdAt");
+
+CREATE UNIQUE INDEX "hub_comment_downvotes_commentId_userId_key" ON "hub_comment_downvotes"("commentId", "userId");
+CREATE INDEX "hub_comment_downvotes_userId_createdAt_idx" ON "hub_comment_downvotes"("userId", "createdAt");
+
+CREATE UNIQUE INDEX "hub_tags_category_slug_key" ON "hub_tags"("category", "slug");
+CREATE INDEX "hub_tags_category_sortOrder_idx" ON "hub_tags"("category", "sortOrder");
+
+CREATE UNIQUE INDEX "hub_tag_translations_tagId_locale_key" ON "hub_tag_translations"("tagId", "locale");
+CREATE INDEX "hub_tag_translations_locale_idx" ON "hub_tag_translations"("locale");
+
+CREATE INDEX "hub_topic_tags_tagId_idx" ON "hub_topic_tags"("tagId");
+
+CREATE UNIQUE INDEX "hub_artifact_tags_slug_key" ON "hub_artifact_tags"("slug");
+CREATE INDEX "hub_artifact_tags_sortOrder_idx" ON "hub_artifact_tags"("sortOrder");
+
+CREATE UNIQUE INDEX "hub_artifact_tag_translations_tagId_locale_key" ON "hub_artifact_tag_translations"("tagId", "locale");
+CREATE INDEX "hub_artifact_tag_translations_locale_idx" ON "hub_artifact_tag_translations"("locale");
+
+CREATE INDEX "hub_artifact_tag_assignments_tagId_idx" ON "hub_artifact_tag_assignments"("tagId");
+
+CREATE UNIQUE INDEX "hub_upvotes_topicId_userId_key" ON "hub_upvotes"("topicId", "userId");
+CREATE INDEX "hub_upvotes_userId_createdAt_idx" ON "hub_upvotes"("userId", "createdAt");
+
+CREATE UNIQUE INDEX "hub_downvotes_topicId_userId_key" ON "hub_downvotes"("topicId", "userId");
+CREATE INDEX "hub_downvotes_userId_createdAt_idx" ON "hub_downvotes"("userId", "createdAt");
+
+ALTER TABLE "uploaded_files" ADD CONSTRAINT "uploaded_files_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "uploaded_files" ADD CONSTRAINT "uploaded_files_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "uploaded_files" ADD CONSTRAINT "uploaded_files_thumbnailId_fkey" FOREIGN KEY ("thumbnailId") REFERENCES "uploaded_files"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "uploaded_file_chunks" ADD CONSTRAINT "uploaded_file_chunks_uploadedFileId_fkey" FOREIGN KEY ("uploadedFileId") REFERENCES "uploaded_files"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "uploaded_file_extractions" ADD CONSTRAINT "uploaded_file_extractions_uploadedFileId_fkey" FOREIGN KEY ("uploadedFileId") REFERENCES "uploaded_files"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "user_agent_chat_message_attachments" ADD CONSTRAINT "user_agent_chat_message_attachments_messageId_fkey" FOREIGN KEY ("messageId") REFERENCES "user_agent_chat_messages"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "user_agent_chat_message_attachments" ADD CONSTRAINT "user_agent_chat_message_attachments_uploadedFileId_fkey" FOREIGN KEY ("uploadedFileId") REFERENCES "uploaded_files"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "user_agent_chat_message_attachments" ADD CONSTRAINT "user_agent_chat_message_attachments_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "project_agent_chat_message_attachments" ADD CONSTRAINT "project_agent_chat_message_attachments_messageId_fkey" FOREIGN KEY ("messageId") REFERENCES "project_agent_chat_messages"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "project_agent_chat_message_attachments" ADD CONSTRAINT "project_agent_chat_message_attachments_uploadedFileId_fkey" FOREIGN KEY ("uploadedFileId") REFERENCES "uploaded_files"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "project_agent_chat_message_attachments" ADD CONSTRAINT "project_agent_chat_message_attachments_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "project_agent_chat_message_attachments" ADD CONSTRAINT "project_agent_chat_message_attachments_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "hub_topics"
+  ADD CONSTRAINT "hub_topics_authorId_fkey"
+  FOREIGN KEY ("authorId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "hub_artifacts"
+  ADD CONSTRAINT "hub_artifacts_topicId_fkey"
+  FOREIGN KEY ("topicId") REFERENCES "hub_topics"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "hub_artifacts"
+  ADD CONSTRAINT "hub_artifacts_authorId_fkey"
+  FOREIGN KEY ("authorId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "hub_artifacts"
+  ADD CONSTRAINT "hub_artifacts_uploadedFileId_fkey"
+  FOREIGN KEY ("uploadedFileId") REFERENCES "uploaded_files"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE "hub_topic_translations"
+  ADD CONSTRAINT "hub_topic_translations_topicId_fkey"
+  FOREIGN KEY ("topicId") REFERENCES "hub_topics"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "hub_comments"
+  ADD CONSTRAINT "hub_comments_topicId_fkey"
+  FOREIGN KEY ("topicId") REFERENCES "hub_topics"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "hub_comments"
+  ADD CONSTRAINT "hub_comments_artifactId_fkey"
+  FOREIGN KEY ("artifactId") REFERENCES "hub_artifacts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "hub_comments"
+  ADD CONSTRAINT "hub_comments_parentId_fkey"
+  FOREIGN KEY ("parentId") REFERENCES "hub_comments"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "hub_comments"
+  ADD CONSTRAINT "hub_comments_authorId_fkey"
+  FOREIGN KEY ("authorId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "hub_comment_translations"
+  ADD CONSTRAINT "hub_comment_translations_commentId_fkey"
+  FOREIGN KEY ("commentId") REFERENCES "hub_comments"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "hub_comment_upvotes"
+  ADD CONSTRAINT "hub_comment_upvotes_commentId_fkey"
+  FOREIGN KEY ("commentId") REFERENCES "hub_comments"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "hub_comment_upvotes"
+  ADD CONSTRAINT "hub_comment_upvotes_userId_fkey"
+  FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "hub_comment_downvotes"
+  ADD CONSTRAINT "hub_comment_downvotes_commentId_fkey"
+  FOREIGN KEY ("commentId") REFERENCES "hub_comments"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "hub_comment_downvotes"
+  ADD CONSTRAINT "hub_comment_downvotes_userId_fkey"
+  FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "hub_topic_tags"
+  ADD CONSTRAINT "hub_topic_tags_topicId_fkey"
+  FOREIGN KEY ("topicId") REFERENCES "hub_topics"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "hub_tag_translations"
+  ADD CONSTRAINT "hub_tag_translations_tagId_fkey"
+  FOREIGN KEY ("tagId") REFERENCES "hub_tags"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "hub_topic_tags"
+  ADD CONSTRAINT "hub_topic_tags_tagId_fkey"
+  FOREIGN KEY ("tagId") REFERENCES "hub_tags"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "hub_artifact_tag_translations"
+  ADD CONSTRAINT "hub_artifact_tag_translations_tagId_fkey"
+  FOREIGN KEY ("tagId") REFERENCES "hub_artifact_tags"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "hub_artifact_tag_assignments"
+  ADD CONSTRAINT "hub_artifact_tag_assignments_artifactId_fkey"
+  FOREIGN KEY ("artifactId") REFERENCES "hub_artifacts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "hub_artifact_tag_assignments"
+  ADD CONSTRAINT "hub_artifact_tag_assignments_tagId_fkey"
+  FOREIGN KEY ("tagId") REFERENCES "hub_artifact_tags"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "hub_upvotes"
+  ADD CONSTRAINT "hub_upvotes_topicId_fkey"
+  FOREIGN KEY ("topicId") REFERENCES "hub_topics"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "hub_upvotes"
+  ADD CONSTRAINT "hub_upvotes_userId_fkey"
+  FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "hub_downvotes"
+  ADD CONSTRAINT "hub_downvotes_topicId_fkey"
+  FOREIGN KEY ("topicId") REFERENCES "hub_topics"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "hub_downvotes"
+  ADD CONSTRAINT "hub_downvotes_userId_fkey"
+  FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;

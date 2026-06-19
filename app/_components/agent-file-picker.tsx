@@ -15,6 +15,7 @@ import {
 } from '@mantine/core'
 import { Check, FileText, FolderOpen, Paperclip, Search, Upload } from 'lucide-react'
 import { useI18n } from './i18n-provider'
+import { ModalTitle } from './modal-title'
 import type { ApiResponse } from '@/shared/api'
 
 export type AgentPickerFile = {
@@ -161,7 +162,7 @@ export function AgentFilePicker({
     <>
       <input
         ref={fileInputRef}
-        accept=".txt,text/plain,image/png,image/jpeg,image/webp"
+        accept=".txt,.pdf,text/plain,application/pdf,image/png,image/jpeg,image/webp"
         hidden
         onChange={(event) => void handleFileChange(event)}
         type="file"
@@ -197,11 +198,9 @@ export function AgentFilePicker({
       <Modal
         opened={isSelectOpen}
         onClose={() => setIsSelectOpen(false)}
+        size="md"
         title={
-          <Group gap="xs" wrap="nowrap">
-            <FolderOpen size={18} />
-            <Text fw={700}>{t.files.chooseUploaded}</Text>
-          </Group>
+          <ModalTitle icon={<FolderOpen size={18} />}>{t.files.chooseUploaded}</ModalTitle>
         }
       >
         <Stack gap="sm">

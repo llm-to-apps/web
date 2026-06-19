@@ -15,6 +15,9 @@ import { appReadyBaseUrl, envNumber } from '../src/server/env'
 import { deleteProjectRepository } from '../src/server/integrations/forgejo'
 import { logError, logInfo, logWarn, type LogContext } from '../src/server/logger'
 import { startAgentRunWorker } from './agent-run-worker'
+import { startHubArtifactScreenshotWorker } from './hub-artifact-screenshot-worker'
+import { startHubArtifactWorker } from './hub-artifact-worker'
+import { startUploadedFileThumbnailWorker } from './uploaded-file-thumbnail-worker'
 import { startUploadedFileWorker } from './uploaded-file-worker'
 
 type ProjectServiceStatus = {
@@ -80,6 +83,9 @@ const worker = new Worker(
   }
 )
 const agentRunWorker = startAgentRunWorker()
+const hubArtifactWorker = startHubArtifactWorker()
+const hubArtifactScreenshotWorker = startHubArtifactScreenshotWorker()
+const uploadedFileThumbnailWorker = startUploadedFileThumbnailWorker()
 const uploadedFileWorker = startUploadedFileWorker()
 
 worker.on('active', (job) => {
@@ -150,6 +156,12 @@ async function shutdown(signal: NodeJS.Signals) {
   await Promise.all([
     closeWorkerGracefully('deploy worker', worker),
     closeWorkerGracefully('agent run worker', agentRunWorker),
+    closeWorkerGracefully('hub artifact worker', hubArtifactWorker),
+    closeWorkerGracefully(
+      'hub artifact screenshot worker',
+      hubArtifactScreenshotWorker
+    ),
+    closeWorkerGracefully('uploaded file thumbnail worker', uploadedFileThumbnailWorker),
     closeWorkerGracefully('uploaded file worker', uploadedFileWorker)
   ])
   await prisma.$disconnect()

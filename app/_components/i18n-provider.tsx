@@ -1,6 +1,13 @@
 'use client'
 
-import { createContext, type ReactNode, useContext, useMemo, useState } from 'react'
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useState
+} from 'react'
 import { useRouter } from 'next/navigation'
 import {
   defaultLocale,
@@ -30,6 +37,10 @@ export function I18nProvider({ children, initialLocale }: I18nProviderProps) {
     resolveInitialLocale(initialLocale)
   )
 
+  useEffect(() => {
+    document.documentElement.lang = locale
+  }, [locale])
+
   const value = useMemo<I18nContextValue>(() => {
     function setLocale(nextLocale: Locale) {
       setLocaleState(nextLocale)
@@ -52,28 +63,6 @@ export function I18nProvider({ children, initialLocale }: I18nProviderProps) {
 function resolveInitialLocale(initialLocale: Locale | undefined) {
   if (isLocale(initialLocale)) {
     return initialLocale
-  }
-
-  if (typeof document === 'undefined') {
-    return defaultLocale
-  }
-
-  const cookieLocale = document.cookie
-    .split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${localeCookieName}=`))
-    ?.split('=')[1]
-
-  if (isLocale(cookieLocale)) {
-    document.documentElement.lang = cookieLocale
-    return cookieLocale
-  }
-
-  const browserLocale = navigator.language.split('-')[0]
-
-  if (isLocale(browserLocale)) {
-    document.documentElement.lang = browserLocale
-    return browserLocale
   }
 
   return defaultLocale

@@ -3,11 +3,8 @@
 import { useEffect, useState } from 'react'
 import type { ComponentProps } from 'react'
 import { Alert, Grid, GridCol, Skeleton, Stack } from '@mantine/core'
-import { AppDesktop, type DesktopProject } from './app-desktop'
-import { UserAgentChat } from './user-agent-chat'
-import { AppLayout } from '../_components/app-layout'
-import { SessionGate } from '../_components/session-gate'
-import type { SessionData } from '../_components/session-provider'
+import { AppDesktop, type DesktopProject } from '@/app/home/app-desktop'
+import { UserAgentChat } from '@/app/home/user-agent-chat'
 import type { ApiResponse } from '@/shared/api'
 
 type HomeData = {
@@ -19,10 +16,6 @@ type HomeData = {
 type HomeResponse = ApiResponse<HomeData>
 
 export default function HomePage() {
-  return <SessionGate>{(session) => <HomeContent session={session} />}</SessionGate>
-}
-
-function HomeContent({ session }: { session: SessionData }) {
   const [data, setData] = useState<HomeData | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -63,7 +56,7 @@ function HomeContent({ session }: { session: SessionData }) {
   }, [])
 
   return (
-    <AppLayout usageSummary={session.usageSummary} user={session.user}>
+    <>
       {error ? <Alert color="red">{error}</Alert> : null}
       {!data && !error ? (
         <Grid>
@@ -90,6 +83,6 @@ function HomeContent({ session }: { session: SessionData }) {
           </GridCol>
         </Grid>
       ) : null}
-    </AppLayout>
+    </>
   )
 }
