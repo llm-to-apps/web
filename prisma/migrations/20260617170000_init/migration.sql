@@ -74,6 +74,7 @@ CREATE TABLE "app_templates" (
     "image" VARCHAR(255),
     "appPort" INTEGER,
     "agentPort" INTEGER,
+    "hubTopicId" VARCHAR(64),
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
     "manifestUrl" VARCHAR(512),
     "manifest" JSONB,

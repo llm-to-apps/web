@@ -503,6 +503,7 @@ function serializeCatalogTemplate(
     id: template.id,
     name: template.name,
     description: template.description,
+    hubTopicId: template.hubTopicId,
     icon: template.icon,
     status: template.status,
     installable: isInstallableTemplate(template),

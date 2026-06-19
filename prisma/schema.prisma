@@ -127,6 +127,7 @@ model AppTemplate {
   image       String?  @db.VarChar(255)
   appPort     Int?
   agentPort   Int?
+  hubTopicId  String?  @db.VarChar(64)
   sortOrder   Int      @default(0)
   manifestUrl String?  @db.VarChar(512)
   manifest    Json?

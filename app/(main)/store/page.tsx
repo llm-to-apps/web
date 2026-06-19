@@ -17,7 +17,7 @@ import {
   TextInput,
   Title
 } from '@mantine/core'
-import { ChevronRight, Search } from 'lucide-react'
+import { ChevronRight, MessageCircle, Search } from 'lucide-react'
 import { AppIcon } from '@/app/_components/app-icon'
 import { InstallButton } from '@/app/store/install-button'
 import { useI18n } from '@/app/_components/i18n-provider'
@@ -30,6 +30,7 @@ type StoreTemplate = {
   icon: string | null
   status: string
   git: string | null
+  hubTopicId: string | null
   image: string | null
   appPort: number | null
   agentPort: number | null
@@ -192,7 +193,19 @@ function TemplateCard({ locale, template }: { locale: string; template: StoreTem
             <Text c="dimmed">{localizedTemplate.description}</Text>
           </div>
         </Group>
-        <Group justify="flex-end">
+        <Group justify="space-between">
+          {template.hubTopicId ? (
+            <Button
+              component={Link}
+              href={`/hub/${encodeURIComponent(template.hubTopicId)}`}
+              leftSection={<MessageCircle size={16} />}
+              variant="subtle"
+            >
+              {t.store.discuss}
+            </Button>
+          ) : (
+            <div />
+          )}
           {isInstallableTemplate(template) ? (
             <InstallButton templateId={template.id} />
           ) : (

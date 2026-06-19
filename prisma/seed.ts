@@ -21,6 +21,7 @@ type AppTemplateSeed = {
   image?: string
   appPort?: number
   agentPort?: number
+  hubTopicId?: string
   sortOrder: number
   manifestUrl?: string
   manifest?: Prisma.InputJsonValue
@@ -743,6 +744,7 @@ async function seedAppTemplates() {
         appPort: template.appPort ?? null,
         description: template.description,
         git: template.git ?? null,
+        hubTopicId: template.hubTopicId ?? null,
         icon: template.icon,
         image: template.image ?? null,
         manifest: template.manifest ?? undefined,
@@ -758,6 +760,7 @@ async function seedAppTemplates() {
         appPort: template.appPort ?? null,
         description: template.description,
         git: template.git ?? null,
+        hubTopicId: template.hubTopicId ?? null,
         icon: template.icon,
         id: template.id,
         image: template.image ?? null,

@@ -39,6 +39,7 @@ function serializeTemplate(template: StoreTemplateRecord) {
     appPort: template.appPort,
     description: template.description,
     git: template.git,
+    hubTopicId: template.hubTopicId,
     icon: template.icon,
     id: template.id,
     image: template.image,
