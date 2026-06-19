@@ -39,7 +39,6 @@ export function AccountMenu({ usageSummary, user }: AccountMenuProps) {
       position="bottom-end"
       shadow="md"
       transitionProps={{ transition: 'pop-top-right' }}
-      width={260}
       withinPortal
     >
       <Menu.Target>

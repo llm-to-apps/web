@@ -10,9 +10,8 @@ import {
 } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Breadcrumbs, Button } from '@mantine/core'
 import { ChevronRight, Home } from 'lucide-react'
-import { BreadcrumbLabel } from './breadcrumb-label'
+import { Os7Breadcrumbs, type Os7BreadcrumbItem } from '../../ui-kit/src/os7-breadcrumbs'
 import { useI18n } from './i18n-provider'
 
 type BreadcrumbItem = {
@@ -106,38 +105,26 @@ export function AppBreadcrumbs({ onHomeNavigate }: AppBreadcrumbsProps = {}) {
 
   const showHomeBreadcrumb = shouldShowHomeBreadcrumb(items)
 
+  const breadcrumbItems: Os7BreadcrumbItem[] = [
+    ...(showHomeBreadcrumb
+      ? [
+          {
+            href: onHomeNavigate ? undefined : '/home',
+            label: t.navigation.home,
+            leftSection: <Home size={15} />,
+            onClick: onHomeNavigate
+          }
+        ]
+      : []),
+    ...items
+  ]
+
   return (
-    <Breadcrumbs separator={<ChevronRight size={14} />}>
-      {showHomeBreadcrumb ? (
-        onHomeNavigate ? (
-          <Button
-            leftSection={<Home size={15} />}
-            onClick={onHomeNavigate}
-            variant="subtle"
-          >
-            {t.navigation.home}
-          </Button>
-        ) : (
-          <Button
-            component={Link}
-            href="/home"
-            leftSection={<Home size={15} />}
-            variant="subtle"
-          >
-            {t.navigation.home}
-          </Button>
-        )
-      ) : null}
-      {items.map((item, index) =>
-        index === items.length - 1 ? (
-          <BreadcrumbLabel key={item.href}>{item.label}</BreadcrumbLabel>
-        ) : (
-          <Button component={Link} href={item.href} key={item.href} variant="subtle">
-            {item.label}
-          </Button>
-        )
-      )}
-    </Breadcrumbs>
+    <Os7Breadcrumbs
+      items={breadcrumbItems}
+      linkComponent={Link}
+      separator={<ChevronRight size={14} />}
+    />
   )
 }
 
