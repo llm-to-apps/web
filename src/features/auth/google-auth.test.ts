@@ -6,7 +6,8 @@ describe('google auth routes', () => {
     vi.unstubAllEnvs()
   })
 
-  it('does not expose Google sign-in until OAuth env is configured', async () => {
+  it('does not expose Google sign-in until OAuth env is enabled and configured', async () => {
+    vi.stubEnv('GOOGLE_OAUTH_ENABLED', '')
     vi.stubEnv('GOOGLE_OAUTH_CLIENT_ID', '')
     vi.stubEnv('GOOGLE_OAUTH_CLIENT_SECRET', '')
 
@@ -23,6 +24,7 @@ describe('google auth routes', () => {
   })
 
   it('exposes Google sign-in when OAuth env is configured', async () => {
+    vi.stubEnv('GOOGLE_OAUTH_ENABLED', 'true')
     vi.stubEnv('GOOGLE_OAUTH_CLIENT_ID', 'google-client-id')
     vi.stubEnv('GOOGLE_OAUTH_CLIENT_SECRET', 'google-client-secret')
 
@@ -39,6 +41,7 @@ describe('google auth routes', () => {
   })
 
   it('starts Google OAuth with a redirect and state cookies', async () => {
+    vi.stubEnv('GOOGLE_OAUTH_ENABLED', 'true')
     vi.stubEnv('GOOGLE_OAUTH_CLIENT_ID', 'google-client-id')
     vi.stubEnv('GOOGLE_OAUTH_CLIENT_SECRET', 'google-client-secret')
     vi.stubEnv('PLATFORM_BASE_URL', 'https://os7.dev')
@@ -58,5 +61,24 @@ describe('google auth routes', () => {
     )
     expect(setCookie).toContain('os7_google_oauth_state=')
     expect(setCookie).toContain('os7_google_oauth_redirect=%2Fhub')
+  })
+
+  it('does not start Google OAuth when disabled', async () => {
+    vi.stubEnv('GOOGLE_OAUTH_ENABLED', '')
+    vi.stubEnv('GOOGLE_OAUTH_CLIENT_ID', 'google-client-id')
+    vi.stubEnv('GOOGLE_OAUTH_CLIENT_SECRET', 'google-client-secret')
+
+    const { handleGoogleStartGet } = await import('./google-start')
+    const response = await handleGoogleStartGet(
+      new NextRequest('https://os7.dev/api/auth/google/start?redirectTo=/hub')
+    )
+
+    expect(response.status).toBe(503)
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: 'NOT_CONFIGURED'
+      },
+      ok: false
+    })
   })
 })

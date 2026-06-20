@@ -66,6 +66,10 @@ export function googleOAuthClientId() {
   return optionalEnv('GOOGLE_OAUTH_CLIENT_ID')
 }
 
+export function googleOAuthEnabled() {
+  return envFlag('GOOGLE_OAUTH_ENABLED')
+}
+
 export function googleOAuthClientSecret() {
   return optionalEnv('GOOGLE_OAUTH_CLIENT_SECRET')
 }

@@ -5,6 +5,7 @@ import { createSession, isValidEmail, normalizeEmail } from '@/server/auth'
 import { prisma } from '@/server/db'
 import {
   googleOAuthClientId,
+  googleOAuthEnabled,
   googleOAuthClientSecret,
   googleOAuthRedirectUri,
   isProductionEnv,
@@ -38,13 +39,15 @@ const currentUserSelect = {
 } as const
 
 export function isGoogleOAuthConfigured() {
-  return Boolean(googleOAuthClientId() && googleOAuthClientSecret())
+  return Boolean(
+    googleOAuthEnabled() && googleOAuthClientId() && googleOAuthClientSecret()
+  )
 }
 
 export async function startGoogleOAuth(request: NextRequest) {
   const clientId = googleOAuthClientId()
 
-  if (!clientId || !googleOAuthClientSecret()) {
+  if (!isGoogleOAuthConfigured() || !clientId) {
     return NextResponse.json(
       {
         error: {

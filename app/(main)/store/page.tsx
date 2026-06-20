@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import {
   Alert,
@@ -46,13 +47,19 @@ type StoreTemplate = {
 type StoreResponse = ApiResponse<{ templates: StoreTemplate[] }>
 
 const companyTemplateIds = new Set(['bookingCalendar', 'kanban'])
+const storeCategoryStorageKey = 'os7_store_category'
 
 export default function StorePage() {
   const { locale, t } = useI18n()
   const [categoryFilter, setCategoryFilter] = useState('personal')
+  const [isUrlFilterReady, setIsUrlFilterReady] = useState(false)
   const [query, setQuery] = useState('')
   const [templates, setTemplates] = useState<StoreTemplate[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const pathname = usePathname()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const queryString = searchParams.toString()
   const categoryFilterOptions = useMemo(
     () => [
       { label: t.store.personal, value: 'personal' },
@@ -75,6 +82,45 @@ export default function StorePage() {
       }) ?? null,
     [categoryFilter, locale, query, templates]
   )
+
+  useEffect(() => {
+    const urlCategoryFilter = searchParams.get('for')
+    const nextCategoryFilter = urlCategoryFilter
+      ? categoryFilterFromUrl(urlCategoryFilter)
+      : readStoredCategoryFilter()
+
+    setCategoryFilter((currentCategoryFilter) =>
+      currentCategoryFilter === nextCategoryFilter
+        ? currentCategoryFilter
+        : nextCategoryFilter
+    )
+    setIsUrlFilterReady(true)
+  }, [queryString, searchParams])
+
+  useEffect(() => {
+    if (!isUrlFilterReady) {
+      return
+    }
+
+    writeStoredCategoryFilter(categoryFilter)
+
+    const nextSearchParams = new URLSearchParams(searchParams.toString())
+    const categoryUrlValue = categoryFilterToUrl(categoryFilter)
+
+    if (categoryUrlValue) {
+      nextSearchParams.set('for', categoryUrlValue)
+    } else {
+      nextSearchParams.delete('for')
+    }
+
+    const nextQueryString = nextSearchParams.toString()
+
+    if (nextQueryString !== queryString) {
+      router.replace(`${pathname}${nextQueryString ? `?${nextQueryString}` : ''}`, {
+        scroll: false
+      })
+    }
+  }, [categoryFilter, isUrlFilterReady, pathname, queryString, router, searchParams])
 
   useEffect(() => {
     let isCurrent = true
@@ -115,11 +161,10 @@ export default function StorePage() {
         <Text c="dimmed">{t.pages.storeDescription}</Text>
       </div>
       {error ? <Alert color="red">{error}</Alert> : null}
-      <Group align="center" justify="space-between">
+      <Group align="flex-end" gap="sm" justify="space-between" wrap="wrap" w="100%">
         <SegmentedControl
           data={categoryFilterOptions}
           onChange={setCategoryFilter}
-          size="sm"
           value={categoryFilter}
         />
         <TextInput
@@ -264,6 +309,53 @@ function templateMatchesQuery(
 
 function normalizeSearchText(value: string) {
   return value.trim().toLocaleLowerCase()
+}
+
+function categoryFilterFromUrl(value: string | null) {
+  if (value === 'company') {
+    return 'business'
+  }
+
+  if (value === 'personal') {
+    return 'personal'
+  }
+
+  return 'personal'
+}
+
+function readStoredCategoryFilter() {
+  if (typeof window === 'undefined') {
+    return 'personal'
+  }
+
+  try {
+    return categoryFilterFromUrl(window.localStorage.getItem(storeCategoryStorageKey))
+  } catch {
+    return 'personal'
+  }
+}
+
+function writeStoredCategoryFilter(category: string) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  try {
+    window.localStorage.setItem(
+      storeCategoryStorageKey,
+      categoryFilterToUrl(category) ?? 'personal'
+    )
+  } catch {
+    // Ignore storage failures, for example in private browsing modes.
+  }
+}
+
+function categoryFilterToUrl(category: string) {
+  if (category === 'business') {
+    return 'company'
+  }
+
+  return null
 }
 
 function isInstallableTemplate(template: StoreTemplate) {
