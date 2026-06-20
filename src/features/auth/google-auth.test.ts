@@ -81,4 +81,21 @@ describe('google auth routes', () => {
       ok: false
     })
   })
+
+  it('uses the public platform URL after Google callback', async () => {
+    vi.stubEnv('PLATFORM_BASE_URL', 'https://os7.dev')
+
+    const { handleGoogleCallbackGet } = await import('./google-callback')
+    const request = new NextRequest(
+      'http://localhost/api/auth/google/callback?error=access_denied',
+      {
+        headers: {
+          cookie: 'os7_google_oauth_redirect=%2Fhub'
+        }
+      }
+    )
+    const response = await handleGoogleCallbackGet(request)
+
+    expect(response.headers.get('location')).toBe('https://os7.dev/hub')
+  })
 })

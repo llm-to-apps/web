@@ -78,7 +78,7 @@ export async function startGoogleOAuth(request: NextRequest) {
 
 export async function finishGoogleOAuth(request: NextRequest) {
   const redirectTo = safeRedirectPath(request.cookies.get(redirectCookie)?.value)
-  const response = NextResponse.redirect(new URL(redirectTo, request.url))
+  const response = NextResponse.redirect(new URL(redirectTo, platformBaseUrl()))
 
   response.cookies.delete(stateCookie)
   response.cookies.delete(redirectCookie)
