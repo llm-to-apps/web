@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, type ReactNode, useState } from 'react'
+import { FormEvent, type ReactNode, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AtSign, Mail } from 'lucide-react'
 import {
@@ -8,6 +8,7 @@ import {
   Box,
   Button,
   Card,
+  Divider,
   Input,
   PinInput,
   Stack,
@@ -23,6 +24,10 @@ import type { ApiResponse } from '@/shared/api'
 type AuthStep = 'email' | 'code'
 
 type AuthResult = ApiResponse
+
+type AuthProvidersResult = ApiResponse<{
+  google: boolean
+}>
 
 type AuthPanelProps = {
   onAuthenticated?: () => void
@@ -45,6 +50,30 @@ export function AuthPanel({
   const [code, setCode] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [result, setResult] = useState<AuthResult | null>(null)
+  const [googleSignInEnabled, setGoogleSignInEnabled] = useState(false)
+
+  useEffect(() => {
+    let active = true
+
+    async function loadAuthProviders() {
+      const response = await fetch('/api/auth/providers', {
+        cache: 'no-store'
+      }).catch(() => null)
+      const data = (await response
+        ?.json()
+        .catch(() => null)) as AuthProvidersResult | null
+
+      if (active && response?.ok && data?.ok) {
+        setGoogleSignInEnabled(data.data.google)
+      }
+    }
+
+    void loadAuthProviders()
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   async function submitAuth(nextCode = code) {
     if (isSubmitting) {
@@ -141,17 +170,32 @@ export function AuthPanel({
           ) : null}
 
           {step === 'email' ? (
-            <TextInput
-              aria-label={t.auth.emailLabel}
-              id="email"
-              leftSection={<AtSign size={18} />}
-              name="email"
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder={t.auth.emailPlaceholder}
-              required
-              type="email"
-              value={email}
-            />
+            <>
+              {googleSignInEnabled ? (
+                <>
+                  <Button
+                    component="a"
+                    href={`/api/auth/google/start?redirectTo=${encodeURIComponent(redirectTo)}`}
+                    variant="default"
+                  >
+                    {t.auth.continueWithGoogle}
+                  </Button>
+                  <Divider label={t.auth.orContinueWithEmail} />
+                </>
+              ) : null}
+
+              <TextInput
+                aria-label={t.auth.emailLabel}
+                id="email"
+                leftSection={<AtSign size={18} />}
+                name="email"
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder={t.auth.emailPlaceholder}
+                required
+                type="email"
+                value={email}
+              />
+            </>
           ) : null}
 
           {step === 'code' ? (
@@ -183,7 +227,7 @@ export function AuthPanel({
           ) : null}
           {isSubmitting && step === 'code' ? (
             <Text c="dimmed" ta="center">
-              Checking code...
+              {t.auth.checkingCode}
             </Text>
           ) : null}
           {result?.ok === false ? (

@@ -62,6 +62,18 @@ export function oauthEncryptionSecret() {
   return optionalEnv('OAUTH_ENCRYPTION_KEY') ?? authSecret()
 }
 
+export function googleOAuthClientId() {
+  return optionalEnv('GOOGLE_OAUTH_CLIENT_ID')
+}
+
+export function googleOAuthClientSecret() {
+  return optionalEnv('GOOGLE_OAUTH_CLIENT_SECRET')
+}
+
+export function googleOAuthRedirectUri() {
+  return optionalTrimmedUrlEnv('GOOGLE_OAUTH_REDIRECT_URI')
+}
+
 export function projectUseAgentModel() {
   return requiredEnv('PROJECT_USE_AGENT_MODEL')
 }

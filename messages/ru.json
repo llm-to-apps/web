@@ -98,6 +98,9 @@
     "codePlaceholder": "1234",
     "working": "Работаю",
     "continue": "Продолжить",
+    "continueWithGoogle": "Продолжить с Google",
+    "orContinueWithEmail": "или продолжить через email",
+    "checkingCode": "Проверяю код...",
     "signIn": "Войти",
     "signInToContinue": "Войдите, чтобы продолжить",
     "authenticationFailed": "Не удалось войти"

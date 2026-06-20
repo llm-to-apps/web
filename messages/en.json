@@ -98,6 +98,9 @@
     "codePlaceholder": "1234",
     "working": "Working",
     "continue": "Continue",
+    "continueWithGoogle": "Continue with Google",
+    "orContinueWithEmail": "or continue with email",
+    "checkingCode": "Checking code...",
     "signIn": "Sign in",
     "signInToContinue": "Sign in to continue",
     "authenticationFailed": "Authentication failed"

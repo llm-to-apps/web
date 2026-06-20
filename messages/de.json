@@ -98,6 +98,9 @@
     "codePlaceholder": "1234",
     "working": "Wird ausgeführt",
     "continue": "Weiter",
+    "continueWithGoogle": "Mit Google fortfahren",
+    "orContinueWithEmail": "oder mit E-Mail fortfahren",
+    "checkingCode": "Code wird geprüft...",
     "signIn": "Anmelden",
     "signInToContinue": "Anmelden, um fortzufahren",
     "authenticationFailed": "Authentifizierung fehlgeschlagen"
