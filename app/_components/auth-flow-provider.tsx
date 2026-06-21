@@ -13,7 +13,7 @@ import { Modal } from '@mantine/core'
 import { LogIn, Sparkles } from 'lucide-react'
 import { AuthPanel } from './auth-panel'
 import { useI18n } from './i18n-provider'
-import { ModalTitle } from './modal-title'
+import { ModalTitle } from '@/ui-kit/src/modal-title'
 import { OnboardingForm } from './onboarding-form'
 import { useSession } from './session-provider'
 

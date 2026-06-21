@@ -15,7 +15,7 @@ import {
 } from '@mantine/core'
 import { Check, FileText, FolderOpen, Paperclip, Search, Upload } from 'lucide-react'
 import { useI18n } from './i18n-provider'
-import { ModalTitle } from './modal-title'
+import { ModalTitle } from '@/ui-kit/src/modal-title'
 import type { ApiResponse } from '@/shared/api'
 
 export type AgentPickerFile = {

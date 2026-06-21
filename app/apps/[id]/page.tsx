@@ -19,7 +19,7 @@ import {
 } from '@mantine/core'
 import { useParams, useSearchParams } from 'next/navigation'
 import { RefreshCw } from 'lucide-react'
-import { ModalTitle } from '@/app/_components/modal-title'
+import { ModalTitle } from '@/ui-kit/src/modal-title'
 import { formatMessage } from '@/shared/i18n/dictionaries'
 import { useI18n } from '../../_components/i18n-provider'
 import { ProjectAgentPanel } from './project-agent-panel'

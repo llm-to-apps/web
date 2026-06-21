@@ -31,7 +31,7 @@ import {
   Trash2
 } from 'lucide-react'
 import { FormActions } from '@/app/_components/form-actions'
-import { ModalTitle } from '@/app/_components/modal-title'
+import { ModalTitle } from '@/ui-kit/src/modal-title'
 import { SessionGate } from '@/app/_components/session-gate'
 import { useI18n } from '@/app/_components/i18n-provider'
 import type { ApiResponse } from '@/shared/api'

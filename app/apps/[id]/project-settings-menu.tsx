@@ -5,7 +5,7 @@ import { ActionIcon, Button, Checkbox, Menu, Modal, Stack, Text } from '@mantine
 import { AlertTriangle, Eraser, ExternalLink, MoreHorizontal, Trash2 } from 'lucide-react'
 import { useI18n } from '../../_components/i18n-provider'
 import { FormActions } from '../../_components/form-actions'
-import { ModalTitle } from '../../_components/modal-title'
+import { ModalTitle } from '@/ui-kit/src/modal-title'
 import { useRouter } from 'next/navigation'
 import type { ApiResponse } from '@/shared/api'
 
