@@ -77,7 +77,7 @@ const prisma = new PrismaClient()
 const moneyTemplateManifestCommit = 'f67b4176d813dc0abe8854be70b700fe83247f9e'
 const moneyTemplateImage = 'ghcr.io/llm-to-apps/money-template:sha-f67b417'
 const moneyTemplateManifestBaseUrl = `https://cdn.jsdelivr.net/gh/llm-to-apps/money-template@${moneyTemplateManifestCommit}`
-const gptCardTemplateManifestCommit = '2c912b74afe8f5e78672899f9117f4de3782b8d7'
+const gptCardTemplateManifestCommit = '94d10cb8c6a7d403126f4854bb159c70df4a64a2'
 const gptCardTemplateImage = 'ghcr.io/llm-to-apps/gpt-card-template:sha-2c912b7'
 const gptCardTemplateManifestBaseUrl = `https://cdn.jsdelivr.net/gh/llm-to-apps/gpt-card-template@${gptCardTemplateManifestCommit}`
 
