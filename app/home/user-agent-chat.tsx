@@ -107,6 +107,8 @@ type FilesResponse = ApiResponse<{
   files: UploadedChatFile[]
 }>
 
+const userAgentChatHeight = 'calc(100dvh - 140px)'
+
 export function UserAgentChat({
   activeRunId = null,
   initialMessages = []
@@ -539,7 +541,7 @@ export function UserAgentChat({
   return (
     <Paper
       aria-label={t.chat.messageAria}
-      h="70vh"
+      h={userAgentChatHeight}
       p="md"
       pos="relative"
       style={{ overflow: 'hidden' }}

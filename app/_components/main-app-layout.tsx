@@ -108,7 +108,7 @@ function MainAppShell({ children }: { children: ReactNode }) {
         />
       </Drawer>
 
-      <AppShell.Main>
+      <AppShell.Main style={{ minHeight: 'calc(100dvh - 108px)' }}>
         <Container>
           <Stack gap="md">
             <AppBreadcrumbs

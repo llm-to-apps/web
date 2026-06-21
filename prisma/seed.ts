@@ -77,6 +77,9 @@ const prisma = new PrismaClient()
 const moneyTemplateManifestCommit = 'f67b4176d813dc0abe8854be70b700fe83247f9e'
 const moneyTemplateImage = 'ghcr.io/llm-to-apps/money-template:sha-f67b417'
 const moneyTemplateManifestBaseUrl = `https://cdn.jsdelivr.net/gh/llm-to-apps/money-template@${moneyTemplateManifestCommit}`
+const gptCardTemplateManifestCommit = '2c912b74afe8f5e78672899f9117f4de3782b8d7'
+const gptCardTemplateImage = 'ghcr.io/llm-to-apps/gpt-card-template:sha-2c912b7'
+const gptCardTemplateManifestBaseUrl = `https://cdn.jsdelivr.net/gh/llm-to-apps/gpt-card-template@${gptCardTemplateManifestCommit}`
 
 const appTemplateTranslations: Record<string, TemplateTranslationSeed> = {
   bookingCalendar: {
@@ -163,6 +166,20 @@ const appTemplateTranslations: Record<string, TemplateTranslationSeed> = {
     ru: {
       name: 'Финансы',
       description: 'Персональный финансовый дашборд с собственной базой данных.'
+    }
+  },
+  'gpt-card': {
+    de: {
+      name: 'GPT Card',
+      description: 'Persönliche Website-Karte mit Beratungsslots.'
+    },
+    en: {
+      name: 'GPT Card',
+      description: 'Personal website card with consultation booking.'
+    },
+    ru: {
+      name: 'GPT Card',
+      description: 'Персональный сайт-визитка со слотами для консультаций.'
     }
   },
   moodJournal: {
@@ -724,12 +741,30 @@ async function seedAppTemplates() {
           image: moneyTemplateImage
         })
       ]
-  const appTemplates = [...moneyTemplates, ...staticAppTemplates]
+  const gptCardTemplates = includeDevTemplates
+    ? [
+        templateFromLocalManifest('../templates/gpt-card-template/manifest.json', {
+          image: 'os7-gpt-card-template:local',
+          manifestUrl: 'local:../templates/gpt-card-template/manifest.json'
+        }),
+        templateFromLocalManifest('../templates/gpt-card-template/manifest.dev.json', {
+          image: 'os7-gpt-card:dev',
+          manifestUrl: 'local:../templates/gpt-card-template/manifest.dev.json'
+        })
+      ]
+    : [
+        await templateFromManifestUrl(`${gptCardTemplateManifestBaseUrl}/manifest.json`, {
+          image: gptCardTemplateImage
+        })
+      ]
+  const appTemplates = [...moneyTemplates, ...gptCardTemplates, ...staticAppTemplates]
 
   if (!includeDevTemplates) {
     await prisma.appTemplate.deleteMany({
       where: {
-        id: 'money-dev'
+        id: {
+          in: ['money-dev', 'gpt-card-dev']
+        }
       }
     })
   }
