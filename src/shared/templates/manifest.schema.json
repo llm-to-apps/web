@@ -207,6 +207,36 @@
         }
       }
     },
+    "integrations": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["provider", "required", "mode", "scopes"],
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": ["google"]
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["on_demand"]
+          },
+          "scopes": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
     "services": {
       "type": "object",
       "additionalProperties": false,

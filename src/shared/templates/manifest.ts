@@ -50,6 +50,15 @@ export type TemplateManifest = {
       limit?: number
     }
   }
+  integrations?: Record<
+    string,
+    {
+      provider: 'google'
+      required: boolean
+      mode: 'on_demand'
+      scopes: string[]
+    }
+  >
   services: {
     mysql?: {
       required: boolean

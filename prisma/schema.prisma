@@ -24,6 +24,7 @@ model User {
   projectMemberships                 ProjectMember[]
   oauthAuthorizationCodes            OAuthAuthorizationCode[]
   oauthAccessTokens                  OAuthAccessToken[]
+  projectIntegrationGrants           ProjectIntegrationGrant[]
   agentRuns                          AgentRun[]
   projectAgentChatMessages           ProjectAgentChatMessage[]
   projectAgentChatMessageAttachments ProjectAgentChatMessageAttachment[]
@@ -77,6 +78,7 @@ model Project {
   user                               User                                @relation(fields: [userId], references: [id], onDelete: Cascade)
   members                            ProjectMember[]
   oauthClient                        OAuthClient?
+  integrationGrants                  ProjectIntegrationGrant[]
   agentRuns                          AgentRun[]
   projectAgentChatMessages           ProjectAgentChatMessage[]
   projectAgentChatMessageAttachments ProjectAgentChatMessageAttachment[]
@@ -209,6 +211,31 @@ model OAuthAccessToken {
   @@index([clientId, expiresAt])
   @@index([userId, createdAt])
   @@map("oauth_access_tokens")
+}
+
+model ProjectIntegrationGrant {
+  id                    String    @id @default(cuid())
+  projectId             String
+  userId                String
+  integrationId         String    @db.VarChar(64)
+  provider              String    @db.VarChar(64)
+  scopes                String[]
+  accessTokenEncrypted  String?   @db.Text
+  refreshTokenEncrypted String?   @db.Text
+  tokenType             String    @default("Bearer") @db.VarChar(32)
+  expiresAt             DateTime?
+  revokedAt             DateTime?
+  metadata              Json?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId, integrationId])
+  @@index([projectId, integrationId, provider])
+  @@index([userId, provider])
+  @@map("project_integration_grants")
 }
 
 model ProjectAgentChatMessage {
