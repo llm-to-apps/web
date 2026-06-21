@@ -192,9 +192,7 @@ export async function handleGoogleIntegrationCallbackGet(request: NextRequest) {
     },
     create: {
       accessTokenEncrypted: encryptIntegrationSecret(token.access_token),
-      expiresAt: token.expires_in
-        ? new Date(Date.now() + token.expires_in * 1000)
-        : null,
+      expiresAt: token.expires_in ? new Date(Date.now() + token.expires_in * 1000) : null,
       integrationId: state.integrationId,
       metadata: token.scope ? { scope: token.scope } : undefined,
       projectId: state.projectId,
@@ -206,9 +204,7 @@ export async function handleGoogleIntegrationCallbackGet(request: NextRequest) {
     },
     update: {
       accessTokenEncrypted: encryptIntegrationSecret(token.access_token),
-      expiresAt: token.expires_in
-        ? new Date(Date.now() + token.expires_in * 1000)
-        : null,
+      expiresAt: token.expires_in ? new Date(Date.now() + token.expires_in * 1000) : null,
       metadata: token.scope ? { scope: token.scope } : undefined,
       provider: 'google',
       refreshTokenEncrypted,
@@ -427,13 +423,7 @@ async function findProjectIntegration({
   }
 }
 
-function buildGoogleAuthorizeUrl({
-  scopes,
-  state
-}: {
-  scopes: string[]
-  state: string
-}) {
+function buildGoogleAuthorizeUrl({ scopes, state }: { scopes: string[]; state: string }) {
   const url = new URL(googleAuthorizeUrl)
   url.searchParams.set('client_id', googleOAuthClientId() ?? '')
   url.searchParams.set('redirect_uri', googleIntegrationRedirectUri())
@@ -532,7 +522,9 @@ function googleIntegrationRedirectUri() {
 }
 
 function isGoogleIntegrationConfigured() {
-  return Boolean(googleOAuthEnabled() && googleOAuthClientId() && googleOAuthClientSecret())
+  return Boolean(
+    googleOAuthEnabled() && googleOAuthClientId() && googleOAuthClientSecret()
+  )
 }
 
 function resolveReturnRedirectUri(
@@ -596,7 +588,9 @@ function verifyState(value: string) {
   }
 
   try {
-    return JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as GoogleCallbackState
+    return JSON.parse(
+      Buffer.from(body, 'base64url').toString('utf8')
+    ) as GoogleCallbackState
   } catch {
     return null
   }
