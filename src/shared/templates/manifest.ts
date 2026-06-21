@@ -11,6 +11,7 @@ export type TemplateManifest = {
   icon: string
   status: 'available' | 'coming_soon'
   sortOrder?: number
+  hot?: boolean
   source: {
     repository: string
     remote: string

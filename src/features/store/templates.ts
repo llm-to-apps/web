@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/server/db'
 import { jsonOk } from '@/server/http'
+import type { TemplateManifest } from '@/shared/templates/manifest'
 
 type StoreTemplateRecord = Prisma.AppTemplateGetPayload<{
   include: {
@@ -43,6 +44,7 @@ function serializeTemplate(template: StoreTemplateRecord) {
     icon: template.icon,
     id: template.id,
     image: template.image,
+    hot: isHotTemplate(template.manifest),
     name: template.name,
     status: template.status,
     translations: Object.fromEntries(
@@ -55,4 +57,8 @@ function serializeTemplate(template: StoreTemplateRecord) {
       ])
     )
   }
+}
+
+function isHotTemplate(manifest: Prisma.JsonValue) {
+  return Boolean((manifest as Partial<TemplateManifest> | null)?.hot)
 }

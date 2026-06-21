@@ -53,6 +53,15 @@ describe('template manifest integrations', () => {
     })
   })
 
+  it('accepts hot template markers', () => {
+    const manifest = parseTemplateManifest({
+      ...baseManifest,
+      hot: true
+    })
+
+    expect(manifest.hot).toBe(true)
+  })
+
   it('rejects unknown integration providers', () => {
     expect(() =>
       parseTemplateManifest({

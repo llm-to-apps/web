@@ -7,6 +7,7 @@ import {
   Clock3,
   Dumbbell,
   HeartPulse,
+  IdCard,
   NotebookPen,
   PanelsTopLeft,
   Smile,
@@ -26,6 +27,7 @@ const iconComponents = {
   habits: ClipboardList,
   jobs: BriefcaseBusiness,
   kanban: PanelsTopLeft,
+  'id-card': IdCard,
   meal: Utensils,
   money: CircleDollarSign,
   mood: Smile,
@@ -37,6 +39,8 @@ const iconComponents = {
 
 const templateIconFallbacks: Record<string, keyof typeof iconComponents> = {
   bookingCalendar: 'booking',
+  'gpt-card': 'id-card',
+  'gpt-card-dev': 'id-card',
   habitTracker: 'habits',
   jobSearchCrm: 'jobs',
   kanban: 'kanban',

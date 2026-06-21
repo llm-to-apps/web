@@ -32,6 +32,7 @@ type StoreTemplate = {
   status: string
   git: string | null
   hubTopicId: string | null
+  hot: boolean
   image: string | null
   appPort: number | null
   agentPort: number | null
@@ -234,7 +235,14 @@ function TemplateCard({ locale, template }: { locale: string; template: StoreTem
             size="large"
           />
           <div>
-            <Title order={3}>{localizedTemplate.name}</Title>
+            <Group align="center" gap="xs">
+              <Title order={3}>{localizedTemplate.name}</Title>
+              {template.hot ? (
+                <Badge color="red" size="sm" variant="light">
+                  HOT
+                </Badge>
+              ) : null}
+            </Group>
             <Text c="dimmed">{localizedTemplate.description}</Text>
           </div>
         </Group>
