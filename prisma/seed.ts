@@ -77,8 +77,8 @@ const prisma = new PrismaClient()
 const moneyTemplateManifestCommit = 'f67b4176d813dc0abe8854be70b700fe83247f9e'
 const moneyTemplateImage = 'ghcr.io/llm-to-apps/money-template:sha-f67b417'
 const moneyTemplateManifestBaseUrl = `https://cdn.jsdelivr.net/gh/llm-to-apps/money-template@${moneyTemplateManifestCommit}`
-const gptCardTemplateManifestCommit = 'cd83b64133be7647de484c3a94afdefcc7ee7edd'
-const gptCardTemplateImage = 'ghcr.io/llm-to-apps/gpt-card-template:sha-cd83b64'
+const gptCardTemplateManifestCommit = '5781d65aa36373d966a99edd0b1059ce177515a1'
+const gptCardTemplateImage = 'ghcr.io/llm-to-apps/gpt-card-template:sha-582e6c0'
 const gptCardTemplateManifestBaseUrl = `https://cdn.jsdelivr.net/gh/llm-to-apps/gpt-card-template@${gptCardTemplateManifestCommit}`
 
 const appTemplateTranslations: Record<string, TemplateTranslationSeed> = {
@@ -178,7 +178,7 @@ const appTemplateTranslations: Record<string, TemplateTranslationSeed> = {
       description: 'Personal website card with consultation booking.'
     },
     ru: {
-      name: 'GPT Card',
+      name: 'GPT визитка',
       description: 'Персональный сайт-визитка со слотами для консультаций.'
     }
   },
