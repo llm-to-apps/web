@@ -227,7 +227,8 @@
     "confirmData": "I understand all application data will be permanently lost.",
     "cancel": "Cancel",
     "deleteAction": "Delete application",
-    "deleteFailed": "Delete failed"
+    "deleteFailed": "Delete failed",
+    "deployFailed": "Could not start"
   },
   "userAgent": {
     "welcome": "I can help you coordinate work across your apps and direct app-specific requests to the most appropriate project agent.",
@@ -240,6 +241,8 @@
     "iframeTitle": "{name} application",
     "applicationStatus": "Application is {status}",
     "previewPending": "The preview will load when the service is ready.",
+    "deployFailed": "Application could not start. Please try again later or reinstall it.",
+    "deleteFailed": "Application could not be deleted. Please try again later.",
     "usageTotal": "Total: {count}",
     "usageInput": "Input: {count}",
     "usageOutput": "Output: {count}"

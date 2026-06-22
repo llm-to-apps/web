@@ -19,6 +19,7 @@ import { Download, Store } from 'lucide-react'
 import { AppIcon } from '../_components/app-icon'
 import { useI18n } from '../_components/i18n-provider'
 import type { ApiResponse } from '@/shared/api'
+import type { Dictionary } from '@/shared/i18n/dictionaries'
 
 export type DesktopProject = {
   id: string
@@ -181,6 +182,7 @@ export function AppDesktop({ initialProjects }: AppDesktopProps) {
                 </Text>
               </Stack>
             )
+            const deployError = formatDeployError(project.deployError, t)
 
             return (
               <AppTileCard
@@ -190,9 +192,9 @@ export function AppDesktop({ initialProjects }: AppDesktopProps) {
                 usageSummary={usageSummary}
               >
                 <div aria-disabled={isBusy ? 'true' : undefined}>{appTileContent}</div>
-                {project.deployError ? (
+                {deployError ? (
                   <Text c="red" size="xs" ta="center">
-                    {project.deployError}
+                    {deployError}
                   </Text>
                 ) : null}
                 {hasTemplateUpdate ? (
@@ -293,4 +295,16 @@ function formatCredits(value: number, locale: string) {
     maximumFractionDigits: 0,
     minimumFractionDigits: 0
   }).format(value)
+}
+
+function formatDeployError(error: string | null, t: Dictionary) {
+  if (error === 'delete_failed') {
+    return t.desktop.deleteFailed
+  }
+
+  if (error === 'deployment_failed') {
+    return t.desktop.deployFailed
+  }
+
+  return null
 }

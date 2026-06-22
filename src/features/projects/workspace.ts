@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 import { getCurrentUser } from '@/server/auth'
 import { prisma } from '@/server/db'
 import { jsonErrorMessage, jsonOk } from '@/server/http'
+import { formatProjectDeployErrorForDisplay } from './deploy-error'
 import { getProjectTemplateUpdate } from './template-update'
 import {
   findWorkspaceProject,
@@ -68,7 +69,10 @@ export async function handleProjectWorkspaceGet(
     messages: chat.messages,
     project: {
       appUrl: project.url,
-      deployError: project.deployError,
+      deployError: formatProjectDeployErrorForDisplay(
+        project.deployError,
+        project.status
+      ),
       devUrl,
       domain: project.domain,
       devDomain: project.devDomain,

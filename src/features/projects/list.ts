@@ -2,6 +2,7 @@ import { getCurrentUser } from '@/server/auth'
 import { prisma } from '@/server/db'
 import { jsonErrorMessage, jsonOk } from '@/server/http'
 import { projectMemberWhere } from '@/server/project-members'
+import { formatProjectDeployErrorForDisplay } from './deploy-error'
 import { createTemplateImageMap, getProjectTemplateUpdate } from './template-update'
 
 export async function handleProjectsListGet() {
@@ -45,6 +46,10 @@ export async function handleProjectsListGet() {
   return jsonOk({
     projects: projects.map((project) => ({
       ...project,
+      deployError: formatProjectDeployErrorForDisplay(
+        project.deployError,
+        project.status
+      ),
       templateUpdate: getProjectTemplateUpdate(project, latestImagesByTemplateId)
     }))
   })

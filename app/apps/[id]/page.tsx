@@ -94,6 +94,7 @@ export default function ProjectPage() {
   const mode = searchParams.get('mode') === 'dev' ? 'dev' : 'use'
   const previewUrl = mode === 'dev' ? devReadyUrl : data?.project.appUrl
   const localizedPreviewUrl = previewUrl ? previewUrlWithLocale(previewUrl, locale) : null
+  const deployError = formatDeployError(data?.project.deployError ?? null, t)
 
   useEffect(() => {
     let isCurrent = true
@@ -489,9 +490,7 @@ export default function ProjectPage() {
                       status: data.project.status
                     })}
                   </Title>
-                  <Text c="dimmed">
-                    {data.project.deployError || t.project.previewPending}
-                  </Text>
+                  <Text c="dimmed">{deployError || t.project.previewPending}</Text>
                 </Stack>
               </Center>
             </Paper>
@@ -506,6 +505,18 @@ function previewUrlWithLocale(previewUrl: string, locale: string) {
   const url = new URL(previewUrl)
   url.searchParams.set('lang', locale)
   return url.toString()
+}
+
+function formatDeployError(error: string | null, t: ReturnType<typeof useI18n>['t']) {
+  if (error === 'delete_failed') {
+    return t.project.deleteFailed
+  }
+
+  if (error === 'deployment_failed') {
+    return t.project.deployFailed
+  }
+
+  return null
 }
 
 function waitForUiDelay() {

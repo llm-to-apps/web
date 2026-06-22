@@ -7,6 +7,7 @@ import { managerUrl as readManagerUrl } from '@/server/env'
 import { jsonErrorMessage, jsonOk } from '@/server/http'
 import { projectMemberWhere } from '@/server/project-members'
 import { parseProjectResources } from '@/server/deploy/project-resources'
+import { formatProjectDeployErrorForDisplay } from './deploy-error'
 import { getProjectTemplateUpdate } from './template-update'
 
 type ProjectRouteContext = {
@@ -58,6 +59,10 @@ export async function handleProjectGet(
   return jsonOk({
     project: {
       ...project,
+      deployError: formatProjectDeployErrorForDisplay(
+        project.deployError,
+        project.status
+      ),
       templateUpdate: getProjectTemplateUpdate(
         project,
         new Map([[project.templateId, template?.image ?? null]])

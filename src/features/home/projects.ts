@@ -6,6 +6,7 @@ import {
   getProjectTemplateUpdate
 } from '@/features/projects/template-update'
 import type { Locale } from '@/shared/i18n/config'
+import { formatProjectDeployErrorForDisplay } from '@/features/projects/deploy-error'
 
 export async function loadHomeProjects(userId: string, locale: Locale) {
   const projects = await prisma.project.findMany({
@@ -75,6 +76,7 @@ export async function loadHomeProjects(userId: string, locale: Locale) {
   return projects.map((project) => ({
     ...project,
     deletedAt: project.deletedAt?.toISOString() ?? null,
+    deployError: formatProjectDeployErrorForDisplay(project.deployError, project.status),
     templateName: localizedTemplateNames.get(project.templateId) ?? project.templateName,
     templateUpdate: getProjectTemplateUpdate(project, latestImagesByTemplateId),
     usage: formatInitialUsage({

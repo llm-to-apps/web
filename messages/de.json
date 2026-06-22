@@ -227,7 +227,8 @@
     "confirmData": "Ich verstehe, dass alle Anwendungsdaten dauerhaft verloren gehen.",
     "cancel": "Abbrechen",
     "deleteAction": "Anwendung löschen",
-    "deleteFailed": "Löschen fehlgeschlagen"
+    "deleteFailed": "Löschen fehlgeschlagen",
+    "deployFailed": "Start fehlgeschlagen"
   },
   "userAgent": {
     "welcome": "Ich helfe dir, über alle Apps hinweg zu denken und App-Aufgaben an den passenden Project Agent weiterzugeben.",
@@ -240,6 +241,8 @@
     "iframeTitle": "{name} Anwendung",
     "applicationStatus": "Anwendung ist {status}",
     "previewPending": "Die Vorschau lädt, sobald der Dienst bereit ist.",
+    "deployFailed": "Die Anwendung konnte nicht gestartet werden. Bitte versuche es später erneut oder installiere sie neu.",
+    "deleteFailed": "Die Anwendung konnte nicht gelöscht werden. Bitte versuche es später erneut.",
     "usageTotal": "Gesamt: {count}",
     "usageInput": "Eingabe: {count}",
     "usageOutput": "Ausgabe: {count}"
