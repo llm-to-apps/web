@@ -7,6 +7,11 @@ import { elapsedSince, logAgentRun } from '@/server/agent/run-logger'
 import { prisma } from '@/server/db'
 import { projectMemberWhere } from '@/server/project-members'
 
+import {
+  agentRoutingByTemplateId,
+  appAgentRoutingFromManifest,
+  type AppAgentRouting
+} from './app-agent-routing'
 import { type AppCatalogArguments, type McpContext } from './schema'
 import { toolJson } from './tools'
 
@@ -281,6 +286,10 @@ export async function listInstalledAppsTool({
 }) {
   const dbStartedAt = Date.now()
   const apps = await findInstalledProjects(context.user.id)
+  const agentRouting = await agentRoutingByTemplateId(
+    apps.map((app) => app.templateId),
+    prisma
+  )
 
   logAgentRun(
     'mcp.personal.apps.list_installed.finished',
@@ -297,7 +306,9 @@ export async function listInstalledAppsTool({
   )
 
   return toolJson({
-    apps: apps.map(serializeInstalledProject)
+    apps: apps.map((app) =>
+      serializeInstalledProject(app, agentRouting.get(app.templateId))
+    )
   })
 }
 
@@ -499,16 +510,21 @@ function serializeCatalogTemplate(
     score?: number
   }
 ) {
+  const agent = appAgentRoutingFromManifest(template.manifest)
+
   return {
     id: template.id,
     name: template.name,
     description: template.description,
+    agent,
     hubTopicId: template.hubTopicId,
     icon: template.icon,
     status: template.status,
     installable: isInstallableTemplate(template),
     installed: installedProjects.length > 0,
-    installedApps: installedProjects.map(serializeInstalledProject),
+    installedApps: installedProjects.map((project) =>
+      serializeInstalledProject(project, agent ?? undefined)
+    ),
     score,
     translations: Object.fromEntries(
       template.translations.map((translation) => [
@@ -522,11 +538,12 @@ function serializeCatalogTemplate(
   }
 }
 
-function serializeInstalledProject(project: InstalledProject) {
+function serializeInstalledProject(project: InstalledProject, agent?: AppAgentRouting) {
   return {
     id: project.id,
     templateId: project.templateId,
     name: project.templateName,
+    agent: agent ?? null,
     domain: project.domain,
     url: project.url,
     status: project.status,

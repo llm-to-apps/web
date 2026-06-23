@@ -727,9 +727,8 @@ async function seedAppTemplates() {
   const includeDevTemplates = process.env.NODE_ENV !== 'production'
   const moneyTemplates = includeDevTemplates
     ? [
-        templateFromLocalManifest('../templates/money/manifest.json', {
-          image: 'os7-money-template:local',
-          manifestUrl: 'local:../templates/money/manifest.json'
+        await templateFromManifestUrl(`${moneyTemplateManifestBaseUrl}/manifest.json`, {
+          image: moneyTemplateImage
         }),
         templateFromLocalManifest('../templates/money/manifest.dev.json', {
           image: 'os7-money:dev',
@@ -743,9 +742,8 @@ async function seedAppTemplates() {
       ]
   const gptCardTemplates = includeDevTemplates
     ? [
-        templateFromLocalManifest('../templates/gpt-card-template/manifest.json', {
-          image: 'os7-gpt-card-template:local',
-          manifestUrl: 'local:../templates/gpt-card-template/manifest.json'
+        await templateFromManifestUrl(`${gptCardTemplateManifestBaseUrl}/manifest.json`, {
+          image: gptCardTemplateImage
         }),
         templateFromLocalManifest('../templates/gpt-card-template/manifest.dev.json', {
           image: 'os7-gpt-card:dev',

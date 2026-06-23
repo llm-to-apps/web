@@ -17,6 +17,7 @@ export type HubTopicListItem = {
   status: string
   tags: string[]
   title: string
+  visibility: string
   translations: Record<
     string,
     {

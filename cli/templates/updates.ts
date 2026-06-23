@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto'
+import fs from 'node:fs/promises'
+import path from 'node:path'
 import { type AppTemplate } from '@prisma/client'
 
 import { prisma } from '../../src/server/db'
@@ -172,6 +174,14 @@ async function applyTemplateUpdate(update: TemplateUpdate) {
 }
 
 async function fetchTemplateManifest(manifestUrl: string) {
+  if (manifestUrl.startsWith('local:')) {
+    const localPath = manifestUrl.slice('local:'.length)
+    const filePath = path.resolve(process.cwd(), localPath)
+    const content = await fs.readFile(filePath, 'utf8')
+
+    return parseTemplateManifest(JSON.parse(content))
+  }
+
   const response = await fetch(manifestUrl, {
     headers: {
       Accept: 'application/json'
@@ -199,6 +209,14 @@ function resolveUpdateSource(
   }
 
   const currentManifest = parseStoredManifest(template.manifest)
+
+  if (template.manifestUrl?.startsWith('local:')) {
+    return {
+      manifestUrl: template.manifestUrl,
+      reason: 'local manifest URL'
+    }
+  }
+
   const githubSource = currentManifest?.updates?.github
 
   if (githubSource) {
@@ -206,10 +224,6 @@ function resolveUpdateSource(
       manifestUrl: githubRawManifestUrl(githubSource),
       reason: 'manifest updates.github'
     }
-  }
-
-  if (template.manifestUrl?.startsWith('local:')) {
-    return null
   }
 
   const repository = parseGithubRepository(template.git ?? '')

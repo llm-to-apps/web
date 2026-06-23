@@ -171,6 +171,8 @@
     "intent": "Намерение",
     "intentPlaceholder": "Я хочу разработать Pomodoro-приложение для фокус-сессий, перерывов, задач и простой аналитики продуктивности.",
     "intentMinLength": "Напиши минимум {count} символа.",
+    "publicTopic": "Публично",
+    "privateTopic": "Приватно",
     "initialFiles": "Файлы",
     "initialFilesPlaceholder": "Прикрепить файлы",
     "initialFilesDescription": "Прикрепите любые материалы: картинки, PDF файлы, Excel таблицы и т.д.",

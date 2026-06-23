@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 const topicCategorySchema = z.enum(['personal', 'business'])
+export const hubTopicVisibilitySchema = z.enum(['public', 'private'])
 export const minHubTopicIntentLength = 256
 export const maxHubTopicIntentLength = 12000
 
@@ -14,7 +15,8 @@ export const createHubTopicSchema = z.object({
       `Intent must be at least ${minHubTopicIntentLength} characters`
     )
     .max(maxHubTopicIntentLength),
-  title: z.string().trim().max(160).optional()
+  title: z.string().trim().max(160).optional(),
+  visibility: hubTopicVisibilitySchema.default('public')
 })
 
 export const createHubCommentSchema = z.object({

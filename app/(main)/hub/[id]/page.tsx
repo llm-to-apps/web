@@ -31,6 +31,7 @@ import {
   Image as ImageIcon,
   Link as LinkIcon,
   LoaderCircle,
+  Lock,
   MessageSquare,
   MoreHorizontal,
   Plus,
@@ -473,6 +474,15 @@ export default function HubTopicPage() {
               <Paper withBorder p="md" radius="md" style={{ flex: 1, minWidth: 0 }}>
                 <Stack gap="sm" style={{ flex: 1, minWidth: 0 }}>
                   <Group justify="flex-end">
+                    {topic.visibility === 'private' ? (
+                      <Badge
+                        color="gray"
+                        leftSection={<Lock size={12} />}
+                        variant="light"
+                      >
+                        {hub.privateTopic}
+                      </Badge>
+                    ) : null}
                     <TopicStatusBadge labels={hub.status} status={topic.status} />
                   </Group>
                   <MarkdownContent content={localizedTopic?.intent ?? ''} />

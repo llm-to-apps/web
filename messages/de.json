@@ -171,6 +171,8 @@
     "intent": "Absicht",
     "intentPlaceholder": "Ich möchte eine Pomodoro-App für Fokus-Sessions, Pausen, Aufgaben und einfache Produktivitätsanalysen bauen.",
     "intentMinLength": "Schreibe mindestens {count} Zeichen.",
+    "publicTopic": "Öffentlich",
+    "privateTopic": "Privat",
     "initialFiles": "Dateien",
     "initialFilesPlaceholder": "Dateien anhängen",
     "initialFilesDescription": "Hänge beliebige Materialien an: Bilder, PDF-Dateien, Excel-Tabellen und mehr.",

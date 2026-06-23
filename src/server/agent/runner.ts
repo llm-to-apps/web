@@ -13,6 +13,7 @@ import { ensureAuthToken } from '../auth/tokens'
 import { billAgentUsage } from '../billing'
 import { hasTokenUsage, readMastraStream } from './mastra-stream'
 import { publishProjectChatChanged } from './project-chat-events'
+import { agentRoutingByTemplateId } from '../../features/mcp/personal/app-agent-routing'
 import {
   agentEmbeddingDimensions,
   agentRuntimeUrl,
@@ -22,6 +23,7 @@ import {
 } from '../env'
 import { embedTexts } from '../files/embeddings'
 import { platformBaseUrl } from '../request-origin'
+import { projectMemberWhere } from '../project-members'
 import { getPlatformStorageObjectBuffer } from '../storage'
 import { projectAgentMemoryIds, userAgentMemoryIds } from './memory-ids'
 import { elapsedSince, errorAgentRun, logAgentRun, truncateForLog } from './run-logger'
@@ -156,17 +158,23 @@ async function executeUserAgentRun(run: AgentRunRecord) {
   const { resourceId: memoryResource, threadId: memoryThreadId } = userAgentMemoryIds(
     run.userId
   )
-  const personalMcpToken = await ensureAuthToken({
-    userId: run.userId,
-    subjectType: 'user',
-    scope: 'personal:mcp',
-    name: 'Personal OS MCP'
-  })
+  const [personalMcpToken, installedAppsInstruction] = await Promise.all([
+    ensureAuthToken({
+      userId: run.userId,
+      subjectType: 'user',
+      scope: 'personal:mcp',
+      name: 'Personal OS MCP'
+    }),
+    buildInstalledAppsInstruction(run.userId)
+  ])
   logAgentRun('user_agent.prepared', runLogContext(run), {
     attachedFileCount: payload.attachedFileIds.length,
     elapsedMs: elapsedSince(startedAt),
+    installedAppCount: installedAppsInstruction.appCount,
+    installedAppNames: installedAppsInstruction.appNames,
     messageLength: payload.message.length,
-    model: agentModel
+    model: agentModel,
+    routingMetadataCount: installedAppsInstruction.routingMetadataCount
   })
   const userContent = await buildAgentUserMessageContent({
     attachedFileIds: payload.attachedFileIds,
@@ -197,6 +205,7 @@ async function executeUserAgentRun(run: AgentRunRecord) {
       },
       instructions: userAgentInstructions({
         attachedFileCount: payload.attachedFileIds.length,
+        installedAppsInstruction: installedAppsInstruction.text,
         userEmail: run.user.email,
         userId: run.userId
       }),
@@ -218,6 +227,71 @@ async function executeUserAgentRun(run: AgentRunRecord) {
     run,
     streamUrl
   })
+}
+
+async function buildInstalledAppsInstruction(userId: string) {
+  const apps = await prisma.project.findMany({
+    where: {
+      members: projectMemberWhere(userId),
+      deletedAt: null,
+      status: {
+        notIn: ['deleting', 'deleted']
+      }
+    },
+    orderBy: {
+      createdAt: 'desc'
+    },
+    select: {
+      id: true,
+      templateId: true,
+      templateName: true,
+      status: true
+    },
+    take: 20
+  })
+
+  if (apps.length === 0) {
+    return {
+      appCount: 0,
+      appNames: [],
+      routingMetadataCount: 0,
+      text: 'Installed app routing:\nNo installed apps are currently visible for this user.'
+    }
+  }
+
+  const agentRouting = await agentRoutingByTemplateId(
+    apps.map((app) => app.templateId),
+    prisma
+  )
+  let routingMetadataCount = 0
+  const appLines = apps.map((app) => {
+    const agent = agentRouting.get(app.templateId)
+    const lines = [`${app.templateName}`, `App id: ${app.id}`, `Status: ${app.status}`]
+
+    if (agent) {
+      routingMetadataCount += 1
+      lines.push(`Use for: ${agent.routing.join('; ')}.`)
+      lines.push(`Delegate tasks: ${agent.tasks.join('; ')}.`)
+    } else {
+      lines.push('Routing metadata: not provided by this app manifest.')
+    }
+
+    return lines.join('\n')
+  })
+
+  return {
+    appCount: apps.length,
+    appNames: apps.map((app) => app.templateName),
+    routingMetadataCount,
+    text: [
+      'Installed app routing:',
+      '',
+      ...appLines.flatMap((appLine) => [appLine, '']),
+      'Routing rule: if the user request clearly matches one ready installed app, call askAppAgent with that app id and pass the user task in plain language. If multiple apps match, ask one concise clarification question.'
+    ]
+      .join('\n')
+      .trim()
+  }
 }
 
 async function executeProjectAgentRun(run: AgentRunRecord) {
@@ -1014,10 +1088,12 @@ function defaultPersonalMcpUrl() {
 
 function userAgentInstructions({
   attachedFileCount,
+  installedAppsInstruction,
   userEmail,
   userId
 }: {
   attachedFileCount: number
+  installedAppsInstruction: string
   userEmail: string
   userId: string
 }) {
@@ -1025,6 +1101,8 @@ function userAgentInstructions({
 You are working for user ${userId}.
 User email: ${userEmail}
 Current message attached files: ${attachedFileCount}
+
+${installedAppsInstruction}
 
 Rules:
 - You are the os7 user agent for this signed-in user.
@@ -1041,7 +1119,8 @@ Rules:
 - Attached file excerpts may already be included in the user message. Answer from those excerpts when they contain enough evidence.
 - Call searchUploadedFiles only when attached file excerpts are missing, ambiguous, or insufficient for the user's question.
 - When answering from uploaded files or excerpts, cite the file name when it is present.
-- If the user asks for work inside a specific app, identify the target app and explain that the project agent should handle the app-specific work.
+- If the user asks for work inside a ready installed app and the request matches that app's routing or delegate tasks, call askAppAgent for that app.
+- If the user asks for work inside an installed app that is not ready, call getInstallStatus when needed and do not call askAppAgent until it is ready.
 - If the target app is unclear, ask one concise question.
 - If a requested platform action requires a missing tool, say which capability is not connected yet.
 - Mastra memory may provide prior conversation context. Treat it as helpful context, not proof of current projects, files, runtime state, or app data.

@@ -2,7 +2,17 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Alert, Button, Grid, GridCol, Group, Stack, Text, Textarea } from '@mantine/core'
+import {
+  Alert,
+  Button,
+  Grid,
+  GridCol,
+  Group,
+  SegmentedControl,
+  Stack,
+  Text,
+  Textarea
+} from '@mantine/core'
 import { ChevronRight } from 'lucide-react'
 import { useAuthFlow } from '@/app/_components/auth-flow-provider'
 import { useI18n } from '@/app/_components/i18n-provider'
@@ -23,6 +33,7 @@ export default function NewHubTopicPage() {
   const [files, setFiles] = useState<File[]>([])
   const [intent, setIntent] = useState('')
   const [isCreating, setIsCreating] = useState(false)
+  const [visibility, setVisibility] = useState<'private' | 'public'>('public')
   const canCreateTopic = session.status === 'authenticated' && session.data.user.onboarded
   const trimmedIntentLength = intent.trim().length
   const canSubmit =
@@ -62,6 +73,7 @@ export default function NewHubTopicPage() {
     try {
       const formData = new FormData()
       formData.set('intent', intent)
+      formData.set('visibility', visibility)
 
       for (const file of files) {
         formData.append('files', file)
@@ -112,6 +124,15 @@ export default function NewHubTopicPage() {
               onChange={(event) => setIntent(event.currentTarget.value)}
               placeholder={hub.intentPlaceholder}
               value={intent}
+            />
+            <SegmentedControl
+              data={[
+                { label: hub.publicTopic, value: 'public' },
+                { label: hub.privateTopic, value: 'private' }
+              ]}
+              disabled={!canCreateTopic}
+              onChange={(value) => setVisibility(value as 'private' | 'public')}
+              value={visibility}
             />
             <Group justify="space-between">
               <Text

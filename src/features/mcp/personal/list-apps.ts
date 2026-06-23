@@ -2,6 +2,7 @@ import { elapsedSince, logAgentRun } from '@/server/agent/run-logger'
 import { prisma } from '@/server/db'
 import { projectMemberWhere } from '@/server/project-members'
 
+import { agentRoutingByTemplateId, type AppAgentRouting } from './app-agent-routing'
 import { type McpContext } from './schema'
 import { toolJson } from './tools'
 
@@ -38,6 +39,10 @@ export async function listPersonalAppsTool({
       deployError: true
     }
   })
+  const agentRouting = await agentRoutingByTemplateId(
+    apps.map((app) => app.templateId),
+    prisma
+  )
   logAgentRun(
     'mcp.personal.tool.finished',
     {
@@ -53,6 +58,17 @@ export async function listPersonalAppsTool({
   )
 
   return toolJson({
-    apps
+    apps: apps.map((app) => serializePersonalApp(app, agentRouting.get(app.templateId)))
   })
+}
+
+function serializePersonalApp<
+  T extends {
+    templateId: string
+  }
+>(app: T, agent: AppAgentRouting | undefined) {
+  return {
+    ...app,
+    agent: agent ?? null
+  }
 }

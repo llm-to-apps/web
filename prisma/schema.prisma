@@ -430,6 +430,7 @@ model HubTopic {
   description String?  @db.Text
   category    String   @db.VarChar(32)
   status      String   @default("analyzing") @db.VarChar(32)
+  visibility  String   @default("public") @db.VarChar(32)
   appUrl      String?  @db.VarChar(1024)
   authorId    String
   createdAt   DateTime @default(now())
@@ -445,6 +446,7 @@ model HubTopic {
 
   @@index([category, createdAt])
   @@index([status, createdAt])
+  @@index([visibility, createdAt])
   @@index([authorId, createdAt])
   @@map("hub_topics")
 }

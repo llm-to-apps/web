@@ -22,6 +22,7 @@ import {
   ChevronDown,
   ChevronUp,
   FileText,
+  Lock,
   MessageSquare,
   Plus,
   Search
@@ -52,6 +53,7 @@ const redditEpochSeconds = 1134028003
 const redditHotScaleSeconds = 45000
 const hubCategoryStorageKey = 'os7_hub_category'
 const allHubStatusFilter = 'all'
+const privateHubSpace = 'private'
 const hubTopicStatuses = [
   'analyzing',
   'discussing',
@@ -83,9 +85,10 @@ export default function HubPage() {
   const categoryFilterOptions = useMemo(
     () => [
       { label: hub.personal, value: 'personal' },
-      { label: hub.company, value: 'business' }
+      { label: hub.company, value: 'business' },
+      { label: hub.privateTopic, value: privateHubSpace }
     ],
-    [hub.company, hub.personal]
+    [hub.company, hub.personal, hub.privateTopic]
   )
 
   const loadTopics = useCallback(async () => {
@@ -93,7 +96,9 @@ export default function HubPage() {
     setError(null)
 
     try {
-      const response = await fetch('/api/hub/topics', { cache: 'no-store' })
+      const response = await fetch(`/api/hub/topics?space=${categoryFilter}`, {
+        cache: 'no-store'
+      })
       const payload = (await response.json().catch(() => null)) as TopicsResponse | null
 
       if (!response.ok || !payload?.ok) {
@@ -116,7 +121,7 @@ export default function HubPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [hub.loadFailed])
+  }, [categoryFilter, hub.loadFailed])
 
   useEffect(() => {
     void loadTopics()
@@ -201,7 +206,10 @@ export default function HubPage() {
   }, [])
 
   const availableTags = useMemo(
-    () => hubTags.filter((tag) => tag.category === categoryFilter),
+    () =>
+      categoryFilter === privateHubSpace
+        ? []
+        : hubTags.filter((tag) => tag.category === categoryFilter),
     [categoryFilter, hubTags]
   )
   const tagLabels = useMemo(
@@ -228,10 +236,6 @@ export default function HubPage() {
     }
 
     for (const topic of topics) {
-      if (topic.category !== categoryFilter) {
-        continue
-      }
-
       if (tagFilter && !topic.tags.includes(tagFilter)) {
         continue
       }
@@ -245,7 +249,7 @@ export default function HubPage() {
     }
 
     return counts
-  }, [categoryFilter, locale, searchQuery, tagFilter, tagLabels, topics])
+  }, [locale, searchQuery, tagFilter, tagLabels, topics])
   const statusFilterOptions = useMemo(
     () => [
       {
@@ -287,7 +291,6 @@ export default function HubPage() {
   const filteredTopics = useMemo(
     () =>
       topics.filter((topic) => {
-        const matchesCategory = topic.category === categoryFilter
         const matchesTag = !tagFilter || topic.tags.includes(tagFilter)
         const matchesStatus =
           statusFilter === allHubStatusFilter || topic.status === statusFilter
@@ -297,9 +300,9 @@ export default function HubPage() {
           tagLabels
         })
 
-        return matchesCategory && matchesTag && matchesStatus && matchesSearch
+        return matchesTag && matchesStatus && matchesSearch
       }),
-    [categoryFilter, locale, searchQuery, statusFilter, tagFilter, tagLabels, topics]
+    [locale, searchQuery, statusFilter, tagFilter, tagLabels, topics]
   )
 
   return (
@@ -319,7 +322,13 @@ export default function HubPage() {
       <Group align="flex-end" gap="sm" justify="space-between" wrap="wrap" w="100%">
         <SegmentedControl
           data={categoryFilterOptions}
-          onChange={setCategoryFilter}
+          onChange={(value) => {
+            if (value === privateHubSpace && session.status !== 'authenticated') {
+              openAuthFlow()
+            }
+
+            setCategoryFilter(value)
+          }}
           value={categoryFilter}
         />
         <TextInput
@@ -340,42 +349,44 @@ export default function HubPage() {
         />
       </Group>
 
-      <Group align="center" gap={6}>
-        <Group gap={6} style={{ flex: 1, minWidth: 180 }}>
-          {isLoading && hubTags.length === 0 ? (
-            <>
-              <Skeleton height={22} radius="xl" width={72} />
-              <Skeleton height={22} radius="xl" width={88} />
-              <Skeleton height={22} radius="xl" width={64} />
-              <Skeleton height={22} radius="xl" width={96} />
-            </>
-          ) : availableTags.length === 0 ? (
-            <Text c="dimmed">{hub.noTags}</Text>
-          ) : (
-            availableTags.map((tag) => {
-              const isSelected = tagFilter === tag.slug
+      {categoryFilter !== privateHubSpace ? (
+        <Group align="center" gap={6}>
+          <Group gap={6} style={{ flex: 1, minWidth: 180 }}>
+            {isLoading && hubTags.length === 0 ? (
+              <>
+                <Skeleton height={22} radius="xl" width={72} />
+                <Skeleton height={22} radius="xl" width={88} />
+                <Skeleton height={22} radius="xl" width={64} />
+                <Skeleton height={22} radius="xl" width={96} />
+              </>
+            ) : availableTags.length === 0 ? (
+              <Text c="dimmed">{hub.noTags}</Text>
+            ) : (
+              availableTags.map((tag) => {
+                const isSelected = tagFilter === tag.slug
 
-              return (
-                <Badge
-                  component="button"
-                  key={`${tag.category}:${tag.slug}`}
-                  onClick={() => toggleTagFilter(tag.slug)}
-                  style={{
-                    cursor: 'pointer',
-                    height: 22,
-                    paddingInline: 8
-                  }}
-                  type="button"
-                  variant="light"
-                  color={isSelected ? 'green' : 'gray'}
-                >
-                  {hubTagLabel(tag, locale)}
-                </Badge>
-              )
-            })
-          )}
+                return (
+                  <Badge
+                    component="button"
+                    key={`${tag.category}:${tag.slug}`}
+                    onClick={() => toggleTagFilter(tag.slug)}
+                    style={{
+                      cursor: 'pointer',
+                      height: 22,
+                      paddingInline: 8
+                    }}
+                    type="button"
+                    variant="light"
+                    color={isSelected ? 'green' : 'gray'}
+                  >
+                    {hubTagLabel(tag, locale)}
+                  </Badge>
+                )
+              })
+            )}
+          </Group>
         </Group>
-      </Group>
+      ) : null}
 
       {error ? <Alert color="red">{error}</Alert> : null}
       {isLoading ? (
@@ -408,6 +419,7 @@ export default function HubPage() {
           labels={{
             company: hub.company,
             downvote: hub.downvote,
+            privateTopic: hub.privateTopic,
             updateVoteFailed: hub.updateVoteFailed,
             upvote: hub.upvote,
             status: hub.status
@@ -473,6 +485,7 @@ const TopicCard = memo(function TopicCard({
   labels: {
     company: string
     downvote: string
+    privateTopic: string
     updateVoteFailed: string
     upvote: string
     status: {
@@ -584,7 +597,14 @@ const TopicCard = memo(function TopicCard({
                 {localizedTopic.title}
               </Text>
             </Stack>
-            <TopicStatusBadge labels={labels.status} status={topic.status} />
+            <Group gap="xs" wrap="nowrap">
+              {topic.visibility === 'private' ? (
+                <Badge color="gray" leftSection={<Lock size={12} />} variant="light">
+                  {labels.privateTopic}
+                </Badge>
+              ) : null}
+              <TopicStatusBadge labels={labels.status} status={topic.status} />
+            </Group>
           </Group>
           <Text c="dimmed" lineClamp={3}>
             {localizedTopic.description || localizedTopic.intent}
@@ -776,6 +796,10 @@ function categoryFilterFromUrl(value: string | null) {
     return 'business'
   }
 
+  if (value === privateHubSpace) {
+    return privateHubSpace
+  }
+
   if (value === 'personal') {
     return 'personal'
   }
@@ -813,6 +837,10 @@ function writeStoredCategoryFilter(category: string) {
 function categoryFilterToUrl(category: string) {
   if (category === 'business') {
     return 'company'
+  }
+
+  if (category === privateHubSpace) {
+    return privateHubSpace
   }
 
   return null

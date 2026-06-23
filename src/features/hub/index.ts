@@ -53,14 +53,18 @@ const maxArtifactUploadBytes = 10 * 1024 * 1024
 const maxInitialTopicArtifactFiles = 10
 const maxTextArtifactBytes = 512 * 1024
 const initialHubTopicStatus = 'analyzing'
-const privateHubTopicStatus = 'analyzing'
+const publicHubTopicVisibility = 'public'
+const privateHubTopicVisibility = 'private'
 const hubTopicListLimit = 50
 const encoder = new TextEncoder()
 
-export async function handleHubTopicsGet() {
+type HubTopicSpace = 'business' | 'personal' | 'private'
+
+export async function handleHubTopicsGet(request: NextRequest) {
   const user = await getCurrentUser()
   const viewerUserId = user?.id ?? '__public_viewer__'
-  const rankedTopicIds = await getHotHubTopicIds(viewerUserId)
+  const space = hubTopicSpaceFromUrl(request.nextUrl.searchParams.get('space'))
+  const rankedTopicIds = await getHotHubTopicIds(viewerUserId, space)
   const tags = await prisma.hubTag.findMany({
     orderBy: [
       {
@@ -114,6 +118,7 @@ export async function handleHubTopicsGet() {
       intent: true,
       slug: true,
       status: true,
+      visibility: true,
       translations: {
         select: {
           description: true,
@@ -188,7 +193,8 @@ export async function handleHubTopicsPost(request: NextRequest) {
       data = createHubTopicSchema.parse({
         category: formText(formData, 'category') || undefined,
         intent,
-        title: formText(formData, 'title') || undefined
+        title: formText(formData, 'title') || undefined,
+        visibility: formText(formData, 'visibility') || undefined
       })
       files = formData
         .getAll('files')
@@ -217,7 +223,8 @@ export async function handleHubTopicsPost(request: NextRequest) {
       description: null,
       intent: data.intent,
       status: initialHubTopicStatus,
-      title: topicTitle
+      title: topicTitle,
+      visibility: data.visibility
     },
     select: {
       id: true
@@ -389,7 +396,7 @@ export async function handleHubTopicEventsGet(
   const { id } = await context.params
   const topic = await findVisibleHubTopicReference(id, user?.id ?? '__public_viewer__')
 
-  if (!topic || !isHubTopicVisibleToUser(topic, user?.id ?? '__public_viewer__')) {
+  if (!topic) {
     return jsonErrorMessage('Topic not found', 404)
   }
 
@@ -416,7 +423,7 @@ export async function handleHubArtifactsPost(
   const { id: topicReference } = await context.params
   const topic = await findVisibleHubTopicReference(topicReference, user.id)
 
-  if (!topic || !isHubTopicVisibleToUser(topic, user.id)) {
+  if (!topic) {
     return jsonErrorMessage('Topic not found', 404)
   }
 
@@ -604,16 +611,7 @@ export async function handleHubArtifactFileGet(
             OR: hubReferenceWhere(topicReference)
           },
           {
-            OR: [
-              {
-                status: {
-                  not: privateHubTopicStatus
-                }
-              },
-              {
-                authorId: viewerUserId
-              }
-            ]
+            ...hubTopicVisibleWhere(viewerUserId)
           }
         ]
       }
@@ -673,16 +671,7 @@ export async function handleHubArtifactThumbnailGet(
             OR: hubReferenceWhere(topicReference)
           },
           {
-            OR: [
-              {
-                status: {
-                  not: privateHubTopicStatus
-                }
-              },
-              {
-                authorId: viewerUserId
-              }
-            ]
+            ...hubTopicVisibleWhere(viewerUserId)
           }
         ]
       }
@@ -809,7 +798,7 @@ export async function handleHubCommentsPost(request: NextRequest, context: Topic
   const { id: topicReference } = await context.params
   const topic = await findVisibleHubTopicReference(topicReference, user.id)
 
-  if (!topic || !isHubTopicVisibleToUser(topic, user.id)) {
+  if (!topic) {
     return jsonErrorMessage('Topic not found', 404)
   }
 
@@ -888,7 +877,7 @@ export async function handleHubUpvotePost(_request: NextRequest, context: TopicC
   const { id: topicReference } = await context.params
   const topic = await findVisibleHubTopicReference(topicReference, user.id)
 
-  if (!topic || !isHubTopicVisibleToUser(topic, user.id)) {
+  if (!topic) {
     return jsonErrorMessage('Topic not found', 404)
   }
 
@@ -955,7 +944,7 @@ export async function handleHubDownvotePost(
   const { id: topicReference } = await context.params
   const topic = await findVisibleHubTopicReference(topicReference, user.id)
 
-  if (!topic || !isHubTopicVisibleToUser(topic, user.id)) {
+  if (!topic) {
     return jsonErrorMessage('Topic not found', 404)
   }
 
@@ -1179,23 +1168,35 @@ function hubReferenceWhere(reference: string) {
 async function findVisibleHubTopicReference(reference: string, userId: string) {
   const topic = await prisma.hubTopic.findFirst({
     where: {
-      OR: hubReferenceWhere(reference)
+      AND: [
+        {
+          OR: hubReferenceWhere(reference)
+        },
+        hubTopicVisibleWhere(userId)
+      ]
     },
     select: {
       authorId: true,
       id: true,
-      status: true
+      visibility: true
     }
   })
 
-  if (!topic || !isHubTopicVisibleToUser(topic, userId)) {
+  if (!topic) {
     return null
   }
 
   return topic
 }
 
-async function getHotHubTopicIds(viewerUserId: string) {
+async function getHotHubTopicIds(viewerUserId: string, space: HubTopicSpace) {
+  const visibilityWhere =
+    space === 'private'
+      ? Prisma.sql`t.visibility = ${privateHubTopicVisibility}
+          AND t."authorId" = ${viewerUserId}`
+      : Prisma.sql`t.visibility = ${publicHubTopicVisibility}
+          AND t.category = ${space}`
+
   const rows = await prisma.$queryRaw<Array<{ id: string }>>(
     Prisma.sql`
       WITH ranked_topics AS (
@@ -1217,8 +1218,7 @@ async function getHotHubTopicIds(viewerUserId: string) {
           FROM hub_downvotes d
           WHERE d."topicId" = t.id
         ) downvotes ON TRUE
-        WHERE t.status <> ${privateHubTopicStatus}
-          OR t."authorId" = ${viewerUserId}
+        WHERE ${visibilityWhere}
       )
       SELECT id
       FROM ranked_topics
@@ -1241,6 +1241,14 @@ async function getHotHubTopicIds(viewerUserId: string) {
   return rows.map((row) => row.id)
 }
 
+function hubTopicSpaceFromUrl(value: string | null): HubTopicSpace {
+  if (value === 'business' || value === 'private') {
+    return value
+  }
+
+  return 'personal'
+}
+
 async function findHubTopic(reference: string, userId: string) {
   return prisma.hubTopic.findFirst({
     where: {
@@ -1248,18 +1256,7 @@ async function findHubTopic(reference: string, userId: string) {
         {
           OR: hubReferenceWhere(reference)
         },
-        {
-          OR: [
-            {
-              status: {
-                not: privateHubTopicStatus
-              }
-            },
-            {
-              authorId: userId
-            }
-          ]
-        }
+        hubTopicVisibleWhere(userId)
       ]
     },
     select: {
@@ -1430,6 +1427,7 @@ async function findHubTopic(reference: string, userId: string) {
       intent: true,
       status: true,
       title: true,
+      visibility: true,
       translations: {
         select: {
           description: true,
@@ -1469,7 +1467,12 @@ async function findVisibleHubComment(
     where: {
       id: commentId,
       topic: {
-        OR: hubReferenceWhere(topicReference)
+        AND: [
+          {
+            OR: hubReferenceWhere(topicReference)
+          },
+          hubTopicVisibleWhere(userId)
+        ]
       }
     },
     select: {
@@ -1478,24 +1481,30 @@ async function findVisibleHubComment(
       topic: {
         select: {
           authorId: true,
-          status: true
+          visibility: true
         }
       }
     }
   })
 
-  if (!comment || !isHubTopicVisibleToUser(comment.topic, userId)) {
+  if (!comment) {
     return null
   }
 
   return comment
 }
 
-function isHubTopicVisibleToUser(
-  topic: { authorId: string; status: string },
-  userId: string
-) {
-  return topic.status !== privateHubTopicStatus || topic.authorId === userId
+function hubTopicVisibleWhere(userId: string): Prisma.HubTopicWhereInput {
+  return {
+    OR: [
+      {
+        visibility: publicHubTopicVisibility
+      },
+      {
+        authorId: userId
+      }
+    ]
+  }
 }
 
 async function uploadHubArtifactFile(file: File, user: CurrentUser) {
@@ -1604,6 +1613,7 @@ type HubTopicListRecord = {
   intent: string
   slug: string | null
   status: string
+  visibility: string
   translations: HubTopicTranslationRecord[]
   topicTags: Array<{
     tag: {
@@ -1627,6 +1637,7 @@ function serializeTopicListItem(topic: HubTopicListRecord) {
     intent: topic.intent,
     slug: topic.slug,
     status: topic.status,
+    visibility: topic.visibility,
     tags: serializeTopicTags(topic),
     title: topic.title,
     translations: serializeTopicTranslations(topic.translations),
@@ -1704,6 +1715,7 @@ function serializeTopicDetail(
     intent: topic.intent,
     slug: topic.slug,
     status: topic.status,
+    visibility: topic.visibility,
     tagLabels: serializeTopicTagLabels(topic.topicTags),
     tags: serializeTopicTags(topic),
     title: topic.title,

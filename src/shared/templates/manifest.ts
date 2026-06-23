@@ -12,6 +12,10 @@ export type TemplateManifest = {
   status: 'available' | 'coming_soon'
   sortOrder?: number
   hot?: boolean
+  agent?: {
+    routing: string[]
+    tasks: string[]
+  }
   source: {
     repository: string
     remote: string
