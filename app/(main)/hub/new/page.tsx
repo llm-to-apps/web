@@ -13,7 +13,7 @@ import {
   Text,
   Textarea
 } from '@mantine/core'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Globe2, Lock } from 'lucide-react'
 import { useAuthFlow } from '@/app/_components/auth-flow-provider'
 import { useI18n } from '@/app/_components/i18n-provider'
 import { useSession } from '@/app/_components/session-provider'
@@ -125,32 +125,55 @@ export default function NewHubTopicPage() {
               placeholder={hub.intentPlaceholder}
               value={intent}
             />
-            <SegmentedControl
-              data={[
-                { label: hub.publicTopic, value: 'public' },
-                { label: hub.privateTopic, value: 'private' }
-              ]}
-              disabled={!canCreateTopic}
-              onChange={(value) => setVisibility(value as 'private' | 'public')}
-              value={visibility}
-            />
-            <Group justify="space-between">
-              <Text
-                c={trimmedIntentLength >= minIntentLength ? 'dimmed' : 'red'}
-                size="xs"
-              >
-                {trimmedIntentLength} /{' '}
-                {format(hub.intentMinLength, { count: minIntentLength })}
+            <Stack gap={4}>
+              <Group align="center" justify="space-between">
+                <Text
+                  c={trimmedIntentLength >= minIntentLength ? 'dimmed' : 'red'}
+                  size="xs"
+                >
+                  {trimmedIntentLength} /{' '}
+                  {format(hub.intentMinLength, { count: minIntentLength })}
+                </Text>
+                <Group align="center" gap="xs" wrap="nowrap">
+                  <SegmentedControl
+                    data={[
+                      {
+                        label: (
+                          <Group gap={6} wrap="nowrap">
+                            <Globe2 size={14} />
+                            <span>{hub.publicTopic}</span>
+                          </Group>
+                        ),
+                        value: 'public'
+                      },
+                      {
+                        label: (
+                          <Group gap={6} wrap="nowrap">
+                            <Lock size={14} />
+                            <span>{hub.privateTopic}</span>
+                          </Group>
+                        ),
+                        value: 'private'
+                      }
+                    ]}
+                    disabled={!canCreateTopic}
+                    onChange={(value) => setVisibility(value as 'private' | 'public')}
+                    value={visibility}
+                  />
+                  <Button
+                    disabled={canCreateTopic && !canSubmit}
+                    loading={isCreating}
+                    onClick={createTopic}
+                    rightSection={<ChevronRight size={16} />}
+                  >
+                    {canCreateTopic ? hub.createTopic : hub.signIn}
+                  </Button>
+                </Group>
+              </Group>
+              <Text c="dimmed" size="xs" ta="right">
+                {visibility === 'public' ? hub.publicTopicHelp : hub.privateTopicHelp}
               </Text>
-              <Button
-                disabled={canCreateTopic && !canSubmit}
-                loading={isCreating}
-                onClick={createTopic}
-                rightSection={<ChevronRight size={16} />}
-              >
-                {canCreateTopic ? hub.createTopic : hub.signIn}
-              </Button>
-            </Group>
+            </Stack>
           </Stack>
         </GridCol>
         <GridCol span={{ base: 12, md: 3 }}>
